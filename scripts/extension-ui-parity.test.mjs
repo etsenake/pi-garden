@@ -21,7 +21,7 @@ const classifications = new Set([
   "owned by the interaction system",
   "owned by the theme system",
   "owned by rich desktop surfaces",
-  "owned by editor/composer customization",
+  "owned by editor customization",
   "owned by Adapt for Desktop",
   "explicitly deferred: transcript rendering only",
 ]);
