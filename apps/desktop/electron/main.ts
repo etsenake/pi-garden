@@ -29,7 +29,11 @@ import {
   DESKTOP_EXTENSION_SCHEME,
 } from "./extensions/extension-view-owner";
 import { ExtensionActionRegistry } from "./extensions/extension-action-registry";
+import { ExtensionCompatibilityService } from "./extensions/extension-adaptation";
+import { ExtensionCompatibilityOwner } from "./extensions/extension-compatibility-owner";
 import { SurfaceRegistry } from "./extensions/surface-registry";
+import { projectIsTrusted } from "./platform/project-trust";
+import { resolveThemeAgentDir } from "./platform/theme-resources";
 import { performExtensionViewHostAction } from "./extensions/extension-view-actions";
 import { extensionFrameDocument } from "./extensions/extension-frame-document";
 import { ReviewOwner } from "./workbench/review-owner";
@@ -296,6 +300,15 @@ const appIconPath = app.isPackaged
   ? path.join(process.resourcesPath, "icon.png")
   : path.join(__dirname, "..", "..", "resources", "icon.png");
 const appIcon = nativeImage.createFromPath(appIconPath);
+// Skills pi-garden ships to every Pi session (extraResources `skills` when packaged).
+const bundledSkillsDir = app.isPackaged
+  ? path.join(process.resourcesPath, "skills")
+  : path.join(__dirname, "..", "..", "resources", "skills");
+// The `@pi-garden/extension-ui` package an adapted extension vendors; the
+// package is bundled into main, so the packaged app ships a copy as a resource.
+const extensionUiPackageDir = app.isPackaged
+  ? path.join(process.resourcesPath, "extension-ui")
+  : path.join(__dirname, "..", "..", "..", "..", "packages", "extension-ui");
 
 function parseExternalWebUrl(url: string): URL | null {
   try {
@@ -956,6 +969,10 @@ app
     extensionViewOwner = extensionViews;
     const surfaceRegistry = new SurfaceRegistry();
     const extensionActions = new ExtensionActionRegistry();
+    const agentDir = resolveThemeAgentDir();
+    const extensionCompatibility = new ExtensionCompatibilityOwner({
+      isProjectTrusted: (workspacePath) => projectIsTrusted(agentDir, workspacePath),
+    });
     protocol.handle(DESKTOP_EXTENSION_SCHEME, (request) =>
       extensionViews.assetResponse(request.url),
     );
@@ -970,14 +987,19 @@ app
         onChanged: (runtime) => {
           surfaceRegistry.replaceRuntime(runtime);
           extensionActions.replaceRuntime(runtime);
+          void extensionCompatibility.replaceRuntime(runtime).catch((error: unknown) => {
+            console.error("[extension-compatibility] runtime evidence failed", error);
+          });
           return extensionViews.replaceRuntime(runtime);
         },
         onInvalidated: ({ target, generation }) => {
           surfaceRegistry.invalidateRuntime(target, generation);
           extensionActions.invalidateRuntime(target, generation);
+          extensionCompatibility.invalidateRuntime(target, generation);
           return extensionViews.invalidateRuntime(target, generation);
         },
       },
+      builtinSkillPaths: [bundledSkillsDir],
       builtinExtensions: [
         {
           name: "pi-garden-thread-orchestration",
@@ -1021,6 +1043,40 @@ app
         store.invokeExtensionAction(target, generation, actionId, args),
       complete: (target, generation, commandName, prefix) =>
         store.completeExtensionCommandArgument(target, generation, commandName, prefix),
+    });
+    const extensionCompatibilityService = new ExtensionCompatibilityService(
+      extensionCompatibility,
+      {
+        workspaceFor: (workspaceId) => {
+          const workspace = store.snapshot().workspaces.find((entry) => entry.id === workspaceId);
+          return workspace ? { workspaceId, path: workspace.path } : undefined;
+        },
+        extensionFor: (workspaceId, extensionPath) =>
+          store.getRuntimeExtension(workspaceId, extensionPath),
+        startThread: (input) => store.startThread(input),
+      },
+      { helperPackageDir: extensionUiPackageDir },
+    );
+    store.subscribeToSessionEvents((event) => {
+      if (event.type === "extensionUiCapabilityObserved") {
+        return extensionCompatibility.observeTerminalUi({
+          target: event.sessionRef,
+          capability: event.observation.capability,
+          extensionPath: event.observation.extensionPath,
+          observedAt: event.timestamp,
+          attribution: "call-site",
+        });
+      }
+      if (event.type === "extensionCompatibilityIssue" && event.issue.capability === "custom") {
+        return extensionCompatibility.observeTerminalUi({
+          target: event.sessionRef,
+          capability: "custom",
+          extensionPath: event.issue.extensionPath,
+          observedAt: event.timestamp,
+          attribution: "reported",
+        });
+      }
+      return undefined;
     });
     await store.initialize();
     themeManager.setMode(store.snapshot().themeMode);
@@ -1117,6 +1173,10 @@ app
         extensionViews,
         surfaceRegistry,
         extensionActions,
+        extensionCompatibility: {
+          owner: extensionCompatibility,
+          service: extensionCompatibilityService,
+        },
         review: new ReviewOwner({
           checkpoints,
           userDataDir: app.getPath("userData"),

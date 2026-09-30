@@ -26,6 +26,16 @@ files:
 extraResources:
   - from: resources/icon.png
     to: icon.png
+  # Skills pi-garden adds to every Pi session (see main.ts bundledSkillsDir).
+  - from: resources/skills
+    to: skills
+  # The helper package an adapted extension vendors; main bundles it, so the
+  # packaged app needs a plain copy Pi's bash tool can read.
+  - from: ../../packages/extension-ui
+    to: extension-ui
+    filter:
+      - package.json
+      - "dist/**/*"
 
 asar: true
 asarUnpack:

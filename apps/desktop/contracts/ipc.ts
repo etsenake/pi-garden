@@ -32,6 +32,12 @@ import type {
   SessionTreeSnapshot,
 } from "@pi-garden/session-driver/types";
 import type { ClipboardImageRead } from "./composer-attachments";
+import type {
+  AdaptExtensionForDesktopInput,
+  ExtensionCompatibilityChange,
+  ExtensionCompatibilityInventory,
+  ExtensionCompatibilityRequest,
+} from "./extension-compatibility";
 import type { SessionRef } from "@pi-garden/session-driver/types";
 import type { SaveTaskWorkbenchTemplateInput, TaskWorkbenchTemplate } from "./workbench";
 import type {
@@ -93,6 +99,9 @@ export type CustomProviderProbeResult =
 export const desktopIpc = {
   extensionViewOpenFile: "pi-garden:extension-view-open-file",
   listExtensionViews: "pi-garden:list-extension-views",
+  getExtensionCompatibility: "pi-garden:get-extension-compatibility",
+  adaptExtensionForDesktop: "pi-garden:adapt-extension-for-desktop",
+  extensionCompatibilityChanged: "pi-garden:extension-compatibility-changed",
   listDesktopEditors: "pi-garden:list-desktop-editors",
   openDesktopEditor: "pi-garden:open-desktop-editor",
   openExtensionView: "pi-garden:open-extension-view",
@@ -859,6 +868,13 @@ export interface PiDesktopApi {
   stageFile(workspaceId: string, filePath: string, stagingSourcePath?: string): Promise<void>;
   onExtensionViewOpenFile(listener: (event: ExtensionViewOpenFile) => void): () => void;
   listExtensionViews(target: SessionRef): Promise<readonly DesktopExtensionViewInfo[]>;
+  getExtensionCompatibility(
+    input: ExtensionCompatibilityRequest,
+  ): Promise<ExtensionCompatibilityInventory>;
+  adaptExtensionForDesktop(input: AdaptExtensionForDesktopInput): Promise<DesktopAppState>;
+  onExtensionCompatibilityChanged(
+    listener: (event: ExtensionCompatibilityChange) => void,
+  ): () => void;
   listDesktopEditors(target: SessionRef): Promise<readonly DesktopEditorInfo[]>;
   openDesktopEditor(input: {
     readonly target: SessionRef;

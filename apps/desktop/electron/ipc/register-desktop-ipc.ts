@@ -24,9 +24,12 @@ import type { WindowOwner } from "../windows/window-owner";
 import { WorkbenchRequests, type WorkbenchOwner } from "./workbench-requests";
 import type { DesktopExtensionViewOwner } from "../extensions/extension-view-owner";
 import type { ExtensionActionRegistry } from "../extensions/extension-action-registry";
+import type { ExtensionCompatibilityService } from "../extensions/extension-adaptation";
+import type { ExtensionCompatibilityOwner } from "../extensions/extension-compatibility-owner";
 import type { SurfaceRegistry } from "../extensions/surface-registry";
 import { registerExtensionViewRequests } from "./extension-view-requests";
 import { registerExtensionActionRequests } from "./extension-action-requests";
+import { registerExtensionCompatibilityRequests } from "./extension-compatibility-requests";
 import { registerSurfaceContributionRequests } from "./surface-contribution-requests";
 import { registerReviewRequests, type ReviewRequestsOwner } from "./review-requests";
 import { mainFrameHandler } from "./main-frame-ipc";
@@ -167,6 +170,10 @@ export interface DesktopIpcOwners {
   readonly extensionViews: DesktopExtensionViewOwner;
   readonly surfaceRegistry: SurfaceRegistry;
   readonly extensionActions: ExtensionActionRegistry;
+  readonly extensionCompatibility: {
+    readonly owner: Pick<ExtensionCompatibilityOwner, "subscribe">;
+    readonly service: Pick<ExtensionCompatibilityService, "inventory" | "adapt">;
+  };
   readonly workspace: WorkspaceOwner;
   readonly conversation: ConversationOwner;
   readonly orchestration: OrchestrationOwner;
@@ -235,6 +242,12 @@ export function registerDesktopIpc({
   registerExtensionViewRequests(handleMainFrame, windows, owners.extensionViews);
   registerSurfaceContributionRequests(handleMainFrame, owners.surfaceRegistry);
   registerExtensionActionRequests(handleMainFrame, windows, owners.extensionActions);
+  registerExtensionCompatibilityRequests(
+    handleMainFrame,
+    windows,
+    owners.extensionCompatibility.owner,
+    owners.extensionCompatibility.service,
+  );
   const workbench = new WorkbenchRequests(owners.workbench);
   const workbenchSenders = new WeakSet<Electron.WebContents>();
   const trackWorkbenchSender = (sender: Electron.WebContents) => {

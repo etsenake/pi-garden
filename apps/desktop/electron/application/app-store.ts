@@ -33,6 +33,7 @@ import type {
 import type {
   ModelSettingsSnapshot,
   RuntimeCommandRecord,
+  RuntimeExtensionRecord,
   RuntimeLoginCallbacks,
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
@@ -165,7 +166,11 @@ export interface DesktopAppStoreOptions {
   readonly shouldKeepSessionDialogs?: (sessionRef: SessionRef) => boolean;
   readonly driverOptions?: Pick<
     PiSdkDriverConfig,
-    "builtinExtensions" | "desktopExtensions" | "onTurnCaptureBoundary" | "turnCaptureTimeoutMs"
+    | "builtinExtensions"
+    | "builtinSkillPaths"
+    | "desktopExtensions"
+    | "onTurnCaptureBoundary"
+    | "turnCaptureTimeoutMs"
   >;
   readonly generateThreadTitleOverride?: (
     workspace: WorkspaceRef,
@@ -879,9 +884,13 @@ export class DesktopAppStore {
   }
 
   getExtensionFilePath(workspaceId: string, filePath: string): string | undefined {
+    return this.getRuntimeExtension(workspaceId, filePath)?.path;
+  }
+
+  getRuntimeExtension(workspaceId: string, filePath: string): RuntimeExtensionRecord | undefined {
     return this.runtimeByWorkspace
       .get(workspaceId)
-      ?.extensions.find((entry) => entry.path === filePath)?.path;
+      ?.extensions.find((entry) => entry.path === filePath);
   }
 
   async renameWorkspace(workspaceId: string, displayName: string): Promise<DesktopAppState> {

@@ -1,10 +1,11 @@
 import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ProjectTrustStore, ResolvedResource } from "@earendil-works/pi-coding-agent";
+import type { ResolvedResource } from "@earendil-works/pi-coding-agent";
 import { builtinThemeCatalog, type ThemeCatalogEntry } from "../../contracts/theme-catalog";
 import { parseExternalThemeDocument } from "../../contracts/theme-document";
 import { isThemePresetId } from "../../contracts/desktop-state";
+import { projectIsTrusted } from "./project-trust";
 
 /**
  * Theme discovery delegates to Pi 0.87.1's package manager. For each workspace
@@ -33,14 +34,12 @@ export async function discoverThemeCatalog(input: {
   readonly agentDir: string;
   readonly workspaces: readonly ThemeDiscoveryWorkspace[];
 }): Promise<readonly ThemeCatalogEntry[]> {
-  const pi = await import("@earendil-works/pi-coding-agent");
   const entries: ThemeCatalogEntry[] = [...builtinThemeCatalog()];
   const parsedByPath = new Map<string, ThemeCatalogEntry | undefined>();
-  const trust = new pi.ProjectTrustStore(input.agentDir);
   let userThemesAdded = false;
 
   for (const workspace of input.workspaces) {
-    const trusted = await projectIsTrusted(trust, workspace.path);
+    const trusted = await projectIsTrusted(input.agentDir, workspace.path);
     const resources = await resolveEnabledThemes(input.agentDir, workspace.path, trusted);
     if (!resources) continue;
     if (!userThemesAdded) {
@@ -62,18 +61,6 @@ export function resolveThemeAgentDir(): string {
   const override = process.env.PI_CODING_AGENT_DIR;
   if (!override) return join(homedir(), CONFIG_DIR, "agent");
   return override.startsWith("~") ? join(homedir(), override.slice(1)) : override;
-}
-
-async function projectIsTrusted(trust: ProjectTrustStore, workspacePath: string): Promise<boolean> {
-  const { hasTrustRequiringProjectResources } = await import("@earendil-works/pi-coding-agent");
-  if (!hasTrustRequiringProjectResources(workspacePath)) return true;
-  try {
-    return trust.get(workspacePath) === true;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[theme] project trust could not be read for ${workspacePath}: ${message}`);
-    return false;
-  }
 }
 
 async function resolveEnabledThemes(

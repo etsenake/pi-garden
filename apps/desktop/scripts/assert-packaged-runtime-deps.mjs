@@ -47,6 +47,7 @@ const requiredPackages = [
   "@xterm/addon-fit",
   "@xterm/addon-web-links",
   "@xterm/xterm",
+  "acorn",
   "ansi-regex",
   "balanced-match",
   "bowser",

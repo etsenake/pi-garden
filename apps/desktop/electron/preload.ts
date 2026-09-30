@@ -10,6 +10,12 @@ import type {
   SurfaceContributionPresentation,
 } from "../contracts/surface-contributions";
 import type {
+  AdaptExtensionForDesktopInput,
+  ExtensionCompatibilityChange,
+  ExtensionCompatibilityInventory,
+  ExtensionCompatibilityRequest,
+} from "../contracts/extension-compatibility";
+import type {
   ExtensionViewOpenFile,
   DesktopExtensionViewInfo,
   OpenExtensionViewInput,
@@ -132,6 +138,15 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.listExtensionViews, target) as Promise<
       readonly DesktopExtensionViewInfo[]
     >,
+  getExtensionCompatibility: (input: ExtensionCompatibilityRequest) =>
+    ipcRenderer.invoke(
+      desktopIpc.getExtensionCompatibility,
+      input,
+    ) as Promise<ExtensionCompatibilityInventory>,
+  adaptExtensionForDesktop: (input: AdaptExtensionForDesktopInput) =>
+    ipcRenderer.invoke(desktopIpc.adaptExtensionForDesktop, input) as Promise<DesktopAppState>,
+  onExtensionCompatibilityChanged: (listener: (event: ExtensionCompatibilityChange) => void) =>
+    subscribeIpc(desktopIpc.extensionCompatibilityChanged, listener),
   listDesktopEditors: (target: SessionRef) =>
     ipcRenderer.invoke(desktopIpc.listDesktopEditors, target) as Promise<
       readonly DesktopEditorInfo[]
