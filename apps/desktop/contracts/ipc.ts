@@ -1,3 +1,4 @@
+import type { HeaderBadgeCatalogChange, HeaderBadgePresentation } from "./header-badges";
 import type {
   ExtensionViewOpenFile,
   DesktopExtensionViewInfo,
@@ -80,6 +81,8 @@ export const desktopIpc = {
   closeExtensionView: "pi-garden:close-extension-view",
   extensionViewMessage: "pi-garden:extension-view-message",
   extensionViewCatalogChanged: "pi-garden:extension-view-catalog-changed",
+  listHeaderBadges: "pi-garden:list-header-badges",
+  headerBadgesChanged: "pi-garden:header-badges-changed",
   stateRequest: "pi-garden:state-request",
   stateChanged: "pi-garden:state-changed",
   getTaskWorkbenchTemplate: "pi-garden:get-task-workbench-template",
@@ -822,6 +825,8 @@ export interface PiDesktopApi {
   stageFile(workspaceId: string, filePath: string, stagingSourcePath?: string): Promise<void>;
   onExtensionViewOpenFile(listener: (event: ExtensionViewOpenFile) => void): () => void;
   listExtensionViews(target: SessionRef): Promise<readonly DesktopExtensionViewInfo[]>;
+  listHeaderBadges(target: SessionRef): Promise<readonly HeaderBadgePresentation[]>;
+  onHeaderBadgesChanged(listener: (event: HeaderBadgeCatalogChange) => void): () => void;
   openExtensionView(input: OpenExtensionViewInput): Promise<ExtensionViewConnection>;
   sendExtensionViewMessage(input: ExtensionViewMessage): Promise<void>;
   closeExtensionView(connectionId: string): Promise<void>;

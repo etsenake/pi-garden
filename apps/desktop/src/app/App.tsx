@@ -31,6 +31,7 @@ import {
   type ExtensionViewTheme,
 } from "../features/extensions/extension-view-panel";
 import { useExtensionViews } from "../features/extensions/use-extension-views";
+import { useHeaderBadges } from "../features/extensions/use-header-badges";
 import { useExtensionHostActions } from "../features/extensions/use-extension-host-actions";
 import { useSidePanelTabHintsVisible } from "../features/workbench/side-panel-tab-hints";
 import { Workbench } from "../features/workbench/workbench";
@@ -216,6 +217,7 @@ export default function App() {
     flushComposerDraftAsync,
   } = useComposerDraftSync({ api, snapshot, selectedSession: workbenchTarget });
   const extensionViews = useExtensionViews({ api, target: workbenchTarget });
+  const headerBadges = useHeaderBadges({ api, target: workbenchTarget });
   const workbench = useWorkbench({ api, target: workbenchTarget });
   // Tracked while the panel is closed too, so a chord that opens it shows the hints.
   const sidePanelTabHintsVisible = useSidePanelTabHintsVisible(api?.platform ?? "linux");
@@ -939,6 +941,9 @@ export default function App() {
           onTogglePanel={commands.toggleSidePanel}
           sessionTitle={
             snapshot.activeView === "threads" && selectedSession ? displayedSessionTitle : undefined
+          }
+          headerBadges={
+            snapshot.activeView === "threads" && selectedSession ? headerBadges : undefined
           }
         >
           {snapshot.activeView === "threads" && selectedWorkspace && selectedSession ? (

@@ -27,6 +27,7 @@ import {
   DesktopExtensionViewOwner,
   DESKTOP_EXTENSION_SCHEME,
 } from "./extensions/extension-view-owner";
+import { HeaderBadgeOwner } from "./extensions/header-badge-owner";
 import { performExtensionViewHostAction } from "./extensions/extension-view-actions";
 import { extensionFrameDocument } from "./extensions/extension-frame-document";
 import { ReviewOwner } from "./workbench/review-owner";
@@ -906,6 +907,7 @@ app
         console.error("[extension-view]", target.sessionId, source, message),
     });
     extensionViewOwner = extensionViews;
+    const headerBadges = new HeaderBadgeOwner();
     protocol.handle(DESKTOP_EXTENSION_SCHEME, (request) =>
       extensionViews.assetResponse(request.url),
     );
@@ -917,9 +919,14 @@ app
       // including one waiting behind another run's capture in the same checkout.
       turnCaptureTimeoutMs: TURN_CAPTURE_BACKSTOP_MS,
       desktopExtensions: {
-        onChanged: (runtime) => extensionViews.replaceRuntime(runtime),
-        onInvalidated: ({ target, generation }) =>
-          extensionViews.invalidateRuntime(target, generation),
+        onChanged: (runtime) => {
+          headerBadges.replaceRuntime(runtime);
+          return extensionViews.replaceRuntime(runtime);
+        },
+        onInvalidated: ({ target, generation }) => {
+          headerBadges.invalidateRuntime(target, generation);
+          return extensionViews.invalidateRuntime(target, generation);
+        },
       },
       builtinExtensions: [
         {
@@ -1051,6 +1058,7 @@ app
         state: store,
         workbench: store,
         extensionViews,
+        headerBadges,
         review: new ReviewOwner({
           checkpoints,
           userDataDir: app.getPath("userData"),

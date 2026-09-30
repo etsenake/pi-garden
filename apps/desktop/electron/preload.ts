@@ -1,3 +1,4 @@
+import type { HeaderBadgeCatalogChange, HeaderBadgePresentation } from "../contracts/header-badges";
 import type {
   ExtensionViewOpenFile,
   DesktopExtensionViewInfo,
@@ -124,6 +125,12 @@ contextBridge.exposeInMainWorld("piApp", {
     subscribeIpc(desktopIpc.extensionViewMessage, listener),
   onExtensionViewCatalogChanged: (listener: (event: ExtensionViewCatalogChange) => void) =>
     subscribeIpc(desktopIpc.extensionViewCatalogChanged, listener),
+  listHeaderBadges: (target: SessionRef) =>
+    ipcRenderer.invoke(desktopIpc.listHeaderBadges, target) as Promise<
+      readonly HeaderBadgePresentation[]
+    >,
+  onHeaderBadgesChanged: (listener: (event: HeaderBadgeCatalogChange) => void) =>
+    subscribeIpc(desktopIpc.headerBadgesChanged, listener),
   onExtensionViewOpenFile: (listener: (event: ExtensionViewOpenFile) => void) =>
     subscribeIpc(desktopIpc.extensionViewOpenFile, listener),
   getTurnChanges: (input: TurnChangesInput) =>

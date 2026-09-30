@@ -23,7 +23,9 @@ import type { ThemeManager } from "../platform/theme-manager";
 import type { WindowOwner } from "../windows/window-owner";
 import { WorkbenchRequests, type WorkbenchOwner } from "./workbench-requests";
 import type { DesktopExtensionViewOwner } from "../extensions/extension-view-owner";
+import type { HeaderBadgeOwner } from "../extensions/header-badge-owner";
 import { registerExtensionViewRequests } from "./extension-view-requests";
+import { registerHeaderBadgeRequests } from "./header-badge-requests";
 import { registerReviewRequests, type ReviewRequestsOwner } from "./review-requests";
 import { mainFrameHandler } from "./main-frame-ipc";
 import { assertComposerAttachmentPixels } from "./composer-attachment-pixels";
@@ -158,6 +160,7 @@ export interface DesktopIpcOwners {
   readonly workbench: WorkbenchOwner;
   readonly review: ReviewRequestsOwner;
   readonly extensionViews: DesktopExtensionViewOwner;
+  readonly headerBadges: HeaderBadgeOwner;
   readonly workspace: WorkspaceOwner;
   readonly conversation: ConversationOwner;
   readonly orchestration: OrchestrationOwner;
@@ -224,6 +227,7 @@ export function registerDesktopIpc({
   const handleMainFrame = mainFrameHandler(windows);
   registerReviewRequests(handleMainFrame, owners.review);
   registerExtensionViewRequests(handleMainFrame, windows, owners.extensionViews);
+  registerHeaderBadgeRequests(handleMainFrame, owners.headerBadges);
   const workbench = new WorkbenchRequests(owners.workbench);
   const workbenchSenders = new WeakSet<Electron.WebContents>();
   const trackWorkbenchSender = (sender: Electron.WebContents) => {

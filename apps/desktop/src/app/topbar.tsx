@@ -1,11 +1,14 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import type { HeaderBadgePresentation } from "../../contracts/header-badges";
 import type { AppView, WorkspaceRecord, WorktreeRecord } from "../../contracts/desktop-state";
+import { HeaderBadges } from "../features/extensions/header-badges";
 import { getSidePanelToggleShortcutLabel, type PiDesktopApi } from "../../contracts/ipc";
 import { SidePanelIcon } from "../ui/icons";
 
 interface TopbarProps {
   readonly activeView: AppView;
   readonly sessionTitle?: string;
+  readonly headerBadges?: readonly HeaderBadgePresentation[];
   readonly children?: ReactNode;
   readonly rootWorkspace: WorkspaceRecord | undefined;
   readonly selectedWorkspace: WorkspaceRecord | undefined;
@@ -19,6 +22,7 @@ interface TopbarProps {
 export function Topbar({
   activeView,
   sessionTitle,
+  headerBadges = [],
   children,
   rootWorkspace,
   selectedWorkspace,
@@ -55,6 +59,7 @@ export function Topbar({
             <h1 className="chat-header__title" title={sessionTitle}>
               {sessionTitle}
             </h1>
+            <HeaderBadges badges={headerBadges} />
           </>
         ) : activeView === "threads" && checkoutLabel ? (
           <>

@@ -52,7 +52,7 @@ await test(
       extensionPath,
       `
 import { appendFileSync } from "node:fs";
-import { registerDesktopView } from ${JSON.stringify(helperPath)};
+import { registerDesktopView, registerHeaderBadge } from ${JSON.stringify(helperPath)};
 export default function extension(pi) {
   appendFileSync(${JSON.stringify(factoryLog)}, "factory\\n");
   let value = 0;
@@ -61,7 +61,10 @@ export default function extension(pi) {
     frontend: new URL("./dist/desktop.js", import.meta.url),
     backend: () => ({ id: "counter-" + (++value), setup() {} }),
   });
-  if (!registration.available) throw new Error("Desktop bootstrap did not acknowledge registration");
+  const badge = registerHeaderBadge(pi, { id: "garden", text: "Garden" });
+  if (!registration.available || !badge.available) {
+    throw new Error("Desktop bootstrap did not acknowledge registration");
+  }
 }
 `,
     );
@@ -102,7 +105,12 @@ export default function extension(pi) {
     assert.deepEqual(changed[0]!.target, ref);
     assert.ok(changed[0]!.extensions.some(({ resolvedPath }) => resolvedPath === extensionPath));
     assert.equal(changed[0]!.declarations.length, 1);
+    assert.deepEqual(
+      changed[0]!.badges.map((badge) => ({ id: badge.id, text: badge.text })),
+      [{ id: "garden", text: "Garden" }],
+    );
     const first = changed[0]!.declarations[0]!;
+    const firstBadge = changed[0]!.badges[0]!;
     assert.equal(first.backend().id, "counter-1");
     assert.equal(first.backend().id, "counter-2", "declaration retains one Pi extension closure");
     assert.equal(await readFile(factoryLog, "utf8"), "factory\n");
@@ -113,6 +121,12 @@ export default function extension(pi) {
     const newest = changed.at(-1)!;
     assert.notEqual(newest.generation, changed[0]!.generation);
     assert.equal(newest.declarations.length, 1);
+    assert.equal(newest.badges.length, 1);
+    assert.deepEqual(
+      newest.badges.map((badge) => ({ id: badge.id, text: badge.text })),
+      [{ id: "garden", text: "Garden" }],
+    );
+    assert.notEqual(newest.badges[0], firstBadge);
     assert.notEqual(newest.declarations[0], first);
     assert.equal(newest.declarations[0]!.backend().id, "counter-1");
     assert.equal(await readFile(factoryLog, "utf8"), "factory\nfactory\n");

@@ -27,6 +27,7 @@ const mainFrameChannels = [
   "setReviewFileReviewed",
   "changeReviewFileStage",
   "listExtensionViews",
+  "listHeaderBadges",
   "openExtensionView",
   "sendExtensionViewMessage",
   "closeExtensionView",
