@@ -5,6 +5,7 @@ import type {
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
 import type { ExtensionActionConflict } from "../../../contracts/extension-actions";
+import type { PiDesktopApi } from "../../../contracts/ipc";
 import type {
   ExtensionCommandCompatibilityRecord,
   WorkspaceRecord,
@@ -32,6 +33,11 @@ interface CustomizePageProps {
   readonly onToggleExtension: (path: string, enabled: boolean) => void;
   readonly onOpenExtensionFolder: (path: string) => void;
   readonly shortcutConflicts?: readonly ExtensionActionConflict[];
+  readonly api?: Pick<
+    PiDesktopApi,
+    "getExtensionCompatibility" | "onExtensionCompatibilityChanged"
+  >;
+  readonly onAdaptForDesktop?: (path: string) => void;
 }
 
 const NEW_SKILL_PROMPT =
@@ -53,6 +59,8 @@ export function CustomizePage({
   onToggleExtension,
   onOpenExtensionFolder,
   shortcutConflicts = [],
+  api,
+  onAdaptForDesktop,
 }: CustomizePageProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -199,11 +207,13 @@ export function CustomizePage({
             />
           ) : (
             <ExtensionsTab
+              api={api}
               commandCompatibility={commandCompatibility}
               extensions={filteredExtensions}
               searching={normalizedQuery.length > 0}
               selected={extensions.find((extension) => extension.path === selectedId)}
               workspace={workspace}
+              onAdaptForDesktop={onAdaptForDesktop}
               onOpenExtensionFolder={onOpenExtensionFolder}
               onSelect={selectItem}
               onToggleExtension={onToggleExtension}

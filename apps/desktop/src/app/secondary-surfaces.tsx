@@ -303,6 +303,20 @@ export function SecondarySurfaces({
     });
   };
 
+  const handleAdaptForDesktop = (filePath: string) => {
+    if (!extensionsWorkspace) {
+      return;
+    }
+    void updateSnapshot(setSnapshot, () =>
+      api.adaptExtensionForDesktop({
+        workspaceId: extensionsWorkspace.id,
+        extensionPath: filePath,
+      }),
+    ).catch((error: unknown) => {
+      console.error("[renderer] adaptExtensionForDesktop failed", error);
+    });
+  };
+
   const handleOpenExtensionFolder = (filePath: string) => {
     if (!extensionsWorkspace) {
       return;
@@ -437,6 +451,7 @@ export function SecondarySurfaces({
     >
       {customizeTab ? (
         <CustomizePage
+          api={api}
           commandCompatibility={extensionsCommandCompatibility}
           extensionsRuntime={extensionsRuntime}
           skillsRuntime={skillsRuntime}
@@ -447,6 +462,7 @@ export function SecondarySurfaces({
               ? workspacePicker(extensionsWorkspace, onSelectExtensionsWorkspace)
               : workspacePicker(skillsWorkspace, onSelectSkillsWorkspace)
           }
+          onAdaptForDesktop={handleAdaptForDesktop}
           onOpenExtensionFolder={handleOpenExtensionFolder}
           onOpenSkillFolder={handleOpenSkillFolder}
           onRefresh={() => {

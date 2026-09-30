@@ -11,6 +11,8 @@ import {
   isPiGardenBuiltinExtension,
   PI_GARDEN_TOOLS_LABEL,
 } from "./extension-display";
+import type { PiDesktopApi } from "../../../contracts/ipc";
+import { ExtensionDesktopCompatibility } from "./extension-compatibility-section";
 import { displayPath, ResourceDetail } from "./resource-detail";
 import { ResourceEmptyState, ResourceList, type ResourceListGroup } from "./resource-list";
 
@@ -27,6 +29,12 @@ interface ExtensionsTabProps {
   readonly onToggleExtension: (path: string, enabled: boolean) => void;
   readonly onOpenExtensionFolder: (path: string) => void;
   readonly shortcutConflicts?: readonly ExtensionActionConflict[];
+  /** Desktop compatibility inventory reads; absent in unit renders without a preload bridge. */
+  readonly api?: Pick<
+    PiDesktopApi,
+    "getExtensionCompatibility" | "onExtensionCompatibilityChanged"
+  >;
+  readonly onAdaptForDesktop?: (path: string) => void;
 }
 
 export function ExtensionsTab({
@@ -39,6 +47,8 @@ export function ExtensionsTab({
   onToggleExtension,
   onOpenExtensionFolder,
   shortcutConflicts = [],
+  api,
+  onAdaptForDesktop,
 }: ExtensionsTabProps) {
   // The list stays mounted under an open detail so expanded groups, scroll and focus survive.
   const list =
@@ -65,9 +75,11 @@ export function ExtensionsTab({
     <>
       {selected ? (
         <ExtensionDetail
+          api={api}
           commandCompatibility={commandCompatibility}
           selected={selected}
           workspace={workspace}
+          onAdaptForDesktop={onAdaptForDesktop}
           onOpenExtensionFolder={onOpenExtensionFolder}
           onSelect={onSelect}
           onToggleExtension={onToggleExtension}
@@ -87,6 +99,8 @@ function ExtensionDetail({
   onToggleExtension,
   onOpenExtensionFolder,
   shortcutConflicts = [],
+  api,
+  onAdaptForDesktop,
 }: Omit<ExtensionsTabProps, "extensions" | "searching" | "selected"> & {
   readonly selected: RuntimeExtensionRecord;
 }) {
@@ -148,6 +162,13 @@ function ExtensionDetail({
           compatibilityRecords={compatibilityRecords}
         />
       ) : null}
+      <ExtensionDesktopCompatibility
+        api={api}
+        extensionPath={selected.path}
+        workspaceId={workspace.id}
+        workspacePath={workspace.path}
+        onAdapt={onAdaptForDesktop}
+      />
       <ExtensionContributionSection title="Flags" items={selected.flags} />
       <ExtensionContributionSection title="Shortcuts" items={selected.shortcuts} />
       <ExtensionDiagnostics

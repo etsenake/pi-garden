@@ -3481,3 +3481,130 @@ mark.thread-find-active {
   border: 1px solid var(--border-default);
   color: var(--muted-soft);
 }
+
+/* Extension detail: desktop compatibility inventory */
+.extension-compat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+
+.extension-compat__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.extension-compat__summary {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.extension-compat__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.extension-compat__note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.extension-compat__note--error {
+  color: var(--error);
+}
+
+.extension-compat__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.extension-compat__finding {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.extension-compat__finding-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.extension-compat__label {
+  font-weight: 600;
+}
+
+.extension-compat__capability {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.extension-compat__status {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.extension-compat__status--adaptable {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.extension-compat__status--desktop-native {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.extension-compat__status--unsupported {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.extension-compat__finding-body {
+  color: var(--muted);
+}
+
+.extension-compat__evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.extension-compat__evidence-item {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--overlay-subtle);
+  color: var(--muted);
+}
+
+.extension-compat__evidence-item--runtime {
+  background: var(--accent-tint-bg);
+}
+
+.extension-compat__empty,
+.extension-compat__skipped {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.extension-compat__skipped ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
