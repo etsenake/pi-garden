@@ -15,7 +15,7 @@ they are not pi-garden's repository checks. PR Review needs a configured Pi mode
 `git`, authenticated `gh`, and the PR head/base commits already present locally.
 Neither example installs dependencies, posts a GitHub review, or merges a PR.
 
-[Header badge](./header-badge/index.ts) is a smaller example. It registers one host-rendered conversation-header label (`Garden`) and supplies no browser code. Place that directory on Pi's user/global extension path, or add its `index.ts` to the `extensions` array in `~/.pi/agent/settings.json`, from a checkout that can resolve `@pi-garden/extension-ui`. Project-local copies follow Pi's project scope. It is a lifecycle demonstration, not a product feature.
+[Header badge](./header-badge/index.ts) is a smaller example. It registers host-rendered conversation-header labels, including one of each semantic tone, and supplies no browser code. Place that directory on Pi's user/global extension path, or add its `index.ts` to the `extensions` array in `~/.pi/agent/settings.json`, from a checkout that can resolve `@pi-garden/extension-ui`. Project-local copies follow Pi's project scope. It is a lifecycle demonstration, not a product feature.
 
 ## Build and configure locally
 

@@ -78,7 +78,11 @@ function presentHeaderBadges(badges: readonly unknown[]): readonly HeaderBadgePr
   const byId = new Map<string, HeaderBadgePresentation>();
   for (const badge of badges) {
     if (!isHeaderBadgeDeclaration(badge)) continue;
-    byId.set(badge.id, { id: badge.id, text: badge.text });
+    byId.set(badge.id, {
+      id: badge.id,
+      text: badge.text,
+      tone: badge.tone ?? "default",
+    });
   }
   return [...byId.values()].sort((left, right) =>
     left.id < right.id ? -1 : left.id > right.id ? 1 : 0,

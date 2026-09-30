@@ -61,7 +61,8 @@ export default function extension(pi) {
     frontend: new URL("./dist/desktop.js", import.meta.url),
     backend: () => ({ id: "counter-" + (++value), setup() {} }),
   });
-  const badge = registerHeaderBadge(pi, { id: "garden", text: "Garden" });
+  registerHeaderBadge(pi, { id: "garden", text: "Old", tone: "success" });
+  const badge = registerHeaderBadge(pi, { id: "garden", text: "Garden", tone: "warning" });
   if (!registration.available || !badge.available) {
     throw new Error("Desktop bootstrap did not acknowledge registration");
   }
@@ -106,8 +107,8 @@ export default function extension(pi) {
     assert.ok(changed[0]!.extensions.some(({ resolvedPath }) => resolvedPath === extensionPath));
     assert.equal(changed[0]!.declarations.length, 1);
     assert.deepEqual(
-      changed[0]!.badges.map((badge) => ({ id: badge.id, text: badge.text })),
-      [{ id: "garden", text: "Garden" }],
+      changed[0]!.badges.map((badge) => ({ id: badge.id, text: badge.text, tone: badge.tone })),
+      [{ id: "garden", text: "Garden", tone: "warning" }],
     );
     const first = changed[0]!.declarations[0]!;
     const firstBadge = changed[0]!.badges[0]!;
@@ -123,8 +124,8 @@ export default function extension(pi) {
     assert.equal(newest.declarations.length, 1);
     assert.equal(newest.badges.length, 1);
     assert.deepEqual(
-      newest.badges.map((badge) => ({ id: badge.id, text: badge.text })),
-      [{ id: "garden", text: "Garden" }],
+      newest.badges.map((badge) => ({ id: badge.id, text: badge.text, tone: badge.tone })),
+      [{ id: "garden", text: "Garden", tone: "warning" }],
     );
     assert.notEqual(newest.badges[0], firstBadge);
     assert.notEqual(newest.declarations[0], first);

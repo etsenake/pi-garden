@@ -43,10 +43,24 @@ export const HEADER_BADGE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
 
 export const HEADER_BADGE_TEXT_MAX = 32;
 
+/** Semantic tones the host maps onto the active theme. Not colors or class names. */
+export const HEADER_BADGE_TONES = [
+  "default",
+  "accent",
+  "success",
+  "warning",
+  "error",
+  "muted",
+] as const;
+
+export type HeaderBadgeTone = (typeof HEADER_BADGE_TONES)[number];
+
 /** Host-rendered label. The extension supplies no markup or code. */
 export interface HeaderBadgeDeclaration {
   readonly id: string;
   readonly text: string;
+  /** Omitted tone is presented as `default`. */
+  readonly tone?: HeaderBadgeTone;
 }
 
 export interface HeaderBadgeRegistrationEvent {
@@ -61,11 +75,21 @@ export interface HeaderBadgeRegistration {
   dispose(): void;
 }
 
+export function isHeaderBadgeTone(value: unknown): value is HeaderBadgeTone {
+  return typeof value === "string" && (HEADER_BADGE_TONES as readonly string[]).includes(value);
+}
+
 export function isHeaderBadgeDeclaration(value: unknown): value is HeaderBadgeDeclaration {
   if (typeof value !== "object" || value === null) return false;
   if (!("id" in value) || !("text" in value)) return false;
+  for (const key of Object.keys(value)) {
+    if (key !== "id" && key !== "text" && key !== "tone") return false;
+  }
   const { id, text } = value;
-  return typeof id === "string" && typeof text === "string" && isHeaderBadgeContent(id, text);
+  if (typeof id !== "string" || typeof text !== "string" || !isHeaderBadgeContent(id, text)) {
+    return false;
+  }
+  return !("tone" in value) || isHeaderBadgeTone(value.tone);
 }
 
 function isHeaderBadgeContent(id: string, text: string): boolean {
@@ -89,6 +113,11 @@ export function registerHeaderBadge(
   pi: DesktopExtensionAPI,
   badge: HeaderBadgeDeclaration,
 ): HeaderBadgeRegistration {
+  for (const key of Object.keys(badge)) {
+    if (key !== "id" && key !== "text" && key !== "tone") {
+      throw new TypeError("Header badge only accepts id, text, and an optional tone");
+    }
+  }
   const text = badge.text.trim();
   if (!HEADER_BADGE_ID_PATTERN.test(badge.id)) {
     throw new TypeError("Header badge ID must be a lowercase identifier of at most 64 characters");
@@ -98,7 +127,16 @@ export function registerHeaderBadge(
       `Header badge text must contain 1 to ${HEADER_BADGE_TEXT_MAX} visible characters`,
     );
   }
-  const declaration: HeaderBadgeDeclaration = { id: badge.id, text };
+  if (badge.tone !== undefined && !isHeaderBadgeTone(badge.tone)) {
+    throw new TypeError(
+      "Header badge tone must be default, accent, success, warning, error, or muted",
+    );
+  }
+  const declaration: HeaderBadgeDeclaration = {
+    id: badge.id,
+    text,
+    tone: badge.tone ?? "default",
+  };
   let available = false;
   let disposed = false;
   const publish = () => {

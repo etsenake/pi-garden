@@ -153,14 +153,14 @@ await test("header badge discovery replays one declaration and shutdown removes 
   pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
   assert.equal(registration.available, true);
   assert.deepEqual(discovered, [
-    { id: "garden", text: "Garden" },
-    { id: "garden", text: "Garden" },
+    { id: "garden", text: "Garden", tone: "default" },
+    { id: "garden", text: "Garden", tone: "default" },
   ]);
   assert.equal(discovered[0], discovered[1]);
   pi.shutdown();
   pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
   assert.equal(registration.available, false);
-  assert.deepEqual(removed, [{ id: "garden", text: "Garden" }]);
+  assert.deepEqual(removed, [{ id: "garden", text: "Garden", tone: "default" }]);
   assert.equal(discovered.length, 2);
 });
 
@@ -173,7 +173,33 @@ await test("header badge registration rejects identifiers and text the host cann
     { id: "garden", text: "   " },
     { id: "garden", text: "line\nbreak" },
     { id: "garden", text: "x".repeat(33) },
+    { id: "garden", text: "Garden", tone: "purple" },
+    { id: "garden", text: "Garden", tone: "" },
+    { id: "garden", text: "Garden", color: "#ff0000" },
+    { id: "garden", text: "Garden", className: "danger" },
   ]) {
-    assert.throws(() => registerHeaderBadge(pi, badge));
+    assert.throws(() => registerHeaderBadge(pi, badge as { id: string; text: string }));
   }
+});
+
+await test("header badge tones are a closed set and a later id replaces text and tone", () => {
+  const pi = createExtensionApi();
+  const discovered: { readonly id: string; readonly text: string; readonly tone?: string }[] = [];
+  pi.events.on(HEADER_BADGE_REGISTER, (value) => {
+    const event = value as HeaderBadgeRegistrationEvent;
+    discovered.push(event.badge);
+    event.accept?.();
+  });
+  for (const tone of ["default", "accent", "success", "warning", "error", "muted"] as const) {
+    registerHeaderBadge(pi, { id: tone, text: tone, tone });
+  }
+  const replaced = registerHeaderBadge(pi, { id: "ready", text: "Ready", tone: "success" });
+  registerHeaderBadge(pi, { id: "ready", text: "Failed", tone: "error" });
+  pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
+  const byId = new Map<string, { readonly text: string; readonly tone?: string }>();
+  for (const badge of discovered) byId.set(badge.id, badge);
+  assert.equal(byId.get("ready")?.text, "Failed");
+  assert.equal(byId.get("ready")?.tone, "error");
+  assert.equal(byId.size, 7);
+  assert.equal(replaced.available, true);
 });
