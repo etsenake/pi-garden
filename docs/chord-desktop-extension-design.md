@@ -31,7 +31,7 @@ Evidence scripts and result JSON are retained in `/private/tmp/pi-garden-chord-0
 
 The implemented contract has two entries in the existing extension package:
 
-1. The normal Pi extension entry registers its commands/tools and optionally calls a Pi-garden helper with a view ID, title, browser asset location and a backend facet factory. The factory closes over that same extension instance. Do not load a second backend from a parallel plugin scanner.
+1. The normal Pi extension entry registers its commands/tools and optionally calls a Pi-garden helper with a stable ID, a placement, browser asset location and a backend facet factory. The factory closes over that same extension instance. Do not load a second backend from a parallel plugin scanner. `registerRichSurface` is the generalized declaration; `registerDesktopView` is its workbench compatibility wrapper and `registerDesktopToolRenderer` its tool-row wrapper.
 2. A prebuilt browser ES module mounts the custom interface into a supplied root and returns a disposer. It can use a frontend Chord facet to consume the backend's typed services and state. Its framework dependencies are bundled; it cannot assume access to the app's React instance or Node modules.
 
 This is Pi-garden's local helper API, not an upstream Pi API or published npm package:
@@ -54,7 +54,7 @@ export function mount(root: HTMLElement, host: DesktopViewContext): () => void {
 }
 ```
 
-[`@pi-garden/extension-ui`](../packages/extension-ui/README.md) is a private workspace package. `registerDesktopView` reports availability and returns a disposer; terminal Pi can report no desktop host while the extension's commands/tools continue to work. Availability acknowledges discovery, not successful source validation or backend activation. `DesktopViewContext` supplies a scoped Chord service source, theme values, an abort signal and `openFile` / `prepareTaskDraft` actions. Service tokens and domain schemas live with the extension and are shared by its entries. Backend state uses `env.replicatedState` so it belongs to the host's Chord instance. Browser dependencies are bundled separately; the author cannot assume the app's React or Node modules are available.
+[`@pi-garden/extension-ui`](../packages/extension-ui/README.md) is a private workspace package. `registerDesktopView` and `registerRichSurface` report availability and return a disposer; terminal Pi can report no desktop host while the extension's commands/tools continue to work. Availability acknowledges discovery, not successful source validation or backend activation. `DesktopViewContext` supplies a scoped Chord service source, theme values with `subscribeTheme`, an abort signal, host-pushed `tool` presentation state with `subscribeTool` for tool renderers, and the `openFile` / `prepareTaskDraft` / `presentOverlay` / `settle` / `cancel` actions. Placement rules (singleton header/footer, additive ordering, tool-name conflicts, overlay result round-trip) are listed in the package README. Service tokens and domain schemas live with the extension and are shared by its entries. Backend state uses `env.replicatedState` so it belongs to the host's Chord instance. Browser dependencies are bundled separately; the author cannot assume the app's React or Node modules are available.
 
 ## Owners and flow
 
@@ -75,7 +75,7 @@ The small EventBus adapter is **discovery only**. It transports a declaration in
 
 After Pi finishes loading, the host matches the declaration's source real path against the final loaded extension catalog, rejecting missing/ambiguous origins and duplicate IDs. It assigns task, extension, view and runtime-generation identity. Each validated view has one backend facet host per task runtime generation; multiple windows receive separate connections to that host. Replaying discovery does not reactivate the same declaration. Because existing Pi extensions are trusted Node code, source matching prevents accidental misrouting; it is not authentication against a hostile installed backend.
 
-Opening a tab requests a connection bound by main to that task/view and initiating window. The frame sends validated JSON messages over its dedicated port; preload and main route only that connection. The adapter constructs a Chord endpoint and per-subscription state codecs rather than implementing another replication system. Main validates the registered main-frame sender and live connection, and exposes only the view's advertised services. File navigation and draft preparation are separate narrow host actions.
+Opening a tab, slot, overlay or tool row requests a connection bound by main to that task/surface and initiating window. The frame sends validated JSON messages over its dedicated port; preload and main route only that connection. The adapter constructs a Chord endpoint and per-subscription state codecs rather than implementing another replication system. Main validates the registered main-frame sender and live connection, and exposes only the view's advertised services. File navigation and draft preparation are separate narrow host actions.
 
 ## Custom frontend boundary
 
