@@ -288,6 +288,7 @@ export function transcriptFromMessages(
         role,
         text,
         ...(attachments.length > 0 ? { attachments } : {}),
+        ...(role === "assistant" && messageHasThinking(message) ? { hasThinking: true } : {}),
         createdAt,
       });
     }
@@ -393,6 +394,20 @@ function applyToolResult(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/** Pi shows a thinking label only for non-blank thinking blocks. */
+export function messageHasThinking(message: unknown): boolean {
+  if (!isRecord(message) || !Array.isArray(message.content)) {
+    return false;
+  }
+  return message.content.some(
+    (part) =>
+      isRecord(part) &&
+      part.type === "thinking" &&
+      typeof part.thinking === "string" &&
+      part.thinking.trim().length > 0,
+  );
 }
 
 export function messageText(message: Record<string, unknown>): string {

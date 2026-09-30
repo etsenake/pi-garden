@@ -73,6 +73,8 @@ import {
 import {
   applyHostUiRequestToExtensionUiState,
   createEmptyExtensionUiState,
+  replayRequestsForExtensionUiState,
+  resetExtensionUiState,
   type ExtensionUiState,
 } from "./extension-ui-state.js";
 import {
@@ -90,6 +92,7 @@ import {
   displayMessagesFromSession,
   extractPreview,
   injectFileAttachmentPreamble,
+  messageHasThinking,
   messageText,
   nowIso,
   previewFromSessionInfo,
@@ -161,6 +164,11 @@ export interface PiSdkDriverOptions {
   /** Read each time a session loads or reloads its extensions; defaults to enabled. */
   readonly isBuiltinExtensionEnabled?: BuiltinExtensionEnabled;
   readonly desktopExtensions?: PiDesktopExtensionObserver;
+  /**
+   * The host's current editor text for a session, read synchronously for Pi's
+   * `ctx.ui.getEditorText()`. Without it the driver only knows text an extension set.
+   */
+  readonly hostEditorText?: (sessionRef: SessionRef) => string | undefined;
   readonly onTurnCaptureBoundary?: import("@pi-garden/session-driver").TurnCaptureObserver;
   readonly turnCaptureTimeoutMs?: number;
   readonly generateThreadTitleOverride?: (
@@ -233,6 +241,20 @@ interface PromptTemplateAdapter {
 
 const NEW_THREAD_PLACEHOLDER_TITLE = "New thread";
 
+/** Pi's TUI loader frames, used when `setWorkingIndicator({ intervalMs })` omits `frames`. */
+const DEFAULT_WORKING_INDICATOR_FRAMES: readonly string[] = [
+  "⠋",
+  "⠙",
+  "⠹",
+  "⠸",
+  "⠼",
+  "⠴",
+  "⠦",
+  "⠧",
+  "⠇",
+  "⠏",
+];
+
 interface SkillAdapter {
   readonly name: string;
   readonly description: string;
@@ -249,6 +271,7 @@ export class SessionSupervisor {
   private readonly agentDir: string | undefined;
   private readonly builtinExtensions: readonly InlineExtension[];
   private readonly desktopExtensions: PiDesktopExtensionObserver | undefined;
+  private readonly hostEditorText: PiSdkDriverOptions["hostEditorText"];
   private readonly onTurnCaptureBoundary: PiSdkDriverOptions["onTurnCaptureBoundary"];
   private readonly turnCaptureTimeoutMs: number | undefined;
   private readonly records = new Map<string, ManagedSessionRecord>();
@@ -275,6 +298,7 @@ export class SessionSupervisor {
       options.isBuiltinExtensionEnabled ?? (() => true),
     );
     this.desktopExtensions = options.desktopExtensions;
+    this.hostEditorText = options.hostEditorText;
     this.onTurnCaptureBoundary = options.onTurnCaptureBoundary;
     this.turnCaptureTimeoutMs = options.turnCaptureTimeoutMs;
     this.agentDir = options.agentDir;
@@ -1724,19 +1748,23 @@ export class SessionSupervisor {
           record.pendingHostUiRequests.delete(requestId);
         };
 
-        const onAbort = () => {
+        // Pi settles the dialog itself on abort or timeout; the host must drop
+        // its modal too, or a late click would answer a promise that is gone.
+        const settleWithDefault = () => {
           cleanup();
+          if (!record.closed) {
+            this.emitHostUiRequest(record, { kind: "dialogClosed", requestId });
+          }
           resolve(defaultValue);
         };
+
+        const onAbort = () => settleWithDefault();
 
         opts?.signal?.addEventListener("abort", onAbort, { once: true });
 
         const timeoutMs = opts?.timeout;
         if (timeoutMs !== undefined) {
-          timeoutId = setTimeout(() => {
-            cleanup();
-            resolve(defaultValue);
-          }, timeoutMs);
+          timeoutId = setTimeout(settleWithDefault, timeoutMs);
         }
 
         record.pendingHostUiRequests.set(requestId, {
@@ -1823,10 +1851,50 @@ export class SessionSupervisor {
           ...(text ? { text } : {}),
         });
       },
-      setWorkingMessage: () => {},
-      setWorkingVisible: () => {},
-      setWorkingIndicator: () => {},
-      setHiddenThinkingLabel: () => {},
+      setWorkingMessage: (message) => {
+        this.emitHostUiRequest(record, {
+          kind: "workingMessage",
+          requestId: crypto.randomUUID(),
+          ...(message !== undefined ? { message } : {}),
+        });
+      },
+      setWorkingVisible: (visible) => {
+        this.emitHostUiRequest(record, {
+          kind: "workingVisible",
+          requestId: crypto.randomUUID(),
+          visible: Boolean(visible),
+        });
+      },
+      setWorkingIndicator: (options) => {
+        // Pi: an omitted argument restores the default spinner; `frames`
+        // omitted inside options also means default frames, while `[]` hides it.
+        const frames = options?.frames;
+        this.emitHostUiRequest(record, {
+          kind: "workingIndicator",
+          requestId: crypto.randomUUID(),
+          ...(options
+            ? {
+                indicator: {
+                  frames: Array.isArray(frames)
+                    ? frames.filter((frame) => typeof frame === "string")
+                    : DEFAULT_WORKING_INDICATOR_FRAMES,
+                  ...(typeof options.intervalMs === "number" &&
+                  Number.isFinite(options.intervalMs) &&
+                  options.intervalMs > 0
+                    ? { intervalMs: options.intervalMs }
+                    : {}),
+                },
+              }
+            : {}),
+        });
+      },
+      setHiddenThinkingLabel: (label) => {
+        this.emitHostUiRequest(record, {
+          kind: "hiddenThinkingLabel",
+          requestId: crypto.randomUUID(),
+          ...(label !== undefined ? { label } : {}),
+        });
+      },
       setWidget: (key, content: unknown, options?: ExtensionWidgetOptions) => {
         if (content === undefined || Array.isArray(content)) {
           const lines = content as readonly string[] | undefined;
@@ -1857,7 +1925,7 @@ export class SessionSupervisor {
       },
       pasteToEditor: (text) => {
         this.emitHostUiRequest(record, {
-          kind: "editorText",
+          kind: "editorPaste",
           requestId: crypto.randomUUID(),
           text,
         });
@@ -1869,7 +1937,8 @@ export class SessionSupervisor {
           text,
         });
       },
-      getEditorText: () => record.extensionUiState.editorText ?? "",
+      getEditorText: () =>
+        this.hostEditorText?.(record.ref) ?? record.extensionUiState.editorText ?? "",
       editor: (title, initialValue) =>
         createDialogPromise(
           undefined,
@@ -1899,8 +1968,14 @@ export class SessionSupervisor {
         success: false,
         error: "Theme switching not supported in pi-garden host UI",
       }),
-      getToolsExpanded: () => false,
-      setToolsExpanded: () => {},
+      getToolsExpanded: () => record.extensionUiState.toolsExpanded,
+      setToolsExpanded: (expanded) => {
+        this.emitHostUiRequest(record, {
+          kind: "toolsExpanded",
+          requestId: crypto.randomUUID(),
+          expanded: Boolean(expanded),
+        });
+      },
     };
   }
 
@@ -2024,10 +2099,7 @@ export class SessionSupervisor {
   }
 
   private clearExtensionUiState(record: ManagedSessionRecord): void {
-    record.extensionUiState.statuses.clear();
-    record.extensionUiState.widgets.clear();
-    record.extensionUiState.title = undefined;
-    record.extensionUiState.editorText = undefined;
+    resetExtensionUiState(record.extensionUiState);
   }
 
   private resetExtensionUi(record: ManagedSessionRecord): void {
@@ -2051,67 +2123,9 @@ export class SessionSupervisor {
     listener: SessionEventListener,
   ): void {
     const timestamp = nowIso();
-
-    for (const [key, text] of record.extensionUiState.statuses) {
+    for (const request of replayRequestsForExtensionUiState(record.extensionUiState)) {
       void Promise.resolve(
-        listener({
-          type: "hostUiRequest",
-          sessionRef: record.ref,
-          timestamp,
-          request: {
-            kind: "status",
-            requestId: `replay:status:${key}`,
-            key,
-            text,
-          },
-        }),
-      ).catch(() => {});
-    }
-
-    for (const widget of record.extensionUiState.widgets.values()) {
-      void Promise.resolve(
-        listener({
-          type: "hostUiRequest",
-          sessionRef: record.ref,
-          timestamp,
-          request: {
-            kind: "widget",
-            requestId: `replay:widget:${widget.key}`,
-            key: widget.key,
-            ...(widget.lines ? { lines: widget.lines } : {}),
-            placement: widget.placement,
-          },
-        }),
-      ).catch(() => {});
-    }
-
-    if (record.extensionUiState.title) {
-      void Promise.resolve(
-        listener({
-          type: "hostUiRequest",
-          sessionRef: record.ref,
-          timestamp,
-          request: {
-            kind: "title",
-            requestId: "replay:title",
-            title: record.extensionUiState.title,
-          },
-        }),
-      ).catch(() => {});
-    }
-
-    if (record.extensionUiState.editorText) {
-      void Promise.resolve(
-        listener({
-          type: "hostUiRequest",
-          sessionRef: record.ref,
-          timestamp,
-          request: {
-            kind: "editorText",
-            requestId: "replay:editorText",
-            text: record.extensionUiState.editorText,
-          },
-        }),
+        listener({ type: "hostUiRequest", sessionRef: record.ref, timestamp, request }),
       ).catch(() => {});
     }
   }
@@ -2241,7 +2255,12 @@ export class SessionSupervisor {
         this.updatePreviewFromMessage(record, event.message);
         if (event.type === "message_end" && event.message.role === "assistant") {
           return toDriverEvents(
-            { type: "assistantMessageEnded", sessionRef: record.ref, timestamp },
+            {
+              type: "assistantMessageEnded",
+              sessionRef: record.ref,
+              timestamp,
+              ...(messageHasThinking(event.message) ? { hasThinking: true } : {}),
+            },
             record,
           );
         }

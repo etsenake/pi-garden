@@ -2,6 +2,8 @@ export {
   applyHostUiRequestToExtensionUiState,
   createEmptyExtensionUiState,
   isExtensionUiDialogRequest,
+  replayRequestsForExtensionUiState,
+  resetExtensionUiState,
 } from "./extension-ui-state.js";
 export type {
   ExtensionUiDialogRequest,

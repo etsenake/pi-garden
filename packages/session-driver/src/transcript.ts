@@ -27,6 +27,8 @@ export interface SessionTranscriptMessage {
   readonly id: string;
   /** Authoritative persisted entry identity; a live display row can retain its own id. */
   readonly sourceMessageId?: string;
+  /** An assistant message that also carried thinking content, shown collapsed by the host. */
+  readonly hasThinking?: boolean;
 }
 
 export interface SessionTranscriptToolCall {

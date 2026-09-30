@@ -182,6 +182,8 @@ export interface AssistantDeltaEvent extends SessionEventBase {
 /** Finalizes one assistant message while the containing run may continue. */
 export interface AssistantMessageEndedEvent extends SessionEventBase {
   readonly type: "assistantMessageEnded";
+  /** The ended message carried hidden thinking content alongside its text. */
+  readonly hasThinking?: boolean;
 }
 
 /** Identifies the immediately preceding ended assistant message after Pi persists it. */
@@ -315,9 +317,61 @@ export type HostUiRequest =
       readonly text: string;
     }
   | {
+      /** Pi `pasteToEditor`: insert into the current editor text instead of replacing it. */
+      readonly kind: "editorPaste";
+      readonly requestId: string;
+      readonly text: string;
+    }
+  | {
+      /** Pi `setWorkingMessage`; an absent message restores the host default. */
+      readonly kind: "workingMessage";
+      readonly requestId: string;
+      readonly message?: string;
+    }
+  | {
+      /** Pi `setWorkingVisible`. */
+      readonly kind: "workingVisible";
+      readonly requestId: string;
+      readonly visible: boolean;
+    }
+  | {
+      /**
+       * Pi `setWorkingIndicator`. Absent `indicator` restores the host default;
+       * `frames: []` hides the indicator and a single frame renders statically.
+       */
+      readonly kind: "workingIndicator";
+      readonly requestId: string;
+      readonly indicator?: HostUiWorkingIndicator;
+    }
+  | {
+      /** Pi `setHiddenThinkingLabel`; an absent label restores the host default. */
+      readonly kind: "hiddenThinkingLabel";
+      readonly requestId: string;
+      readonly label?: string;
+    }
+  | {
+      /** Pi `setToolsExpanded`. */
+      readonly kind: "toolsExpanded";
+      readonly requestId: string;
+      readonly expanded: boolean;
+    }
+  | {
+      /**
+       * The runtime settled a dialog without a host response (AbortSignal, timeout,
+       * runtime disappearance). `requestId` is the closed dialog's own request id.
+       */
+      readonly kind: "dialogClosed";
+      readonly requestId: string;
+    }
+  | {
       readonly kind: "reset";
       readonly requestId: string;
     };
+
+export interface HostUiWorkingIndicator {
+  readonly frames: readonly string[];
+  readonly intervalMs?: number;
+}
 
 export interface HostUiRequestEvent extends SessionEventBase {
   readonly type: "hostUiRequest";
