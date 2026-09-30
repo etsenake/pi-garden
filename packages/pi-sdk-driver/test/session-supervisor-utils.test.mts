@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  desktopToolProgressFromAssistantMessage,
+  desktopToolProgressFromExecutionUpdate,
   determineRunOutcome,
   messageText,
   shouldPersistSnapshotForAgentEvent,
@@ -85,4 +87,46 @@ await test("the persist policy exempts streaming partials and keeps every discre
   ]) {
     assert.equal(shouldPersistSnapshotForAgentEvent(eventType), true, eventType);
   }
+});
+
+await test("desktop tool progress keeps Pi's argument and partial-result phases", () => {
+  const message = {
+    role: "assistant",
+    content: [{ type: "toolCall", id: "call-1", name: "garden_probe", arguments: { city: "pa" } }],
+  };
+  assert.deepEqual(
+    desktopToolProgressFromAssistantMessage(message, { type: "toolcall_delta", contentIndex: 0 }),
+    {
+      callId: "call-1",
+      toolName: "garden_probe",
+      input: { city: "pa" },
+      argumentsComplete: false,
+      executionStarted: false,
+    },
+  );
+  assert.equal(
+    desktopToolProgressFromAssistantMessage(message, { type: "toolcall_end", contentIndex: 0 })
+      ?.argumentsComplete,
+    true,
+  );
+  assert.deepEqual(
+    desktopToolProgressFromExecutionUpdate({
+      toolCallId: "call-1",
+      toolName: "garden_probe",
+      args: { city: "paris" },
+      partialResult: {
+        content: [{ type: "text", text: "Par" }],
+        details: { step: 1 },
+        isError: false,
+      },
+    }),
+    {
+      callId: "call-1",
+      toolName: "garden_probe",
+      input: { city: "paris" },
+      argumentsComplete: true,
+      executionStarted: true,
+      partial: { content: [{ type: "text", text: "Par" }], details: { step: 1 }, isError: false },
+    },
+  );
 });

@@ -16,6 +16,7 @@ import type {
   ExtensionViewConnection,
   ExtensionViewMessage,
   ExtensionViewCatalogChange,
+  ExtensionOverlayChange,
 } from "../contracts/extension-views";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { PRELOAD_DEV_RELOAD_MARKER } from "./dev-reload-preload-probe";
@@ -134,6 +135,10 @@ contextBridge.exposeInMainWorld("piApp", {
     subscribeIpc(desktopIpc.extensionViewMessage, listener),
   onExtensionViewCatalogChanged: (listener: (event: ExtensionViewCatalogChange) => void) =>
     subscribeIpc(desktopIpc.extensionViewCatalogChanged, listener),
+  onExtensionOverlayChanged: (listener: (event: ExtensionOverlayChange) => void) =>
+    subscribeIpc(desktopIpc.extensionOverlayChanged, listener),
+  dismissExtensionOverlay: () =>
+    ipcRenderer.invoke(desktopIpc.dismissExtensionOverlay) as Promise<void>,
   listSurfaceContributions: (target: SessionRef) =>
     ipcRenderer.invoke(desktopIpc.listSurfaceContributions, target) as Promise<
       readonly SurfaceContributionPresentation[]

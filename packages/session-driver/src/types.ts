@@ -209,6 +209,14 @@ export interface ToolUpdatedEvent extends SessionEventBase {
   readonly callId: string;
   readonly text?: string;
   readonly progress?: number;
+  readonly toolName?: string;
+  readonly input?: unknown;
+  /** False while Pi is still streaming tool-call arguments. */
+  readonly argumentsComplete?: boolean;
+  /** False until Pi starts executing the tool. */
+  readonly executionStarted?: boolean;
+  /** Structured or textual partial result from Pi's tool update. */
+  readonly partial?: unknown;
 }
 
 export interface ToolFinishedEvent extends SessionEventBase {

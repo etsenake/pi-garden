@@ -34,6 +34,12 @@ export interface TimelineToolCall {
   readonly createdAt: string;
   readonly input?: unknown;
   readonly output?: unknown;
+  /** False while arguments are still streaming. Absent means the host has not been told. */
+  readonly argumentsComplete?: boolean;
+  /** False before Pi starts the tool. Absent on rows created before this field existed. */
+  readonly executionStarted?: boolean;
+  /** Last streaming partial result, when Pi published one. */
+  readonly partial?: unknown;
 }
 
 export interface TimelineSummary {

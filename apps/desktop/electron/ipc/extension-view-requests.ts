@@ -1,4 +1,5 @@
 import { parseDesktopHostAction } from "@pi-garden/extension-ui/browser";
+import { isDesktopRichSurface } from "../../contracts/extension-views";
 import { desktopIpc } from "../../contracts/ipc";
 import type { DesktopExtensionViewOwner } from "../extensions/extension-view-owner";
 import type { WindowOwner } from "../windows/window-owner";
@@ -7,10 +8,14 @@ import { expectNonEmptyString, expectRecord, expectSessionTarget } from "./reque
 
 function decodeOpenRequest(raw: unknown) {
   const input = expectRecord(raw, "extension view request");
+  if (input.surface !== undefined && !isDesktopRichSurface(input.surface)) {
+    throw new Error("Unknown rich surface");
+  }
   return {
     target: expectSessionTarget(input.target),
     extensionId: expectNonEmptyString(input.extensionId, "extensionId"),
     viewId: expectNonEmptyString(input.viewId, "viewId"),
+    ...(isDesktopRichSurface(input.surface) ? { surface: input.surface } : {}),
   };
 }
 
@@ -68,6 +73,7 @@ export function registerExtensionViewRequests(
           target,
           extensionId: input.extensionId,
           viewId: input.viewId,
+          ...(input.surface ? { surface: input.surface } : {}),
           senderId: contents.id,
         },
         (message) => {
@@ -109,14 +115,25 @@ export function registerExtensionViewRequests(
       return;
     }
     pending.add(requestId);
-    let result: { type: "host-action-result"; requestId: string; ok: boolean; error?: string };
+    let result: {
+      type: "host-action-result";
+      requestId: string;
+      ok: boolean;
+      error?: string;
+      result?: unknown;
+    };
     try {
-      await owner.invokeHostAction(
+      const value = await owner.invokeHostAction(
         connectionId,
         contents.id,
         parseDesktopHostAction(message.action),
       );
-      result = { type: "host-action-result", requestId, ok: true };
+      result = {
+        type: "host-action-result",
+        requestId,
+        ok: true,
+        ...(value !== undefined ? { result: value } : {}),
+      };
     } catch (error) {
       result = {
         type: "host-action-result",
@@ -135,6 +152,13 @@ export function registerExtensionViewRequests(
     (raw) => expectNonEmptyString(raw, "connectionId"),
     (connectionId, request) => {
       owner.closeConnection(connectionId, track(request.contents).id);
+    },
+  );
+  handle(
+    desktopIpc.dismissExtensionOverlay,
+    () => undefined,
+    (_value, request) => {
+      owner.dismissOverlay(track(request.contents).id);
     },
   );
 }

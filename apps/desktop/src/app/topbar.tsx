@@ -11,6 +11,7 @@ interface TopbarProps {
   readonly sessionTitle?: string;
   readonly headerBadges?: readonly SurfaceContributionPresentation[];
   readonly statusContributions?: readonly SurfaceContributionPresentation[];
+  readonly richHeader?: ReactNode;
   readonly onInvokeExtensionAction?: (actionId: string) => void;
   readonly children?: ReactNode;
   readonly rootWorkspace: WorkspaceRecord | undefined;
@@ -27,6 +28,7 @@ export function Topbar({
   sessionTitle,
   headerBadges = [],
   statusContributions = [],
+  richHeader,
   onInvokeExtensionAction,
   children,
   rootWorkspace,
@@ -65,6 +67,7 @@ export function Topbar({
               {sessionTitle}
             </h1>
             <HeaderBadges badges={headerBadges} onInvokeAction={onInvokeExtensionAction} />
+            {richHeader}
           </>
         ) : activeView === "threads" && checkoutLabel ? (
           <>

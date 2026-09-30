@@ -55,6 +55,33 @@ handler. The handler stays in the extension process. The same id is what a
 button, the command palette, and the shortcut invoke. Pi `registerCommand` and
 `registerShortcut` stay the command and shortcut APIs; Pi Garden discovers them.
 
+## Rich surfaces
+
+`registerRichSurface` is the generalized declaration. `registerDesktopView` remains
+the workbench compatibility wrapper and still emits the original desktop-view
+events. A rich declaration names a stable `id`, a placement, `source`, a prebuilt
+browser `frontend`, and a `backend` facet factory. Additive placements take an
+optional integer `order` (omitted means `0`). Lower orders render first. Equal
+orders use the extension id, then the surface id. Placement is a closed set:
+
+| Placement                                                                                | Rule                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app-header`, `app-footer`                                                               | Singleton. The lowest extension id, then id, mounts. The host shows the other owners as a conflict.                                                                        |
+| `sidebar`, `thread-header`, `composer-before`, `composer-after`, `settings`, `workbench` | Additive, in deterministic order.                                                                                                                                          |
+| `overlay`                                                                                | Registered, not auto-mounted. `host.actions.presentOverlay(id)` asks the host to open it. The overlay mount calls `host.actions.settle(value)` or `host.actions.cancel()`. |
+| `tool`                                                                                   | Use `registerDesktopToolRenderer`. One renderer owns one Pi tool name. A second claim is a conflict and the built-in tool row stays.                                       |
+
+The browser module still exports `mount(root, host)` and runs in the sandboxed
+frame. It does not receive Node, Electron, or the parent preload. `host.tool` and
+`host.subscribeTool` carry tool presentation state for a tool renderer.
+`host.subscribeTheme` reports the same live theme snapshot the host already
+pushes into the frame. Closing a surface drops the frame. It does not delete
+extension state or cancel accepted backend work.
+
+These surfaces are the Pi Garden targets for a later adaptation of terminal
+`setWidget` component factories, `setHeader`, `setFooter`, and `custom()`. Those
+factories are not executed in the browser.
+
 `registerDesktopView` returns an object with `available` and `dispose()`. Terminal
 Pi reports `available === false`. Availability acknowledges discovery; the desktop
 validates the loaded extension source and browser assets before activating the

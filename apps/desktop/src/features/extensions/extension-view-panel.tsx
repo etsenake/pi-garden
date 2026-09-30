@@ -6,6 +6,9 @@ import type {
   ExtensionViewConnection,
   ExtensionViewMessage,
 } from "../../../contracts/extension-views";
+import type { DesktopToolPresentation } from "@pi-garden/extension-ui/browser";
+import { themeSnapshot } from "../../../contracts/theme-catalog";
+import type { ActiveTheme } from "../../ui/active-theme";
 import { RefreshIcon } from "../../ui/icons";
 
 export interface ExtensionViewTheme {
@@ -30,6 +33,24 @@ export interface ExtensionViewTheme {
   };
 }
 
+export function toExtensionViewTheme(activeTheme: ActiveTheme): ExtensionViewTheme {
+  return {
+    mode: activeTheme.variant,
+    background: activeTheme.tokens["--main"] ?? "",
+    foreground: activeTheme.tokens["--text"] ?? "",
+    accent: activeTheme.tokens["--accent"] ?? "",
+    snapshot: themeSnapshot({
+      id: activeTheme.id,
+      name: activeTheme.name,
+      description: "",
+      variant: activeTheme.variant,
+      tokens: activeTheme.tokens,
+      syntaxTheme: activeTheme.syntaxTheme,
+      seed: activeTheme.seed,
+    }),
+  };
+}
+
 type ViewState =
   | { readonly kind: "opening" }
   | { readonly kind: "mounting" | "ready"; readonly connection: ExtensionViewConnection }
@@ -45,6 +66,9 @@ export function ExtensionViewPanel({
   theme,
   onBeforePrepareTaskDraft,
   onPrepareTaskDraftPendingChange,
+  variant = "panel",
+  toolState = null,
+  onUnavailable,
 }: {
   readonly api: PiDesktopApi;
   readonly target: SessionRef;
@@ -52,6 +76,11 @@ export function ExtensionViewPanel({
   readonly theme: ExtensionViewTheme;
   readonly onBeforePrepareTaskDraft: () => Promise<void>;
   readonly onPrepareTaskDraftPendingChange: (pending: boolean, requestKey: string) => void;
+  /** Workbench keeps the host title and reload control. Slots and overlays do not. */
+  readonly variant?: "panel" | "slot" | "overlay";
+  readonly toolState?: DesktopToolPresentation | null;
+  /** Custom tool rows use this to restore the built-in presentation. */
+  readonly onUnavailable?: (message: string) => void;
 }) {
   const [state, setState] = useState<ViewState>({ kind: "opening" });
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -60,6 +89,10 @@ export function ExtensionViewPanel({
   const portRef = useRef<MessagePort | null>(null);
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const toolStateRef = useRef(toolState);
+  toolStateRef.current = toolState;
+  const onUnavailableRef = useRef(onUnavailable);
+  onUnavailableRef.current = onUnavailable;
   const beforePrepareTaskDraftRef = useRef(onBeforePrepareTaskDraft);
   beforePrepareTaskDraftRef.current = onBeforePrepareTaskDraft;
   const prepareTaskDraftPendingChangeRef = useRef(onPrepareTaskDraftPendingChange);
@@ -69,6 +102,7 @@ export function ExtensionViewPanel({
     target.sessionId,
     view.extensionId,
     view.id,
+    view.surface,
     view.generation,
     view.state,
     reloadNonce,
@@ -127,6 +161,7 @@ export function ExtensionViewPanel({
     };
     const fail = (message: string) => {
       if (disposed) return;
+      onUnavailableRef.current?.(message);
       setState({ kind: "failed", message });
       dispose();
     };
@@ -215,6 +250,7 @@ export function ExtensionViewPanel({
           type: "pi-garden:extension-connect",
           connectionId: opened.connectionId,
           theme: themeRef.current,
+          tool: toolStateRef.current,
         },
         "*",
         [channel.port2],
@@ -240,6 +276,7 @@ export function ExtensionViewPanel({
         target: { workspaceId: target.workspaceId, sessionId: target.sessionId },
         extensionId: view.extensionId,
         viewId: view.id,
+        ...(view.surface ? { surface: view.surface } : {}),
       })
       .then(
         (opened) => {
@@ -273,6 +310,7 @@ export function ExtensionViewPanel({
     view.extensionId,
     view.generation,
     view.id,
+    view.surface,
     view.state,
     view.error,
   ]);
@@ -281,25 +319,33 @@ export function ExtensionViewPanel({
     portRef.current?.postMessage({ type: "pi-garden:theme-changed", theme });
   }, [theme]);
 
+  useEffect(() => {
+    if (!toolState) return;
+    portRef.current?.postMessage({ type: "pi-garden:tool-state", tool: toolState });
+  }, [toolState]);
+
   const connection = state.kind === "mounting" || state.kind === "ready" ? state.connection : null;
   return (
     <section
-      className="extension-view-panel"
+      className={`extension-view-panel${variant === "panel" ? "" : " extension-view-panel--slot"}`}
       aria-label={view.title}
       data-testid="extension-view-panel"
       data-state={state.kind}
+      data-surface={view.surface ?? "workbench"}
     >
-      <header className="extension-view-panel__header">
-        <span>{view.title}</span>
-        <button
-          className="button"
-          type="button"
-          onClick={() => setReloadNonce((value) => value + 1)}
-        >
-          <RefreshIcon />
-          Reload view
-        </button>
-      </header>
+      {variant === "panel" ? (
+        <header className="extension-view-panel__header">
+          <span>{view.title}</span>
+          <button
+            className="button"
+            type="button"
+            onClick={() => setReloadNonce((value) => value + 1)}
+          >
+            <RefreshIcon />
+            Reload view
+          </button>
+        </header>
+      ) : null}
       {state.kind === "failed" ? (
         <div className="extension-view-panel__status" role="status">
           <h3>Couldn’t open this view</h3>
@@ -317,7 +363,9 @@ export function ExtensionViewPanel({
         {connection ? (
           <iframe
             className="extension-view-panel__frame"
-            data-testid="extension-view-frame"
+            data-testid={variant === "panel" ? "extension-view-frame" : "rich-surface-frame"}
+            data-surface={view.surface ?? "workbench"}
+            data-surface-id={view.id}
             key={connection.connectionId}
             title={view.title}
             ref={iframeRef}

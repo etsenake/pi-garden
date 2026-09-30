@@ -3,6 +3,7 @@ import {
   type Dispatch,
   type DragEvent,
   type KeyboardEvent,
+  type ReactNode,
   type RefObject,
   type SetStateAction,
 } from "react";
@@ -91,6 +92,8 @@ interface ComposerPanelProps {
   readonly annotations: TranscriptAnnotations;
   readonly composerBefore?: readonly SurfaceContributionPresentation[];
   readonly composerAfter?: readonly SurfaceContributionPresentation[];
+  readonly richBefore?: ReactNode;
+  readonly richAfter?: ReactNode;
   readonly onInvokeExtensionAction?: (actionId: string) => void;
 }
 
@@ -145,6 +148,8 @@ export function ComposerPanel({
   annotations,
   composerBefore = [],
   composerAfter = [],
+  richBefore,
+  richAfter,
   onInvokeExtensionAction,
 }: ComposerPanelProps) {
   const hasComposerInput =
@@ -157,6 +162,7 @@ export function ComposerPanel({
         contributions={composerBefore}
         onInvokeAction={onInvokeExtensionAction}
       />
+      {richBefore}
       <div className="conversation conversation--composer" inert={preparingTaskDraft}>
         <ComposerSurface
           lastError={lastError}
@@ -249,6 +255,7 @@ export function ComposerPanel({
           }
         />
       </div>
+      {richAfter}
       <ComposerAfterContributions
         contributions={composerAfter}
         onInvokeAction={onInvokeExtensionAction}

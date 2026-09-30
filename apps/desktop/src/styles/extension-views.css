@@ -62,6 +62,82 @@
   background: var(--main);
 }
 
+.extension-view-panel--slot {
+  flex: none;
+  min-height: 36px;
+}
+
+.rich-surface-slot,
+.rich-surface-stack {
+  min-width: 0;
+}
+
+.rich-surface-conflict {
+  margin: 0;
+  padding: 4px 8px;
+  color: var(--warning, var(--muted));
+  font-size: 11px;
+}
+
+.rich-surface-slot[data-surface="app-header"] .extension-view-panel__frame,
+.rich-surface-slot[data-surface="app-footer"] .extension-view-panel__frame {
+  height: 36px;
+}
+
+.rich-surface-slot[data-surface="sidebar"] .extension-view-panel__frame,
+.rich-surface-slot[data-surface="thread-header"] .extension-view-panel__frame,
+.rich-surface-slot[data-surface="composer-before"] .extension-view-panel__frame,
+.rich-surface-slot[data-surface="composer-after"] .extension-view-panel__frame {
+  height: 72px;
+}
+
+.rich-surface-slot[data-surface="settings"] .extension-view-panel__frame {
+  height: 220px;
+}
+
+.rich-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--main) 28%, transparent);
+}
+
+.rich-overlay-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 48px));
+  max-height: min(640px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--main);
+  color: var(--text);
+}
+
+.rich-overlay-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rich-overlay-dialog__header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.rich-overlay-dialog .extension-view-panel__frame {
+  height: 280px;
+}
+
+.timeline-tool__custom .extension-view-panel__frame {
+  height: 140px;
+}
+
 .workbench__extension-heading {
   margin: 16px 0 4px;
   color: var(--muted);

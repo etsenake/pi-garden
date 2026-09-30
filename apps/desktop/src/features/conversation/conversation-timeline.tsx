@@ -15,6 +15,7 @@ import type { AnnotationMarker, OpenAnnotation } from "./annotations/annotation-
 import { useAnnotationSelection } from "./annotations/annotation-selection";
 import type { TranscriptAnnotations } from "./annotations/use-transcript-annotations";
 import { ThreadSearchBar } from "./thread-search";
+import type { RichToolHost } from "../extensions/rich-surface-slots";
 import {
   DEFAULT_TIMELINE_EXTENSION_UI,
   TimelineItem,
@@ -51,6 +52,7 @@ interface ConversationTimelineProps {
   readonly platform: NodeJS.Platform;
   /** Pi extension UI state for this session; Pi's defaults when absent. */
   readonly extensionUi?: TimelineExtensionUi;
+  readonly richTools?: RichToolHost;
 }
 const NO_MARKERS: readonly AnnotationMarker[] = [];
 export function ConversationTimeline({
@@ -69,6 +71,7 @@ export function ConversationTimeline({
   annotations,
   platform,
   extensionUi = DEFAULT_TIMELINE_EXTENSION_UI,
+  richTools,
 }: ConversationTimelineProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const annotationSelection = useAnnotationSelection({
@@ -174,6 +177,7 @@ export function ConversationTimeline({
                   generation={viewport.layoutGeneration}
                   toggledToolCallIds={toggledToolCallIds}
                   extensionUi={extensionUi}
+                  richTools={richTools}
                   onToggleToolCall={toggleToolCall}
                   onViewFileInDiff={onViewFileInDiff}
                   onOpenTurnChange={onOpenTurnChange}
@@ -282,6 +286,7 @@ interface MeasuredTimelineItemProps {
   readonly generation: number;
   readonly toggledToolCallIds: ReadonlySet<string>;
   readonly extensionUi: TimelineExtensionUi;
+  readonly richTools?: RichToolHost;
   readonly onToggleToolCall: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onOpenTurnChange?: OpenTurnChange;
@@ -302,6 +307,7 @@ function MeasuredTimelineItemBase({
   generation,
   toggledToolCallIds,
   extensionUi,
+  richTools,
   onToggleToolCall,
   onViewFileInDiff,
   onOpenTurnChange,
@@ -348,6 +354,7 @@ function MeasuredTimelineItemBase({
         item={item}
         toggledToolCallIds={toggledToolCallIds}
         extensionUi={extensionUi}
+        richTools={richTools}
         onToggleToolCall={onToggleToolCall}
         onViewFileInDiff={onViewFileInDiff}
         onOpenTurnChange={onOpenTurnChange}
@@ -394,7 +401,11 @@ function isSameDisplayItem(a: DisplayTimelineItem, b: DisplayTimelineItem): bool
       a.toolName === b.toolName &&
       a.label === b.label &&
       a.detail === b.detail &&
-      a.metadata === b.metadata
+      a.metadata === b.metadata &&
+      a.argumentsComplete === b.argumentsComplete &&
+      a.executionStarted === b.executionStarted &&
+      a.partial === b.partial &&
+      a.output === b.output
     );
   }
   if (a.kind === "activity" && b.kind === "activity") {
@@ -431,6 +442,7 @@ function areMeasuredTimelineItemPropsEqual(
     prev.onHeightChange === next.onHeightChange &&
     prev.toggledToolCallIds === next.toggledToolCallIds &&
     isSameTimelineExtensionUi(prev.extensionUi, next.extensionUi) &&
+    prev.richTools === next.richTools &&
     prev.onToggleToolCall === next.onToggleToolCall &&
     prev.onViewFileInDiff === next.onViewFileInDiff &&
     prev.onOpenTurnChange === next.onOpenTurnChange &&

@@ -95,6 +95,8 @@ import {
   createWorkspaceRef,
   deriveSessionConfig,
   deriveWorkspaceTitle,
+  desktopToolProgressFromAssistantMessage,
+  desktopToolProgressFromExecutionUpdate,
   determineRunOutcome,
   displayMessagesFromSession,
   extractPreview,
@@ -2397,6 +2399,23 @@ export class SessionSupervisor {
         return [sessionUpdatedEvent(record)];
       case "message_update":
         this.updatePreviewFromMessage(record, event.message);
+        if (event.message.role === "assistant") {
+          const progress = desktopToolProgressFromAssistantMessage(
+            event.message,
+            event.assistantMessageEvent,
+          );
+          if (progress) {
+            return toDriverEvents(
+              {
+                type: "toolUpdated" as const,
+                sessionRef: record.ref,
+                timestamp,
+                ...progress,
+              },
+              record,
+            );
+          }
+        }
         if (
           event.message.role === "assistant" &&
           event.assistantMessageEvent.type === "text_delta"
@@ -2431,9 +2450,7 @@ export class SessionSupervisor {
             type: "toolUpdated" as const,
             sessionRef: record.ref,
             timestamp,
-            callId: event.toolCallId,
-            ...(typeof event.partialResult === "string" ? { text: event.partialResult } : {}),
-            ...(typeof event.partialResult === "number" ? { progress: event.partialResult } : {}),
+            ...desktopToolProgressFromExecutionUpdate(event),
           },
           record,
         );

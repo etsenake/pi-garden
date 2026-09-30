@@ -9,6 +9,7 @@ import {
   net,
   protocol,
   shell,
+  webContents,
   type MenuItemConstructorOptions,
   type MessageBoxOptions,
 } from "electron";
@@ -937,6 +938,18 @@ app
           { store, windows: windowOwner, views: extensionViews },
           context,
         ),
+      onOverlay: (event) => {
+        const contents = webContents.fromId(event.senderId);
+        if (!contents || contents.isDestroyed()) return;
+        contents.send(desktopIpc.extensionOverlayChanged, {
+          phase: event.phase,
+          requestId: event.requestId,
+          target: event.target,
+          extensionId: event.extensionId,
+          viewId: event.viewId,
+          generation: event.generation,
+        });
+      },
       onDiagnostic: (target, source, message) =>
         console.error("[extension-view]", target.sessionId, source, message),
     });

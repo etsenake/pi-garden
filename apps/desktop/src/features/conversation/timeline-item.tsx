@@ -20,7 +20,10 @@ import { ImageAttachmentThumb } from "./image-attachment-thumb";
 import { MessageMarkdown } from "./message-markdown";
 import { TurnChangesCard, type OpenTurnChange } from "./turn-changes-card";
 import type { WorkspaceFileLine } from "./workspace-file-line";
+import { ExtensionViewPanel } from "../extensions/extension-view-panel";
+import type { RichToolHost } from "../extensions/rich-surface-slots";
 import { InlineDiff, extractDiffFromOutput } from "../../ui/diff-inline";
+import { desktopToolPresentation } from "./tool-presentation";
 import {
   ChevronRightIcon,
   CopyIcon,
@@ -69,6 +72,7 @@ export function TimelineItem({
   item,
   toggledToolCallIds,
   extensionUi = DEFAULT_TIMELINE_EXTENSION_UI,
+  richTools,
   onToggleToolCall,
   onViewFileInDiff,
   sourceMessageIndex,
@@ -84,6 +88,7 @@ export function TimelineItem({
   /** Tool calls the user toggled away from the session's default expansion. */
   readonly toggledToolCallIds?: ReadonlySet<string>;
   readonly extensionUi?: TimelineExtensionUi;
+  readonly richTools?: RichToolHost;
   readonly onToggleToolCall?: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly sourceMessageIndex?: number;
@@ -127,6 +132,7 @@ export function TimelineItem({
           expanded={extensionUi.toolsExpanded !== (toggledToolCallIds?.has(item.callId) ?? false)}
           onToggle={onToggleToolCall}
           onViewFileInDiff={onViewFileInDiff}
+          richTools={richTools}
         />
       );
     case "summary":
@@ -367,11 +373,84 @@ function TimelineToolCallItem({
   expanded,
   onToggle,
   onViewFileInDiff,
+  richTools,
 }: {
   readonly item: TimelineToolCall;
   readonly expanded: boolean;
   readonly onToggle?: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
+  readonly richTools?: RichToolHost;
+}) {
+  const candidates =
+    richTools?.renderers.filter(
+      (view) => view.surface === "tool" && view.toolName === item.toolName,
+    ) ?? [];
+  const ready = candidates.filter((view) => view.state === "ready");
+  const conflict = candidates.some((view) => view.state === "conflict") || ready.length > 1;
+  const renderer = !conflict && ready.length === 1 ? ready[0] : undefined;
+  const rendererKey = renderer ? `${renderer.extensionId}:${renderer.generation}` : "";
+  const [failedRendererKey, setFailedRendererKey] = useState<string | null>(null);
+  const customFailed = failedRendererKey === rendererKey && rendererKey !== "";
+  if (renderer && richTools && !customFailed) {
+    return (
+      <article
+        className={`timeline-tool timeline-tool--${item.status} timeline-tool__custom`}
+        data-testid="timeline-tool"
+        data-tool-name={item.toolName}
+        data-tool-renderer="custom"
+      >
+        <div className="timeline-tool__header-row">
+          <button
+            className="timeline-tool__header"
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => onToggle?.(item.callId)}
+          >
+            <span
+              className={`timeline-tool__chevron ${expanded ? "timeline-tool__chevron--expanded" : ""}`}
+            >
+              <ChevronRightIcon />
+            </span>
+            <span className="timeline-tool__label">{item.label}</span>
+          </button>
+        </div>
+        <ExtensionViewPanel
+          api={richTools.api}
+          target={richTools.target}
+          view={renderer}
+          theme={richTools.theme}
+          variant="slot"
+          toolState={desktopToolPresentation(item, expanded)}
+          onBeforePrepareTaskDraft={richTools.onBeforePrepareTaskDraft}
+          onPrepareTaskDraftPendingChange={richTools.onPrepareTaskDraftPendingChange}
+          onUnavailable={() => setFailedRendererKey(rendererKey)}
+        />
+      </article>
+    );
+  }
+  return (
+    <BuiltinToolCall
+      item={item}
+      expanded={expanded}
+      onToggle={onToggle}
+      onViewFileInDiff={onViewFileInDiff}
+      rendererState={conflict ? "conflict" : "builtin"}
+    />
+  );
+}
+
+function BuiltinToolCall({
+  item,
+  expanded,
+  onToggle,
+  onViewFileInDiff,
+  rendererState,
+}: {
+  readonly item: TimelineToolCall;
+  readonly expanded: boolean;
+  readonly onToggle?: (callId: string) => void;
+  readonly onViewFileInDiff?: (path: string) => void;
+  readonly rendererState: "builtin" | "conflict";
 }) {
   const hasContent = item.input !== undefined || item.output !== undefined;
   const diffText = isWriteTool(item.toolName) ? extractDiffFromOutput(item.output) : undefined;
@@ -391,7 +470,12 @@ function TimelineToolCallItem({
   };
 
   return (
-    <article className={`timeline-tool timeline-tool--${item.status}`}>
+    <article
+      className={`timeline-tool timeline-tool--${item.status}`}
+      data-testid="timeline-tool"
+      data-tool-name={item.toolName}
+      data-tool-renderer={rendererState}
+    >
       <div className="timeline-tool__header-row">
         <span className="timeline-tool__glyph" aria-hidden="true">
           {toolGlyph(item.toolName)}

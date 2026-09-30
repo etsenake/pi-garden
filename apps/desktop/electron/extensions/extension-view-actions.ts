@@ -18,7 +18,7 @@ export async function performExtensionViewHostAction(
     readonly views: DesktopExtensionViewOwner;
   },
   context: DesktopExtensionConnectionContext & { readonly action: DesktopHostAction },
-): Promise<void> {
+): Promise<unknown> {
   const contents = webContents.fromId(context.senderId);
   if (!contents || contents.isDestroyed()) throw new Error("The requesting window is closed");
   const window = owners.windows.windowForSender(contents);
@@ -42,6 +42,17 @@ export async function performExtensionViewHostAction(
     return filePath;
   };
   const action = context.action;
+  if (action.type === "presentOverlay") {
+    return owners.views.presentOverlay(context, action.id);
+  }
+  if (action.type === "settleOverlay") {
+    owners.views.settleOverlay(context, action.value);
+    return;
+  }
+  if (action.type === "cancelOverlay") {
+    owners.views.cancelOverlay(context);
+    return;
+  }
   if (action.type === "openFile") {
     const filePath = await existingFile(action.path);
     requireCurrentTask();

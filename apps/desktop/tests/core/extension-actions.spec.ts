@@ -13,8 +13,8 @@ import {
   seedAgentDir,
   selectSession,
   writeProjectExtension,
+  desktopShortcut,
 } from "../helpers/electron-app";
-import { desktopShortcut } from "../helpers/native-input";
 
 const require = createRequire(__filename);
 const helperPath = require.resolve("@pi-garden/extension-ui");

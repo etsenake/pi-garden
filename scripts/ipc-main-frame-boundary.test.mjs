@@ -34,6 +34,7 @@ const mainFrameChannels = [
   "openExtensionView",
   "sendExtensionViewMessage",
   "closeExtensionView",
+  "dismissExtensionOverlay",
   "getTaskWorkbenchTemplate",
   "saveTaskWorkbenchTemplate",
   "persistComposerDraft",

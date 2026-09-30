@@ -91,6 +91,31 @@ export type {
   SurfaceContributionSurface,
   SurfaceContributionTone,
 } from "./surface-contributions.js";
+export {
+  ADDITIVE_RICH_SURFACES,
+  DESKTOP_TOOL_NAME_PATTERN,
+  RICH_SURFACE_DISCOVER,
+  RICH_SURFACE_ID_PATTERN,
+  RICH_SURFACE_ORDER_LIMIT,
+  RICH_SURFACE_REGISTER,
+  RICH_SURFACE_UNREGISTER,
+  RICH_SURFACES,
+  SINGLETON_RICH_SURFACES,
+  compareRichSurfacePlacement,
+  compareSingletonOwners,
+  isRichSurfaceKind,
+  isSingletonRichSurface,
+  registerDesktopToolRenderer,
+  registerRichSurface,
+  validateRichSurfaceDeclaration,
+} from "./rich-surfaces.js";
+export type {
+  DesktopToolRendererDeclaration,
+  RichSurfaceDeclaration,
+  RichSurfaceKind,
+  RichSurfaceRegistrationEvent,
+  SingletonRichSurface,
+} from "./rich-surfaces.js";
 
 /** Registers and replays the same declaration without re-running its backend factory. */
 export function registerDesktopView(

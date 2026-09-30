@@ -22,6 +22,11 @@ window.addEventListener('message', async (event) => {
   const root = document.getElementById('root');
   const pending = new Map();
   const theme = event.data.theme;
+  const themeListeners = new Set();
+  const toolListeners = new Set();
+  let toolState = event.data.tool ?? null;
+  const notifyTheme = () => { for (const listener of themeListeners) listener(theme); };
+  const notifyTool = () => { if (toolState) for (const listener of toolListeners) listener(toolState); };
   const applyTheme = (next) => {
     Object.assign(theme, next);
     if (next.snapshot) theme.snapshot = next.snapshot;
@@ -34,6 +39,7 @@ window.addEventListener('message', async (event) => {
     if (tokens) {
       for (const name of Object.keys(tokens)) document.documentElement.style.setProperty(name, tokens[name]);
     }
+    notifyTheme();
   };
   let sequence = 0;
   let dispose;
@@ -59,11 +65,12 @@ window.addEventListener('message', async (event) => {
   }, {once:true});
   port.onmessage = ({data}) => {
     if (data?.type === 'pi-garden:theme-changed') { applyTheme(data.theme); return; }
+    if (data?.type === 'pi-garden:tool-state') { toolState = data.tool ?? null; notifyTool(); return; }
     if (data?.type === 'host-action-result') {
       const request = pending.get(data.requestId);
       if (!request) return;
       pending.delete(data.requestId);
-      if (data.ok === true) request.resolve();
+      if (data.ok === true) request.resolve(data.result);
       else request.reject(new Error(typeof data.error === 'string' ? data.error : 'The action could not be completed'));
     } else connection.receive(data);
   };
@@ -72,9 +79,12 @@ window.addEventListener('message', async (event) => {
   applyTheme(theme);
   try {
     if (typeof mount !== 'function') throw new Error('The extension frontend must export mount(root, host).');
-    dispose = await mount(root,{services:connection.services,signal:connection.signal,theme,actions:{
+    dispose = await mount(root,{services:connection.services,signal:connection.signal,theme,tool:toolState,subscribeTool(listener){toolListeners.add(listener); if (toolState) listener(toolState); return () => toolListeners.delete(listener);},subscribeTheme(listener){themeListeners.add(listener); listener(theme); return () => themeListeners.delete(listener);},actions:{
       openFile: target => action({type:'openFile',...target}),
-      prepareTaskDraft: draft => action({type:'prepareTaskDraft',...draft})
+      prepareTaskDraft: draft => action({type:'prepareTaskDraft',...draft}),
+      presentOverlay: id => action({type:'presentOverlay',id}),
+      settle: value => action(value === undefined ? {type:'settleOverlay'} : {type:'settleOverlay',value}),
+      cancel: () => action({type:'cancelOverlay'})
     }});
     if (typeof dispose !== 'function') throw new Error('The extension mount must return a cleanup function.');
     if (connection.signal.aborted) await dispose();

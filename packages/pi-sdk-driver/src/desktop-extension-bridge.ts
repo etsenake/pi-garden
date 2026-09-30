@@ -13,10 +13,14 @@ import {
   EXTENSION_ACTION_REGISTER,
   EXTENSION_ACTION_UNREGISTER,
   STALE_EXTENSION_ACTION_MESSAGE,
+  RICH_SURFACE_DISCOVER,
+  RICH_SURFACE_REGISTER,
+  RICH_SURFACE_UNREGISTER,
   SURFACE_CONTRIBUTION_DISCOVER,
   SURFACE_CONTRIBUTION_REGISTER,
   SURFACE_CONTRIBUTION_UNREGISTER,
   canonicalSurfaceContribution,
+  isRichSurfaceKind,
   compareSurfaceContributions,
   surfaceContributionKey,
   type DesktopViewDeclaration,
@@ -24,6 +28,8 @@ import {
   type ExtensionActionHandler,
   type ExtensionActionRecord,
   type ExtensionActionRegistrationEvent,
+  type RichSurfaceDeclaration,
+  type RichSurfaceRegistrationEvent,
   type SurfaceContribution,
   type SurfaceContributionRegistrationEvent,
 } from "@pi-garden/extension-ui";
@@ -38,6 +44,8 @@ export interface PiDesktopExtensionRuntime {
   readonly generation: string;
   readonly extensions: readonly { readonly resolvedPath: string }[];
   readonly declarations: readonly DesktopViewDeclaration[];
+  /** Rich surfaces other than compatibility workbench views from `registerDesktopView`. */
+  readonly richSurfaces: readonly RichSurfaceDeclaration[];
   /** Data-only host contributions from the extensions loaded in this runtime. */
   readonly contributions: readonly SurfaceContribution[];
   /**
@@ -85,6 +93,7 @@ export function createDesktopExtensionBridge(options: {
 }): DesktopExtensionActionBridge {
   const eventBus = createEventBus();
   const declarations = new Set<DesktopViewDeclaration>();
+  const richSurfaces = new Set<RichSurfaceDeclaration>();
   const contributions = new Map<string, SurfaceContribution>();
   const explicitActions = new Map<
     string,
@@ -116,6 +125,7 @@ export function createDesktopExtensionBridge(options: {
       ...epoch,
       extensions: loadedExtensions.map((extension) => ({ ...extension })),
       declarations: [...declarations],
+      richSurfaces: [...richSurfaces],
       contributions: [...contributions.values()].sort(compareSurfaceContributions),
       actions: options.projectActions?.(epoch.target, explicit) ?? explicit,
     };
@@ -130,6 +140,16 @@ export function createDesktopExtensionBridge(options: {
   });
   eventBus.on(DESKTOP_VIEW_UNREGISTER, (value) => {
     if (!declarations.delete(value as DesktopViewDeclaration)) return;
+    publish();
+  });
+  eventBus.on(RICH_SURFACE_REGISTER, (value) => {
+    if (!isRichSurfaceRegistration(value)) return;
+    richSurfaces.add(value.declaration);
+    value.accept?.();
+    publish();
+  });
+  eventBus.on(RICH_SURFACE_UNREGISTER, (value) => {
+    if (!richSurfaces.delete(value as RichSurfaceDeclaration)) return;
     publish();
   });
   eventBus.on(SURFACE_CONTRIBUTION_REGISTER, (value) => {
@@ -178,11 +198,13 @@ export function createDesktopExtensionBridge(options: {
       };
       // Only live Pi extension instances answer; registration does not execute their factory again.
       declarations.clear();
+      richSurfaces.clear();
       contributions.clear();
       explicitActions.clear();
       discovering = true;
       try {
         eventBus.emit(DESKTOP_VIEW_DISCOVER, {});
+        eventBus.emit(RICH_SURFACE_DISCOVER, {});
         eventBus.emit(SURFACE_CONTRIBUTION_DISCOVER, {});
         eventBus.emit(EXTENSION_ACTION_DISCOVER, {});
       } finally {
@@ -194,6 +216,7 @@ export function createDesktopExtensionBridge(options: {
       const epoch = active;
       active = undefined;
       declarations.clear();
+      richSurfaces.clear();
       contributions.clear();
       explicitActions.clear();
       if (!epoch) return;
@@ -275,6 +298,29 @@ function isActionRegistration(value: unknown): value is ExtensionActionRegistrat
 function isContributionRegistration(value: unknown): value is SurfaceContributionRegistrationEvent {
   if (typeof value !== "object" || value === null || !("contribution" in value)) return false;
   if (!canonicalSurfaceContribution(value.contribution)) return false;
+  return !("accept" in value) || value.accept === undefined || typeof value.accept === "function";
+}
+
+function isRichSurfaceRegistration(value: unknown): value is RichSurfaceRegistrationEvent {
+  if (typeof value !== "object" || value === null || !("declaration" in value)) return false;
+  const declaration = value.declaration;
+  if (typeof declaration !== "object" || declaration === null) return false;
+  const record = declaration as RichSurfaceDeclaration;
+  if (!isRichSurfaceKind(record.surface)) return false;
+  if (typeof record.id !== "string" || typeof record.source !== "string") return false;
+  if (typeof record.frontend !== "string" && !(record.frontend instanceof URL)) return false;
+  if (typeof record.backend !== "function") return false;
+  if (record.title !== undefined && typeof record.title !== "string") return false;
+  if (record.surface === "workbench" && typeof record.title !== "string") return false;
+  if (record.surface === "tool") {
+    if (typeof record.toolName !== "string" || !record.toolName) return false;
+  } else if (record.toolName !== undefined) return false;
+  if (
+    record.order !== undefined &&
+    (typeof record.order !== "number" || !Number.isSafeInteger(record.order))
+  ) {
+    return false;
+  }
   return !("accept" in value) || value.accept === undefined || typeof value.accept === "function";
 }
 

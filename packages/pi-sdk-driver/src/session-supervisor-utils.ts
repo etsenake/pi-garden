@@ -396,6 +396,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
 /** Pi shows a thinking label only for non-blank thinking blocks. */
 export function messageHasThinking(message: unknown): boolean {
   if (!isRecord(message) || !Array.isArray(message.content)) {
@@ -603,4 +607,59 @@ export function singleFlight<T>(
   });
   inFlight.set(key, promise);
   return promise;
+}
+
+export interface DesktopToolProgress {
+  readonly callId: string;
+  readonly toolName?: string;
+  readonly input?: unknown;
+  readonly argumentsComplete?: boolean;
+  readonly executionStarted?: boolean;
+  readonly text?: string;
+  readonly progress?: number;
+  readonly partial?: unknown;
+}
+
+/** Argument streaming before Pi starts the tool. `renderCall` sees this state. */
+export function desktopToolProgressFromAssistantMessage(
+  message: unknown,
+  assistantEvent: { readonly type: string; readonly contentIndex?: number },
+): DesktopToolProgress | undefined {
+  if (
+    assistantEvent.type !== "toolcall_start" &&
+    assistantEvent.type !== "toolcall_delta" &&
+    assistantEvent.type !== "toolcall_end"
+  ) {
+    return undefined;
+  }
+  if (!isRecord(message) || !isUnknownArray(message.content)) return undefined;
+  const part = message.content[assistantEvent.contentIndex ?? -1];
+  if (!isRecord(part) || part.type !== "toolCall" || typeof part.id !== "string") return undefined;
+  return {
+    callId: part.id,
+    toolName: typeof part.name === "string" ? part.name : "tool",
+    input: part.arguments,
+    argumentsComplete: assistantEvent.type === "toolcall_end",
+    executionStarted: false,
+  };
+}
+
+/** Pi `tool_execution_update`: arguments are complete and the result may still be partial. */
+export function desktopToolProgressFromExecutionUpdate(event: {
+  readonly toolCallId: string;
+  readonly toolName: string;
+  readonly args: unknown;
+  readonly partialResult: unknown;
+}): DesktopToolProgress {
+  const partial = event.partialResult;
+  return {
+    callId: event.toolCallId,
+    toolName: event.toolName,
+    input: event.args,
+    argumentsComplete: true,
+    executionStarted: true,
+    ...(typeof partial === "string" ? { text: partial } : {}),
+    ...(typeof partial === "number" && Number.isFinite(partial) ? { progress: partial } : {}),
+    ...(partial !== undefined ? { partial } : {}),
+  };
 }

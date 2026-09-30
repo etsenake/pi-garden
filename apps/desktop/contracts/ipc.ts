@@ -16,6 +16,7 @@ import type {
   ExtensionViewConnection,
   ExtensionViewMessage,
   ExtensionViewCatalogChange,
+  ExtensionOverlayChange,
 } from "./extension-views";
 import type { RuntimeSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type {
@@ -90,6 +91,8 @@ export const desktopIpc = {
   closeExtensionView: "pi-garden:close-extension-view",
   extensionViewMessage: "pi-garden:extension-view-message",
   extensionViewCatalogChanged: "pi-garden:extension-view-catalog-changed",
+  extensionOverlayChanged: "pi-garden:extension-overlay-changed",
+  dismissExtensionOverlay: "pi-garden:dismiss-extension-overlay",
   listSurfaceContributions: "pi-garden:list-surface-contributions",
   surfaceContributionsChanged: "pi-garden:surface-contributions-changed",
   listExtensionActions: "pi-garden:list-extension-actions",
@@ -853,6 +856,8 @@ export interface PiDesktopApi {
   closeExtensionView(connectionId: string): Promise<void>;
   onExtensionViewMessage(listener: (event: ExtensionViewMessage) => void): () => void;
   onExtensionViewCatalogChanged(listener: (event: ExtensionViewCatalogChange) => void): () => void;
+  onExtensionOverlayChanged(listener: (event: ExtensionOverlayChange) => void): () => void;
+  dismissExtensionOverlay(): Promise<void>;
   getTurnChanges(input: TurnChangesInput): Promise<TurnChangesResult>;
   getReview(input: GetReviewInput): Promise<ReviewResult>;
   getReviewFile(input: ReviewFileInput): Promise<ReviewFileResult>;

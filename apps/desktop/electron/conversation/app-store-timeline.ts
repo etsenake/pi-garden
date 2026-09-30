@@ -239,6 +239,8 @@ export function applyTimelineEvent(
         toolLabel(event.toolName, event.input),
         undefined,
         event.input,
+        undefined,
+        { argumentsComplete: true, executionStarted: true },
       );
       break;
     }
@@ -246,10 +248,23 @@ export function applyTimelineEvent(
       upsertToolRow(
         transcript,
         event.callId,
-        undefined,
+        event.toolName,
         "running",
-        undefined,
+        event.toolName && event.input !== undefined
+          ? toolLabel(event.toolName, event.input)
+          : undefined,
         event.text ?? progressLabel(event.progress),
+        event.input,
+        undefined,
+        {
+          ...(event.argumentsComplete !== undefined
+            ? { argumentsComplete: event.argumentsComplete }
+            : {}),
+          ...(event.executionStarted !== undefined
+            ? { executionStarted: event.executionStarted }
+            : {}),
+          ...(event.partial !== undefined ? { partial: event.partial } : {}),
+        },
       );
       break;
     case "toolFinished":
@@ -262,6 +277,7 @@ export function applyTimelineEvent(
         detailFromOutput(event.output),
         undefined,
         event.output,
+        { argumentsComplete: true, executionStarted: true },
       );
       break;
     case "runCompleted": {
@@ -335,6 +351,11 @@ function upsertToolRow(
   detail?: string,
   input?: unknown,
   output?: unknown,
+  presentation: {
+    readonly argumentsComplete?: boolean;
+    readonly executionStarted?: boolean;
+    readonly partial?: unknown;
+  } = {},
 ) {
   const index = transcript.findIndex((item) => item.kind === "tool" && item.callId === callId);
   const existing = index >= 0 ? transcript[index] : undefined;
@@ -349,6 +370,9 @@ function upsertToolRow(
       metadata: existingTool?.metadata,
       input: input ?? existingTool?.input,
       output: output ?? existingTool?.output,
+      argumentsComplete: presentation.argumentsComplete ?? existingTool?.argumentsComplete,
+      executionStarted: presentation.executionStarted ?? existingTool?.executionStarted,
+      partial: "partial" in presentation ? presentation.partial : existingTool?.partial,
     },
   );
 

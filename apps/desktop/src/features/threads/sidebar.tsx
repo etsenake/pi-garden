@@ -8,6 +8,7 @@ import {
   useState,
   type CSSProperties,
   type MutableRefObject,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -113,6 +114,7 @@ interface SidebarProps {
   readonly threadShortcutOrderRef: MutableRefObject<readonly ThreadListEntry[] | null>;
   readonly sidebarFooter?: readonly SurfaceContributionPresentation[];
   readonly sidebarSection?: readonly SurfaceContributionPresentation[];
+  readonly richSections?: ReactNode;
   readonly onInvokeExtensionAction?: (actionId: string) => void;
 }
 
@@ -162,6 +164,7 @@ export function Sidebar(props: SidebarProps) {
     threadShortcutOrderRef,
     sidebarFooter = [],
     sidebarSection = [],
+    richSections,
     onInvokeExtensionAction,
   } = props;
 
@@ -651,6 +654,7 @@ export function Sidebar(props: SidebarProps) {
         contributions={sidebarSection}
         onInvokeAction={onInvokeExtensionAction}
       />
+      {richSections}
       <SidebarFooter contributions={sidebarFooter} onInvokeAction={onInvokeExtensionAction} />
     </aside>
   );

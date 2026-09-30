@@ -12,8 +12,15 @@ import {
   EXTENSION_ACTION_UNREGISTER,
   normalizeShortcut,
   normalizeSurfaceContribution,
+  compareRichSurfacePlacement,
+  compareSingletonOwners,
   registerAction,
   registerComposerAfter,
+  registerDesktopToolRenderer,
+  registerRichSurface,
+  RICH_SURFACE_DISCOVER,
+  RICH_SURFACE_REGISTER,
+  RICH_SURFACE_UNREGISTER,
   registerComposerBefore,
   registerDesktopView,
   registerHeaderBadge,
@@ -22,6 +29,7 @@ import {
   registerStatusChrome,
   type DesktopExtensionAPI,
   type DesktopViewRegistrationEvent,
+  type RichSurfaceRegistrationEvent,
   type SurfaceContribution,
   type SurfaceContributionRegistrationEvent,
 } from "../dist/index.js";
@@ -418,4 +426,84 @@ await test("registerAction replays one handler and drops it on shutdown", () => 
   assert.deepEqual(removed, ["mark-plot"]);
   assert.equal(calls, 0);
   assert.equal(registered.length, 2);
+});
+
+await test("rich surfaces replay one declaration and tool renderers name one tool", () => {
+  const pi = createExtensionApi();
+  let factories = 0;
+  const declaration = {
+    id: "garden-header",
+    surface: "app-header" as const,
+    source: "file:///extension/index.ts",
+    frontend: new URL("file:///extension/dist/header.js"),
+    backend() {
+      factories += 1;
+      return { id: "header-backend", setup() {} };
+    },
+  };
+  const registration = registerRichSurface(pi, declaration);
+  const seen: unknown[] = [];
+  pi.events.on(RICH_SURFACE_REGISTER, (value) => {
+    const event = value as RichSurfaceRegistrationEvent;
+    seen.push(event.declaration);
+    event.accept?.();
+  });
+  pi.events.emit(RICH_SURFACE_DISCOVER, undefined);
+  pi.events.emit(RICH_SURFACE_DISCOVER, undefined);
+  assert.equal(registration.available, true);
+  assert.deepEqual(seen, [declaration, declaration]);
+  assert.equal(factories, 0);
+  const removed: unknown[] = [];
+  pi.events.on(RICH_SURFACE_UNREGISTER, (value) => removed.push(value));
+  registration.dispose();
+  assert.deepEqual(removed, [declaration]);
+
+  const tool = registerDesktopToolRenderer(pi, {
+    id: "probe",
+    toolName: "garden_probe",
+    source: declaration.source,
+    frontend: declaration.frontend,
+    backend: declaration.backend,
+  });
+  const toolDeclaration = seen.at(-1) as { surface?: string; toolName?: string } | undefined;
+  assert.equal(tool.available, true);
+  assert.equal(toolDeclaration?.surface, "tool");
+  assert.equal(toolDeclaration?.toolName, "garden_probe");
+  assert.throws(() =>
+    registerRichSurface(pi, {
+      ...declaration,
+      id: "sidebar-tool",
+      surface: "sidebar",
+      toolName: "nope",
+    }),
+  );
+  assert.throws(() =>
+    registerDesktopToolRenderer(pi, {
+      id: "missing",
+      toolName: "",
+      source: declaration.source,
+      frontend: declaration.frontend,
+      backend: declaration.backend,
+    }),
+  );
+  pi.shutdown();
+});
+
+await test("additive order and singleton winners ignore load order", () => {
+  const alpha = { order: 0, extensionId: "b", id: "alpha" };
+  const zeta = { order: 0, extensionId: "b", id: "zeta" };
+  const middle = { order: 1, extensionId: "a", id: "middle" };
+  assert.deepEqual(
+    [zeta, middle, alpha].sort(compareRichSurfacePlacement).map((item) => item.id),
+    ["alpha", "zeta", "middle"],
+  );
+  const owners = [
+    { extensionId: "ext-b", id: "header" },
+    { extensionId: "ext-a", id: "other" },
+  ];
+  assert.deepEqual(
+    [...owners].reverse().sort(compareSingletonOwners),
+    [...owners].sort(compareSingletonOwners),
+  );
+  assert.equal([...owners].sort(compareSingletonOwners)[0]?.extensionId, "ext-a");
 });

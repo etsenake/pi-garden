@@ -3,7 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Context } from "@earendil-works/chord";
-import type { DesktopViewDeclaration } from "@pi-garden/extension-ui";
+import type { DesktopViewDeclaration, RichSurfaceDeclaration } from "@pi-garden/extension-ui";
+import { RICH_SURFACES } from "@pi-garden/extension-ui";
+import { DESKTOP_RICH_SURFACES } from "../../contracts/extension-views";
 import { expect, test } from "@playwright/test";
 import { createJiti } from "jiti";
 
@@ -406,6 +408,172 @@ test("a replacement declaration can reuse the ID of a removed pending activation
   } finally {
     release();
     await initial;
+    await owner.dispose();
+    await rm(data.directory, { recursive: true, force: true });
+  }
+});
+
+test("rich surface names stay aligned with the author helper", () => {
+  expect([...DESKTOP_RICH_SURFACES]).toEqual([...RICH_SURFACES]);
+});
+
+test("singleton headers, additive order, and tool-renderer conflicts are deterministic", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  const diagnostics: string[] = [];
+  const owner = new DesktopExtensionViewOwner({
+    frameDocument: () => "",
+    onHostAction: async () => {},
+    onDiagnostic: (_target, _source, message) => diagnostics.push(message),
+  });
+  const backend =
+    (id: string): RichSurfaceDeclaration["backend"] =>
+    () =>
+      defineFacet({
+        id,
+        setup() {},
+      });
+  const header = (
+    data: Awaited<ReturnType<typeof fixture>>,
+    id: string,
+  ): RichSurfaceDeclaration => ({
+    ...data.declaration,
+    id,
+    surface: "app-header",
+    title: id,
+    backend: backend(`header.${id}`),
+  });
+  const sidebar = (
+    data: Awaited<ReturnType<typeof fixture>>,
+    id: string,
+    order: number,
+  ): RichSurfaceDeclaration => ({
+    ...data.declaration,
+    id,
+    surface: "sidebar",
+    title: id,
+    order,
+    backend: backend(`sidebar.${id}`),
+  });
+  const tool = (data: Awaited<ReturnType<typeof fixture>>, id: string): RichSurfaceDeclaration => ({
+    ...data.declaration,
+    id,
+    surface: "tool",
+    title: id,
+    toolName: "garden_probe",
+    backend: backend(`tool.${id}`),
+  });
+  try {
+    const extensions = [{ resolvedPath: first.source }, { resolvedPath: second.source }];
+    const forward = [header(first, "alpha"), header(second, "zeta")];
+    await owner.replaceRuntime({
+      target,
+      generation: "one",
+      extensions,
+      declarations: [],
+      richSurfaces: forward,
+    });
+    const readyForward = owner.listViews(target).filter((view) => view.state === "ready");
+    expect(readyForward).toHaveLength(1);
+    await owner.replaceRuntime({
+      target,
+      generation: "one",
+      extensions,
+      declarations: [],
+      richSurfaces: [...forward].reverse(),
+    });
+    const readyReverse = owner.listViews(target).filter((view) => view.state === "ready");
+    expect(readyReverse.map((view) => view.extensionId)).toEqual(
+      readyForward.map((view) => view.extensionId),
+    );
+    expect(readyReverse[0]?.conflict?.map((peer) => peer.extensionId)).toEqual(
+      owner
+        .listViews(target)
+        .filter((view) => view.state === "conflict")
+        .map((view) => view.extensionId),
+    );
+    expect(diagnostics.some((message) => message.includes("Competing app-header"))).toBe(true);
+
+    await owner.replaceRuntime({
+      target,
+      generation: "two",
+      extensions: [{ resolvedPath: first.source }],
+      declarations: [],
+      richSurfaces: [
+        sidebar(first, "zeta", 0),
+        sidebar(first, "alpha", 0),
+        sidebar(first, "middle", 1),
+      ],
+    });
+    expect(
+      owner
+        .listViews(target)
+        .filter((view) => view.surface === "sidebar")
+        .map((view) => view.id),
+    ).toEqual(["alpha", "zeta", "middle"]);
+
+    await owner.replaceRuntime({
+      target,
+      generation: "three",
+      extensions,
+      declarations: [],
+      richSurfaces: [tool(first, "probe-a"), tool(second, "probe-b")],
+    });
+    expect(owner.listViews(target).every((view) => view.state === "conflict")).toBe(true);
+    expect(diagnostics.some((message) => message.includes("garden_probe"))).toBe(true);
+    const conflicted = owner.listViews(target)[0];
+    expect(conflicted).toBeTruthy();
+    await expect(
+      owner.openConnection(
+        {
+          target,
+          extensionId: conflicted!.extensionId,
+          viewId: conflicted!.id,
+          surface: "tool",
+          senderId: 1,
+        },
+        () => {},
+      ),
+    ).rejects.toThrow(/unavailable|Competing/);
+  } finally {
+    await owner.dispose();
+    await rm(first.directory, { recursive: true, force: true });
+    await rm(second.directory, { recursive: true, force: true });
+  }
+});
+
+test("a rich surface with a missing frontend is rejected without activating its backend", async () => {
+  const data = await fixture();
+  const owner = new DesktopExtensionViewOwner({
+    frameDocument: () => "",
+    onHostAction: async () => {},
+  });
+  try {
+    await owner.replaceRuntime({
+      target,
+      generation: "one",
+      extensions: [{ resolvedPath: data.source }],
+      declarations: [],
+      richSurfaces: [
+        {
+          ...data.declaration,
+          id: "missing-sidebar",
+          surface: "sidebar",
+          title: "Missing",
+          frontend: pathToFileURL(path.join(data.directory, "dist", "missing.js")),
+        },
+      ],
+    });
+    expect(owner.listViews(target)).toEqual([
+      expect.objectContaining({
+        id: "missing-sidebar",
+        surface: "sidebar",
+        state: "error",
+        error: expect.stringContaining("missing.js"),
+      }),
+    ]);
+    expect(data.activations()).toBe(0);
+  } finally {
     await owner.dispose();
     await rm(data.directory, { recursive: true, force: true });
   }

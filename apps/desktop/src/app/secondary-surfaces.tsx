@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type { ExtensionActionConflict } from "../../contracts/extension-actions";
 import type { AppView, DesktopAppState, WorkspaceRecord } from "../../contracts/desktop-state";
@@ -8,7 +15,14 @@ import {
   type CustomProviderConfig,
   type DesktopNotificationPermissionStatus,
 } from "../../contracts/ipc";
+import type { DesktopExtensionViewInfo } from "../../contracts/extension-views";
 import { CustomizePage } from "../features/extensions/customize-page";
+import {
+  RichSurfaceSlots,
+  richSurfacesFor,
+  type RichSurfaceHost,
+} from "../features/extensions/rich-surface-slots";
+import { SettingsIcon } from "../ui/icons";
 import { SettingsView, type SettingsSection } from "../features/settings/settings-view";
 import {
   CUSTOMIZE_SECTION_ID,
@@ -37,6 +51,10 @@ interface SecondarySurfacesProps {
   readonly onSelectView: (view: Extract<AppView, "settings" | "skills" | "extensions">) => void;
   readonly onTrySkill: (command: string) => void;
   readonly shortcutConflicts?: readonly ExtensionActionConflict[];
+  readonly extensionSettings?: {
+    readonly host: RichSurfaceHost;
+    readonly views: readonly DesktopExtensionViewInfo[];
+  };
 }
 
 export function SecondarySurfaces({
@@ -57,10 +75,29 @@ export function SecondarySurfaces({
   onSelectView,
   onTrySkill,
   shortcutConflicts = [],
+  extensionSettings,
 }: SecondarySurfacesProps) {
+  const [extensionSectionId, setExtensionSectionId] = useState<string | null>(null);
   const [notificationPermissionStatus, setNotificationPermissionStatus] =
     useState<DesktopNotificationPermissionStatus>("unknown");
   const [notificationPermissionPending, setNotificationPermissionPending] = useState(false);
+
+  const extensionSettingsSections = useMemo(() => {
+    if (!extensionSettings || !settingsWorkspaceId) return [];
+    if (extensionSettings.host.target.workspaceId !== settingsWorkspaceId) return [];
+    return richSurfacesFor(extensionSettings.views, "settings");
+  }, [extensionSettings, settingsWorkspaceId]);
+  const selectedExtensionSettings = extensionSettingsSections.find(
+    (view) => extensionSectionKey(view) === extensionSectionId,
+  );
+  useEffect(() => {
+    if (
+      extensionSectionId &&
+      !extensionSettingsSections.some((view) => extensionSectionKey(view) === extensionSectionId)
+    ) {
+      setExtensionSectionId(null);
+    }
+  }, [extensionSectionId, extensionSettingsSections]);
 
   const settingsWorkspace = settingsWorkspaceId
     ? rootWorkspaceOptions.find((workspace) => workspace.id === settingsWorkspaceId)
@@ -360,16 +397,38 @@ export function SecondarySurfaces({
 
   return (
     <SecondarySurface
-      activeNavId={customizeTab ? CUSTOMIZE_SECTION_ID : settingsSection}
-      navItems={SETTINGS_NAV_ITEMS}
+      activeNavId={
+        selectedExtensionSettings
+          ? extensionSectionKey(selectedExtensionSettings)
+          : customizeTab
+            ? CUSTOMIZE_SECTION_ID
+            : settingsSection
+      }
+      navItems={[
+        ...SETTINGS_NAV_ITEMS,
+        ...extensionSettingsSections.map((view) => ({
+          id: extensionSectionKey(view),
+          title: view.title,
+          group: "Extensions",
+          icon: <SettingsIcon />,
+          keywords: [view.title, view.id],
+        })),
+      ]}
       onBack={onBack}
       onSelectNav={(id) => {
         if (id === CUSTOMIZE_SECTION_ID) {
+          setExtensionSectionId(null);
           if (!customizeTab) onSelectView("skills");
+          return;
+        }
+        if (extensionSettingsSections.some((view) => extensionSectionKey(view) === id)) {
+          setExtensionSectionId(id);
+          if (customizeTab) onSelectView("settings");
           return;
         }
         const section = SETTINGS_SECTIONS.find((definition) => definition.id === id);
         if (!section) return;
+        setExtensionSectionId(null);
         onSelectSettingsSection(section.id);
         if (customizeTab) onSelectView("settings");
       }}
@@ -404,6 +463,23 @@ export function SecondarySurfaces({
           onToggleSkill={handleToggleSkill}
           onTryCommand={onTrySkill}
         />
+      ) : selectedExtensionSettings && extensionSettings ? (
+        <section className="canvas">
+          <div className="conversation settings-view">
+            <header className="view-header">
+              <div>
+                <h1 className="view-header__title">{selectedExtensionSettings.title}</h1>
+                <p className="view-header__body">Extension settings for this workspace.</p>
+              </div>
+            </header>
+            <RichSurfaceSlots
+              host={extensionSettings.host}
+              surface="settings"
+              views={[selectedExtensionSettings]}
+              label="settings section"
+            />
+          </div>
+        </section>
       ) : (
         <SettingsView
           workspace={settingsWorkspace}
@@ -460,4 +536,8 @@ export function SecondarySurfaces({
       )}
     </SecondarySurface>
   );
+}
+
+function extensionSectionKey(view: DesktopExtensionViewInfo): string {
+  return `extension:${view.extensionId}:${view.id}`;
 }

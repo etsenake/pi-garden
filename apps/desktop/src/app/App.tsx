@@ -28,9 +28,10 @@ import { FileWorkbench } from "../features/workbench/file-workbench";
 import { useWorkbench } from "../features/workbench/use-workbench";
 import {
   ExtensionViewPanel,
-  type ExtensionViewTheme,
+  toExtensionViewTheme,
 } from "../features/extensions/extension-view-panel";
 import { useExtensionViews } from "../features/extensions/use-extension-views";
+import { useRichExtensionUi } from "../features/extensions/use-rich-extension-ui";
 import { useExtensionActions } from "../features/extensions/use-extension-actions";
 import { useSurfaceContributions } from "../features/extensions/use-surface-contributions";
 import { useExtensionHostActions } from "../features/extensions/use-extension-host-actions";
@@ -87,7 +88,6 @@ import {
   getActiveTheme,
   useActiveTheme,
 } from "../ui/active-theme";
-import { themeSnapshot } from "../../contracts/theme-catalog";
 import { deriveWorkspaceContext } from "./workspace-context";
 import { useTreeForkModals } from "../features/conversation/hooks/use-tree-fork-modals";
 import { useComposerDraftSync } from "../features/conversation/hooks/use-composer-draft-sync";
@@ -154,24 +154,7 @@ export default function App() {
   }, [snapshot?.enableTransparency]);
 
   const activeTheme = useActiveTheme();
-  const extensionViewTheme = useMemo<ExtensionViewTheme>(() => {
-    const snapshotTheme = themeSnapshot({
-      id: activeTheme.id,
-      name: activeTheme.name,
-      description: "",
-      variant: activeTheme.variant,
-      tokens: activeTheme.tokens,
-      syntaxTheme: activeTheme.syntaxTheme,
-      seed: activeTheme.seed,
-    });
-    return {
-      mode: activeTheme.variant,
-      background: activeTheme.tokens["--main"] ?? "",
-      foreground: activeTheme.tokens["--text"] ?? "",
-      accent: activeTheme.tokens["--accent"] ?? "",
-      snapshot: snapshotTheme,
-    };
-  }, [activeTheme]);
+  const extensionViewTheme = useMemo(() => toExtensionViewTheme(activeTheme), [activeTheme]);
 
   const {
     activeWorktrees,
@@ -296,12 +279,15 @@ export default function App() {
     flushComposerDraftAsync,
   });
   const activeTool = workbench.activeTool;
-  const activeExtensionView =
-    activeTool?.kind === "extension"
-      ? extensionViews.views.find(
-          (view) => view.extensionId === activeTool.extensionId && view.id === activeTool.viewId,
-        )
-      : undefined;
+  const rich = useRichExtensionUi({
+    api,
+    target: workbenchTarget,
+    theme: extensionViewTheme,
+    views: extensionViews.views,
+    beforePrepareTaskDraft: extensionHostActions.beforePrepareTaskDraft,
+    onPrepareTaskDraftPendingChange: extensionHostActions.handlePrepareTaskDraftPendingChange,
+    activeTool,
+  });
   const workbenchRef = useRef(workbench);
   workbenchRef.current = workbench;
   const selectedToolId =
@@ -956,8 +942,10 @@ export default function App() {
           onSelectView={setActiveView}
           onTrySkill={handleTrySkill}
           shortcutConflicts={extensionActions?.conflicts ?? []}
+          extensionSettings={rich.settings}
         />
         {commandPalette}
+        {rich.overlay}
       </>
     );
   }
@@ -1003,6 +991,7 @@ export default function App() {
           onUnarchiveSession={threadMenu.restore}
           sidebarFooter={selectedSession ? sidebarFooter : []}
           sidebarSection={selectedSession ? sidebarSection : []}
+          richSections={selectedSession ? rich.slot("sidebar", "sidebar section") : null}
           onInvokeExtensionAction={invokeExtensionAction}
         />
       ) : null}
@@ -1030,6 +1019,11 @@ export default function App() {
           onInvokeExtensionAction={invokeExtensionAction}
           statusContributions={
             snapshot.activeView === "threads" && selectedSession ? statusChrome : undefined
+          }
+          richHeader={
+            snapshot.activeView === "threads" && selectedSession
+              ? rich.slot("app-header", "app header")
+              : null
           }
         >
           {snapshot.activeView === "threads" && selectedWorkspace && selectedSession ? (
@@ -1162,6 +1156,7 @@ export default function App() {
             <>
               <section className="canvas canvas--thread">
                 <div className="conversation conversation--thread">
+                  {rich.slot("thread-header", "thread header")}
                   {showSchemaSkewNotice ? (
                     <div
                       className="schema-skew-notice"
@@ -1202,6 +1197,7 @@ export default function App() {
                     annotations={transcriptAnnotations}
                     platform={api?.platform ?? "linux"}
                     extensionUi={selectedExtensionUi}
+                    richTools={rich.tools}
                   />
                 </div>
               </section>
@@ -1256,6 +1252,8 @@ export default function App() {
                 onStop={stopCurrentRun}
                 composerBefore={composerBefore}
                 composerAfter={composerAfter}
+                richBefore={rich.slot("composer-before", "before composer")}
+                richAfter={rich.slot("composer-after", "after composer")}
                 onInvokeExtensionAction={invokeExtensionAction}
                 selectedSession={selectedSession}
                 lastError={snapshot.lastError}
@@ -1279,6 +1277,7 @@ export default function App() {
                 extensionUi={selectedExtensionUi}
                 annotations={transcriptAnnotations}
               />
+              {rich.slot("app-footer", "app footer")}
               {activeExtensionDialog ? (
                 <ExtensionDialog
                   dialog={activeExtensionDialog}
@@ -1347,7 +1346,7 @@ export default function App() {
             tabHintsVisible={sidePanelTabHintsVisible}
             onResize={workbenchWidth.setWidth}
             onTogglePanel={commands.toggleSidePanel}
-            extensionViews={extensionViews.views}
+            extensionViews={rich.workbenchViews}
             extensionViewsLoading={extensionViews.loading}
             extensionViewsError={extensionViews.error}
             onReloadExtensionViews={extensionViews.reload}
@@ -1359,11 +1358,11 @@ export default function App() {
             loading={!workbench.ready}
             onRetryRestore={workbench.retryRestore}
           >
-            {activeExtensionView?.state === "ready" && workbenchTarget && api ? (
+            {rich.activeView?.state === "ready" && workbenchTarget && api ? (
               <ExtensionViewPanel
                 api={api}
                 target={workbenchTarget}
-                view={activeExtensionView}
+                view={rich.activeView}
                 theme={extensionViewTheme}
                 onBeforePrepareTaskDraft={extensionHostActions.beforePrepareTaskDraft}
                 onPrepareTaskDraftPendingChange={
@@ -1440,6 +1439,7 @@ export default function App() {
         <ThreadSwitcher state={threadSwitcher.state} onChoose={threadSwitcher.choose} />
       ) : null}
       {commandPalette}
+      {rich.overlay}
     </div>
   );
 }

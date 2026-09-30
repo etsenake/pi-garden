@@ -14,12 +14,40 @@ export interface DesktopTaskDraft {
 
 export type DesktopHostAction =
   | ({ readonly type: "openFile" } & DesktopFileTarget)
-  | ({ readonly type: "prepareTaskDraft" } & DesktopTaskDraft);
+  | ({ readonly type: "prepareTaskDraft" } & DesktopTaskDraft)
+  | { readonly type: "presentOverlay"; readonly id: string }
+  | { readonly type: "settleOverlay"; readonly value?: unknown }
+  | { readonly type: "cancelOverlay" };
+
+/** Graphical tool state pushed by Pi Garden. The extension does not execute the tool. */
+export interface DesktopToolPresentation {
+  readonly toolName: string;
+  readonly toolCallId: string;
+  readonly arguments: unknown;
+  readonly argumentsComplete: boolean;
+  readonly executionStarted: boolean;
+  readonly phase: "pending" | "running" | "partial" | "complete" | "error";
+  readonly partial?: unknown;
+  readonly result?: {
+    readonly content: unknown;
+    readonly details?: unknown;
+    readonly isError: boolean;
+  };
+  readonly error?: string;
+  readonly expanded: boolean;
+}
+
+export type DesktopOverlayResult =
+  { readonly status: "result"; readonly value: unknown } | { readonly status: "cancelled" };
 
 export interface DesktopViewContext {
   readonly services: RemoteServiceSource;
   /** Aborted when this mount loses its connection, including reload and task closure. */
   readonly signal: AbortSignal;
+  /** Present for a tool renderer. Null for chrome, settings, workbench, and overlay mounts. */
+  readonly tool: DesktopToolPresentation | null;
+  subscribeTool(listener: (tool: DesktopToolPresentation) => void): () => void;
+  subscribeTheme(listener: (theme: DesktopViewContext["theme"]) => void): () => void;
   readonly theme: {
     readonly mode: "light" | "dark";
     readonly background: string;
@@ -45,6 +73,12 @@ export interface DesktopViewContext {
   readonly actions: {
     openFile(target: DesktopFileTarget): Promise<void>;
     prepareTaskDraft(draft: DesktopTaskDraft): Promise<void>;
+    /** Opens this extension's overlay. The host owns focus, cancellation, and cleanup. */
+    presentOverlay(id: string): Promise<DesktopOverlayResult>;
+    /** Resolves the overlay that this mount is presenting. */
+    settle(value?: unknown): Promise<void>;
+    /** Cancels the overlay that this mount is presenting. */
+    cancel(): Promise<void>;
   };
 }
 
@@ -96,7 +130,33 @@ export function parseDesktopHostAction(value: unknown): DesktopHostAction {
       ...(files ? { files } : {}),
     };
   }
+  if (value.type === "presentOverlay") {
+    assertKeys(value, ["type", "id"], []);
+    if (typeof value.id !== "string" || !/^[a-z][a-z0-9._-]{0,63}$/.test(value.id)) {
+      throw new TypeError("Overlay ID must be a lowercase identifier of at most 64 characters");
+    }
+    return { type: "presentOverlay", id: value.id };
+  }
+  if (value.type === "settleOverlay") {
+    assertKeys(value, ["type"], ["value"]);
+    if (value.value !== undefined) assertJsonPayload(value.value);
+    return {
+      type: "settleOverlay",
+      ...(value.value !== undefined ? { value: value.value } : {}),
+    };
+  }
+  if (value.type === "cancelOverlay") {
+    assertKeys(value, ["type"], []);
+    return { type: "cancelOverlay" };
+  }
   throw new TypeError("Unknown desktop host action");
+}
+
+function assertJsonPayload(value: unknown): void {
+  if (!isJsonValue(value)) throw new TypeError("Overlay result must be JSON");
+  if (JSON.stringify(value).length > 100_000) {
+    throw new TypeError("Overlay result must be at most 100000 characters");
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
