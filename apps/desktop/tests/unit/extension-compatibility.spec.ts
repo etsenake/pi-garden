@@ -290,6 +290,83 @@ test.describe("compatibility owner", () => {
     expect((await readFile(entry, "utf8")).match(/registerDesktopAdaptations\(/g)).toHaveLength(1);
   });
 
+  test("a rerun preserves skill edits and only appends unpaired capabilities", async () => {
+    const { entry, root } = await fixture("terminal-heavy");
+    const helper = path.dirname(path.dirname(require.resolve("@pi-garden/extension-ui")));
+    await applyDesktopAdaptation(entry, helper);
+    const widgetPath = path.join(path.dirname(entry), "pi-garden-desktop", "widget.js");
+    const desktopPath = path.join(path.dirname(entry), "pi-garden-desktop.ts");
+    const semantic = `export function mount(root, host) {
+  root.dataset.testid = "semantic-widget";
+  root.textContent = "live ticks";
+  return () => {};
+}
+`;
+    await writeFile(widgetPath, semantic);
+    const editedDesktop = `${await readFile(desktopPath, "utf8")}\n// skill-owned chord wiring\n`;
+    await writeFile(desktopPath, editedDesktop);
+
+    const unchanged = await applyDesktopAdaptation(entry, helper);
+    expect(unchanged.changed).toBe(false);
+    expect(await readFile(widgetPath, "utf8")).toBe(semantic);
+    expect(await readFile(desktopPath, "utf8")).toBe(editedDesktop);
+
+    // Add a second real capability file the writer has not paired yet.
+    const headerOnly = path.join(root, "header-only", "index.ts");
+    await mkdir(path.dirname(headerOnly), { recursive: true });
+    await writeFile(
+      headerOnly,
+      `export default function fixture(pi) {
+  pi.on("session_start", (_e, ctx) => {
+    ctx.ui.setHeader(() => ({ render: () => ["h"], invalidate: () => {} }));
+  });
+}
+`,
+    );
+    await applyDesktopAdaptation(headerOnly, helper);
+    const headerFrontend = path.join(path.dirname(headerOnly), "pi-garden-desktop", "header.js");
+    const headerSemantic = `export function mount(root) {
+  root.dataset.testid = "semantic-header";
+  root.textContent = "pi header";
+  return () => {};
+}
+`;
+    await writeFile(headerFrontend, headerSemantic);
+    // Grow the extension with a footer the first pass did not see.
+    await writeFile(
+      headerOnly,
+      `${await readFile(headerOnly, "utf8")}
+// footer added after first adaptation
+export function _unused() {}
+`.replace(
+        `ctx.ui.setHeader(() => ({ render: () => ["h"], invalidate: () => {} }));`,
+        `ctx.ui.setHeader(() => ({ render: () => ["h"], invalidate: () => {} }));
+    ctx.ui.setFooter(() => ({ render: () => ["f"], invalidate: () => {} }));`,
+      ),
+    );
+    // Re-insert the adaptation call the rewrite may have dropped — keep factory shape.
+    const grown = `import { registerDesktopAdaptations } from "./pi-garden-desktop.js";
+export default function fixture(pi) {
+  registerDesktopAdaptations(pi);
+  pi.on("session_start", (_e, ctx) => {
+    ctx.ui.setHeader(() => ({ render: () => ["h"], invalidate: () => {} }));
+    ctx.ui.setFooter(() => ({ render: () => ["f"], invalidate: () => {} }));
+  });
+}
+`;
+    await writeFile(headerOnly, grown);
+    const incremental = await applyDesktopAdaptation(headerOnly, helper);
+    expect(incremental.changed).toBe(true);
+    expect(await readFile(headerFrontend, "utf8")).toBe(headerSemantic);
+    expect(await readFile(path.join(path.dirname(headerOnly), "pi-garden-desktop", "footer.js"), "utf8")).toMatch(
+      /adapted ui\.setFooter/,
+    );
+    const desktop = await readFile(path.join(path.dirname(headerOnly), "pi-garden-desktop.ts"), "utf8");
+    expect(desktop).toMatch(/registerRichSurface/);
+    expect(desktop.match(/surface: "app-footer"/g)?.length ?? 0).toBe(1);
+    expect(desktop.match(/surface: "app-header"/g)?.length ?? 0).toBe(1);
+  });
+
   test("fixture B: adaptable findings first, Adapt available for a user extension", async () => {
     const { entry } = await fixture("terminal-heavy");
     const inventory = await owner().inventory({ workspace, extension: record(entry) });
@@ -507,6 +584,7 @@ test.describe("adapt for desktop invocation", () => {
       workspace,
       inventory,
       helperPackageDir: "/app/resources/extension-ui",
+      adaptWriterPath: "/app/resources/skills/adapt-for-desktop/apply.mjs",
     });
     expect(prompt.startsWith("/skill:adapt-for-desktop Adapt the Pi extension")).toBe(true);
     expect(prompt).toContain(`Target extension entry: ${entry}`);
@@ -514,6 +592,7 @@ test.describe("adapt for desktop invocation", () => {
     expect(prompt).toContain("Workspace: /work/space");
     expect(prompt).toContain("Scope: user (editable)");
     expect(prompt).toContain("/app/resources/extension-ui");
+    expect(prompt).toContain("/app/resources/skills/adapt-for-desktop/apply.mjs");
     expect(prompt).toContain("- ui.setHeader (");
     expect(prompt).toContain("→ ");
     expect(prompt).not.toContain("Leave untouched");
@@ -542,7 +621,7 @@ test.describe("adapt for desktop invocation", () => {
           return { ok: true } as never;
         },
       },
-      { helperPackageDir: "/helper" },
+      { helperPackageDir: "/helper", adaptWriterPath: "/helper/skills/adapt-for-desktop/apply.mjs" },
     );
     await expect(service.adapt({ workspaceId: "ws", extensionPath: entry })).rejects.toThrow(
       /trust/i,

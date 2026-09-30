@@ -1,0 +1,114 @@
+{
+  "piPackage": "@earendil-works/pi-coding-agent",
+  "piVersion": "0.99.1",
+  "extensionUIContext": {
+    "select": [
+      "select(title: string, options: string[], opts?: ExtensionUIDialogOptions): Promise<string | undefined>;"
+    ],
+    "confirm": [
+      "confirm(title: string, message: string, opts?: ExtensionUIDialogOptions): Promise<boolean>;"
+    ],
+    "input": [
+      "input(title: string, placeholder?: string, opts?: ExtensionUIDialogOptions): Promise<string | undefined>;"
+    ],
+    "notify": [
+      "notify(message: string, type?: \"info\" | \"warning\" | \"error\"): void;"
+    ],
+    "onTerminalInput": [
+      "onTerminalInput(handler: TerminalInputHandler): () => void;"
+    ],
+    "setStatus": [
+      "setStatus(key: string, text: string | undefined): void;"
+    ],
+    "setWorkingMessage": [
+      "setWorkingMessage(message?: string): void;"
+    ],
+    "setWorkingVisible": [
+      "setWorkingVisible(visible: boolean): void;"
+    ],
+    "setWorkingIndicator": [
+      "setWorkingIndicator(options?: WorkingIndicatorOptions): void;"
+    ],
+    "setHiddenThinkingLabel": [
+      "setHiddenThinkingLabel(label?: string): void;"
+    ],
+    "setWidget": [
+      "setWidget(key: string, content: ((tui: TUI, theme: Theme) => Component & { dispose?(): void; }) | undefined, options?: ExtensionWidgetOptions): void;",
+      "setWidget(key: string, content: string[] | undefined, options?: ExtensionWidgetOptions): void;"
+    ],
+    "setFooter": [
+      "setFooter(factory: ((tui: TUI, theme: Theme, footerData: ReadonlyFooterDataProvider) => Component & { dispose?(): void; }) | undefined): void;"
+    ],
+    "setHeader": [
+      "setHeader(factory: ((tui: TUI, theme: Theme) => Component & { dispose?(): void; }) | undefined): void;"
+    ],
+    "setTitle": [
+      "setTitle(title: string): void;"
+    ],
+    "custom": [
+      "custom<T>(factory: (tui: TUI, theme: Theme, keybindings: KeybindingsManager, done: (result: T) => void) => (Component & { dispose?(): void; }) | Promise<Component & { dispose?(): void; }>, options?: { overlay?: boolean; overlayOptions?: OverlayOptions | (() => OverlayOptions); onHandle?: (handle: OverlayHandle) => void; }): Promise<T>;"
+    ],
+    "pasteToEditor": [
+      "pasteToEditor(text: string): void;"
+    ],
+    "setEditorText": [
+      "setEditorText(text: string): void;"
+    ],
+    "getEditorText": [
+      "getEditorText(): string;"
+    ],
+    "editor": [
+      "editor(title: string, prefill?: string): Promise<string | undefined>;"
+    ],
+    "addAutocompleteProvider": [
+      "addAutocompleteProvider(factory: AutocompleteProviderFactory): void;"
+    ],
+    "setEditorComponent": [
+      "setEditorComponent(factory: EditorFactory | undefined): void;"
+    ],
+    "getEditorComponent": [
+      "getEditorComponent(): EditorFactory | undefined;"
+    ],
+    "theme": [
+      "readonly theme: Theme;"
+    ],
+    "getAllThemes": [
+      "getAllThemes(): { name: string; path: string | undefined; }[];"
+    ],
+    "getTheme": [
+      "getTheme(name: string): Theme | undefined;"
+    ],
+    "setTheme": [
+      "setTheme(theme: string | Theme): { success: boolean; error?: string; };"
+    ],
+    "getToolsExpanded": [
+      "getToolsExpanded(): boolean;"
+    ],
+    "setToolsExpanded": [
+      "setToolsExpanded(expanded: boolean): void;"
+    ]
+  },
+  "extensionAPI": {
+    "registerTool": [
+      "registerTool<TParams extends TSchema = TSchema, TDetails = unknown, TState = any>(tool: ToolDefinition<TParams, TDetails, TState>): void;"
+    ],
+    "registerCommand": [
+      "registerCommand(name: string, options: Omit<RegisteredCommand, \"name\" | \"sourceInfo\">): void;"
+    ],
+    "registerShortcut": [
+      "registerShortcut(shortcut: KeyId, options: { description?: string; handler: (ctx: ExtensionContext) => Promise<void> | void; }): void;"
+    ],
+    "registerFlag": [
+      "registerFlag(name: string, options: { description?: string; type: \"boolean\"; default?: boolean; } | { description?: string; type: \"string\"; default?: string; }): void;"
+    ],
+    "registerMessageRenderer": [
+      "registerMessageRenderer<T = unknown>(customType: string, renderer: MessageRenderer<T>): void;"
+    ],
+    "registerMarkdownTransformer": [
+      "registerMarkdownTransformer(transformer: MarkdownTransformer): void;"
+    ],
+    "registerEntryRenderer": [
+      "registerEntryRenderer<T = unknown>(customType: string, renderer: EntryRenderer<T>): void;"
+    ]
+  }
+}

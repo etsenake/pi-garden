@@ -1,3 +1,10 @@
+/**
+ * Checkout Adapt for Desktop CLI (jiti).
+ *
+ * Prefer `apply.mjs` in the packaged app and in prompts that name an absolute
+ * writer path. This TypeScript entry remains for local jiti runs before the
+ * desktop build has emitted the skill-local bundle.
+ */
 import { applyDesktopAdaptation } from "../../../electron/extensions/apply-desktop-adaptation.ts";
 
 const [entry, helper] = process.argv.slice(2);

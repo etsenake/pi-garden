@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   DESKTOP_ADAPTATION_METADATA_NAME,
+  type DesktopAdaptationMetadata,
   type DesktopAdaptationPair,
   type DesktopRegistrationApi,
   type ExtensionCapabilityId,
@@ -13,8 +14,13 @@ import { analyzeExtensionSource } from "./extension-compatibility-analyzer";
  * The Adapt for Desktop writer.
  *
  * One registration per terminal family, recorded in `desktop-adaptation.json`
- * beside the entry. A second run writes nothing when those files already match.
- * Terminal calls stay in the entry so ordinary Pi still has them.
+ * beside the entry. Scaffold files are written once; a later run never
+ * regenerates an existing frontend or the desktop module body after the skill
+ * has edited them. Only unpaired capabilities get new registrations. Terminal
+ * calls stay in the entry so ordinary Pi still has them.
+ *
+ * A pairing record or mounted placeholder is scaffolding, not semantic
+ * adaptation: the skill still has to wire live behaviour into those files.
  */
 
 const DESKTOP_MODULE = "pi-garden-desktop.ts";
@@ -73,41 +79,120 @@ export async function applyDesktopAdaptation(
   }
 
   const { evidence } = await analyzeExtensionSource(entry);
-  const plans = planRegistrations(evidence);
-  if (plans.length === 0) {
+  const planned = planRegistrations(evidence);
+  if (planned.length === 0) {
     throw new Error("No terminal-specific presentation was found to adapt.");
   }
 
   const directory = path.dirname(entry);
-  const pairs = plans.flatMap((plan) =>
-    plan.capabilities.map((capability): DesktopAdaptationPair => ({
-      capability,
-      api: plan.api,
-      id: plan.id,
-      ...(plan.surface ? { surface: plan.surface } : {}),
-      ...(plan.toolName ? { toolName: plan.toolName } : {}),
-    })),
+  const existingMeta = await readAdaptationMetadata(directory);
+  const existingPairs = existingMeta?.pairs ?? [];
+  const newPlans = planned.filter((plan) => !planIsCovered(plan, existingPairs));
+  const pairs = mergePairs(
+    existingPairs,
+    newPlans.flatMap((plan) =>
+      plan.capabilities.map(
+        (capability): DesktopAdaptationPair => ({
+          capability,
+          api: plan.api,
+          id: plan.id,
+          ...(plan.surface ? { surface: plan.surface } : {}),
+          ...(plan.toolName ? { toolName: plan.toolName } : {}),
+        }),
+      ),
+    ),
   );
+
   let changed = await vendorHelper(directory, path.resolve(helperPackageDir));
-  changed =
-    (await writeIfChanged(
-      path.join(directory, DESKTOP_MODULE),
-      renderDesktopModule(path.basename(entry), plans),
-    )) || changed;
-  for (const plan of plans) {
+
+  const desktopPath = path.join(directory, DESKTOP_MODULE);
+  if (!(await isFile(desktopPath))) {
+    // First scaffold: write the full module for every planned registration.
+    changed =
+      (await writeIfChanged(desktopPath, renderDesktopModule(path.basename(entry), planned))) ||
+      changed;
+    for (const plan of planned) {
+      changed =
+        (await writeIfChanged(
+          path.join(directory, FRONTEND_DIR, `${plan.id}.js`),
+          renderFrontend(plan),
+        )) || changed;
+    }
+  } else if (newPlans.length > 0) {
+    // Add only unpaired registrations; never rewrite existing skill-edited bodies.
+    const previous = await readFile(desktopPath, "utf8");
     changed =
       (await writeIfChanged(
-        path.join(directory, FRONTEND_DIR, `${plan.id}.js`),
-        renderFrontend(plan),
+        desktopPath,
+        appendRegistrations(previous, path.basename(entry), newPlans),
       )) || changed;
+    for (const plan of newPlans) {
+      const frontendPath = path.join(directory, FRONTEND_DIR, `${plan.id}.js`);
+      if (await isFile(frontendPath)) continue;
+      changed = (await writeIfChanged(frontendPath, renderFrontend(plan))) || changed;
+    }
   }
+  // else: every capability is already paired — leave edited scaffolds alone.
+
   changed =
     (await writeIfChanged(
       path.join(directory, DESKTOP_ADAPTATION_METADATA_NAME),
-      `${JSON.stringify({ version: 1, pairs }, null, 2)}\n`,
+      `${JSON.stringify({ version: 1, pairs } satisfies DesktopAdaptationMetadata, null, 2)}\n`,
     )) || changed;
   changed = (await writeIfChanged(entry, insertAdaptationCall(source))) || changed;
   return { changed, entryPath: entry, pairs };
+}
+
+function planIsCovered(
+  plan: PlannedRegistration,
+  pairs: readonly DesktopAdaptationPair[],
+): boolean {
+  return plan.capabilities.every((capability) =>
+    pairs.some(
+      (pair) =>
+        pair.capability === capability &&
+        pair.api === plan.api &&
+        pair.id === plan.id &&
+        (plan.surface === undefined || pair.surface === plan.surface) &&
+        (plan.toolName === undefined || pair.toolName === plan.toolName),
+    ),
+  );
+}
+
+function mergePairs(
+  existing: readonly DesktopAdaptationPair[],
+  added: readonly DesktopAdaptationPair[],
+): DesktopAdaptationPair[] {
+  const out = [...existing];
+  for (const pair of added) {
+    if (
+      out.some(
+        (item) =>
+          item.capability === pair.capability &&
+          item.api === pair.api &&
+          item.id === pair.id &&
+          item.surface === pair.surface &&
+          item.toolName === pair.toolName,
+      )
+    ) {
+      continue;
+    }
+    out.push(pair);
+  }
+  return out;
+}
+
+async function readAdaptationMetadata(
+  directory: string,
+): Promise<DesktopAdaptationMetadata | undefined> {
+  const file = path.join(directory, DESKTOP_ADAPTATION_METADATA_NAME);
+  try {
+    const raw = JSON.parse(await readFile(file, "utf8")) as DesktopAdaptationMetadata;
+    if (raw?.version !== 1 || !Array.isArray(raw.pairs)) return undefined;
+    return raw;
+  } catch {
+    return undefined;
+  }
 }
 
 function planRegistrations(
@@ -213,6 +298,43 @@ ${calls}}
 `;
 }
 
+/**
+ * Append registrations for newly unpaired capabilities without regenerating
+ * the existing module body (which the skill may have edited).
+ */
+function appendRegistrations(
+  existing: string,
+  entryBase: string,
+  plans: readonly PlannedRegistration[],
+): string {
+  if (plans.length === 0) return existing;
+  const source = `new URL(${JSON.stringify(`./${entryBase}`)}, import.meta.url).href`;
+  const neededImports = new Set(plans.map((plan) => plan.api));
+  let next = existing;
+  const importMatch = /import\s*\{([^}]+)\}\s*from\s*["']@pi-garden\/extension-ui["']\s*;/.exec(
+    next,
+  );
+  if (importMatch) {
+    const current = new Set(
+      importMatch[1]!
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean),
+    );
+    for (const name of neededImports) current.add(name);
+    const merged = [...current].sort().join(", ");
+    next = `${next.slice(0, importMatch.index)}import { ${merged} } from "@pi-garden/extension-ui";${next.slice(importMatch.index + importMatch[0].length)}`;
+  } else {
+    next = `import { ${[...neededImports].sort().join(", ")} } from "@pi-garden/extension-ui";\n${next}`;
+  }
+  const calls = plans.map((plan) => renderRegistration(plan, source)).join("\n");
+  const closer = next.lastIndexOf("\n}");
+  if (closer === -1) {
+    throw new Error(`Cannot append desktop adaptations to ${DESKTOP_MODULE}`);
+  }
+  return `${next.slice(0, closer)}\n${calls}${next.slice(closer)}`;
+}
+
 function renderRegistration(plan: PlannedRegistration, source: string): string {
   const frontend = `new URL(${JSON.stringify(`./${FRONTEND_DIR}/${plan.id}.js`)}, import.meta.url)`;
   const backend = `() => ({ id: ${JSON.stringify(`pi-garden.adapt.${plan.id}.backend`)}, setup() {} })`;
@@ -261,6 +383,7 @@ function renderFrontend(plan: PlannedRegistration): string {
   const output = document.createElement("output");
   output.dataset.testid = "desktop-adaptation";
   output.dataset.capability = ${JSON.stringify(plan.marker)};
+  output.dataset.scaffold = "true";
   output.textContent = ${JSON.stringify(`adapted ${plan.marker}`)};
   root.append(output);
   return () => {};

@@ -1082,7 +1082,7 @@ app
           store.getRuntimeExtension(workspaceId, extensionPath),
         startThread: (input) => store.startThread(input),
       },
-      { helperPackageDir: extensionUiPackageDir },
+      { helperPackageDir: extensionUiPackageDir, adaptWriterPath: path.join(bundledSkillsDir, "adapt-for-desktop", "apply.mjs") },
     );
     store.subscribeToSessionEvents((event) => {
       if (event.type === "extensionUiCapabilityObserved") {

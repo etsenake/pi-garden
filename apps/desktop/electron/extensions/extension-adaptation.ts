@@ -29,6 +29,11 @@ export interface ExtensionAdaptationHost {
 export interface ExtensionAdaptationPaths {
   /** Directory of the shipped `@pi-garden/extension-ui` package (package.json + dist). */
   readonly helperPackageDir: string;
+  /**
+   * Absolute path to the packaged-safe Adapt writer CLI (`apply.mjs` beside the
+   * skill). Ordinary Pi runs this with Node; no repository checkout is required.
+   */
+  readonly adaptWriterPath: string;
 }
 
 export class ExtensionCompatibilityService {
@@ -59,6 +64,7 @@ export class ExtensionCompatibilityService {
         workspace,
         inventory,
         helperPackageDir: this.paths.helperPackageDir,
+        adaptWriterPath: this.paths.adaptWriterPath,
       }),
     });
   }
@@ -80,6 +86,7 @@ export function buildAdaptForDesktopPrompt(input: {
   readonly workspace: ExtensionCompatibilityWorkspace;
   readonly inventory: ExtensionCompatibilityInventory;
   readonly helperPackageDir: string;
+  readonly adaptWriterPath: string;
 }): string {
   const { extension, workspace, inventory } = input;
   const scope =
@@ -97,6 +104,7 @@ export function buildAdaptForDesktopPrompt(input: {
     `Scope: ${scope}`,
     `Workspace: ${workspace.path}`,
     `@pi-garden/extension-ui package to vendor from (read-only source): ${input.helperPackageDir}`,
+    `Adapt writer (run with node; self-contained, no repo checkout): ${input.adaptWriterPath}`,
     `Source inspection: ${inventory.source.status}${
       inventory.source.files.length > 0 ? ` (${inventory.source.files.length} file(s))` : ""
     }`,

@@ -63,9 +63,17 @@ Never do these:
 
 ## Procedure
 
-The writer is `apply.ts` beside this file. Do not hand-write a parallel set of
-registrations. From the pi-garden repository, with the entry path and the
-helper package directory from the request:
+The writer is `apply.mjs` beside this file (built into the skill directory; plain
+Node, no repository checkout). Do not hand-write a parallel set of
+registrations. The Adapt prompt names the absolute writer path and the helper
+package directory. Run:
+
+```sh
+node "<adapt writer path from the prompt>" "<entry>" "<helper package dir>"
+```
+
+In a pi-garden checkout before the desktop build has emitted the bundle, the
+TypeScript entry still works:
 
 ```sh
 pnpm exec jiti apps/desktop/resources/skills/adapt-for-desktop/apply.ts "<entry>" "<helper package dir>"
@@ -77,13 +85,17 @@ It vendors `@pi-garden/extension-ui` (package.json plus dist, unchanged) into
 `desktop-adaptation.json` beside the entry, and inserts one import plus one
 `registerDesktopAdaptations(pi)` call into the extension factory. Terminal
 calls stay. `source` is the entry file's URL, not the sibling module's
-`import.meta.url`. A second run prints `unchanged` and does not add another
-import, call, or registration.
+`import.meta.url`. A second run for the same capabilities prints `unchanged`
+and does not overwrite skill-edited frontends or the desktop module body, and
+does not add another import, call, or registration. Adapting a newly unpaired
+capability appends only that registration and leaves prior edits intact.
 
 `desktop-adaptation.json` is the pairing record: each terminal capability names
 the api, id, surface and tool of the registration that adapted it. A rich
-surface that merely exists does not adapt anything. Do not add a second
-registration for a capability already listed there.
+surface that merely exists does not adapt anything. A mounted scaffold
+placeholder or pairing record alone is not completed semantic adaptation —
+wire live Chord behaviour into the generated files before reporting done. Do
+not add a second registration for a capability already listed there.
 
 1. **Read the target** and the findings in the request. Note each terminal-only
    call and the extension factory (`export default function name(pi)`).
@@ -102,8 +114,9 @@ registration for a capability already listed there.
 4. **Live data, only inside those files.** If a surface needs the extension's
    state, move it through Chord in the generated backend and frontend without
    changing the paired id, surface or tool name and without adding another
-   `register*` call. Re-running the writer restores the canonical generated
-   files, so do that only for a capability that is still listed as adaptable.
+   `register*` call. Re-running the writer for an already-paired capability
+   leaves those edited files alone. Re-run only when a new unpaired capability
+   still needs a scaffold.
 5. **Move live data through Chord without importing Chord.** A rich surface
    `backend` is a plain facet object; the host supplies `env`:
 
