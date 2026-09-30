@@ -164,7 +164,7 @@ function GitHubIcon() {
 function Logo() {
   return (
     <a className="logo" href="#top" aria-label="pi-gui home">
-      <img src="/icon.svg" alt="" width={24} height={24} />
+      <img src="/icon.png" alt="" width={24} height={24} />
       <span>pi-gui</span>
     </a>
   );

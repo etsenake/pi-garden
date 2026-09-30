@@ -19,16 +19,17 @@
 }
 
 .new-thread__logo {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
 }
 
-.new-thread__logo svg {
-  width: 44px;
-  height: 44px;
+.new-thread__logo img {
+  width: 56px;
+  height: 56px;
   display: block;
+  user-select: none;
 }
 
 .new-thread__eyebrow {
