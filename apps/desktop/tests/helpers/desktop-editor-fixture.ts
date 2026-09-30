@@ -15,14 +15,24 @@ export async function mount(root, host) {
   theme.id = "theme";
   const boundary = document.createElement("pre");
   boundary.id = "boundary";
-  root.append(theme, boundary);
+  const mountToken = document.createElement("output");
+  mountToken.id = "mount";
+  mountToken.textContent = String(Math.random());
+  const hostUpdates = document.createElement("output");
+  hostUpdates.id = "host-updates";
+  let hostUpdateCount = 0;
+  hostUpdates.textContent = "0";
+  root.append(theme, boundary, mountToken, hostUpdates);
   const paintTheme = () => {
     theme.textContent = (host.theme.snapshot && host.theme.snapshot.id) || host.theme.mode;
   };
   paintTheme();
   const stopTheme = host.subscribeTheme(paintTheme);
   const stopText = host.subscribeText((text) => {
-    if (field.value !== text) field.value = text;
+    if (field.value === text) return;
+    field.value = text;
+    hostUpdateCount += 1;
+    hostUpdates.textContent = String(hostUpdateCount);
   });
   const stopCursor = host.subscribeCursor((cursor) => {
     field.selectionStart = cursor;
@@ -74,20 +84,28 @@ export default function desktopEditor(pi) {
     });
     ctx.ui.setStatus("tui-editor", typeof ctx.ui.getEditorComponent() + ":" + String(called));
     ctx.ui.setEditorComponent(undefined);
+    const words = ["garden", "grove"];
+    const wordBefore = (lines, line, col) => (lines[line] ?? "").slice(0, col).split(/\\s/).pop() ?? "";
     ctx.ui.addAutocompleteProvider((current) => ({
       triggerCharacters: [":"],
       async getSuggestions(lines, line, col, context) {
-        const text = (lines[line] ?? "").slice(0, col);
-        if (!text.endsWith(":") && !context.force) return current.getSuggestions(lines, line, col, context);
-        return { items: [{ value: "garden", label: "garden", description: "extension" }], prefix: ":" };
+        const word = wordBefore(lines, line, col);
+        const query = word.startsWith(":") ? word.slice(1) : context.force ? word : null;
+        if (query === null) return current.getSuggestions(lines, line, col, context);
+        const items = words
+          .filter((value) => value.startsWith(query))
+          .map((value) => ({ value, label: value, description: "extension" }));
+        return { items, prefix: word };
       },
       applyCompletion(lines, line, col, item, prefix) {
-        if (prefix !== ":") return current.applyCompletion(lines, line, col, item, prefix);
+        if (!words.includes(item.value) || prefix !== wordBefore(lines, line, col)) {
+          return current.applyCompletion(lines, line, col, item, prefix);
+        }
         const currentLine = lines[line] ?? "";
-        const next = currentLine.slice(0, Math.max(0, col - prefix.length)) + item.value + currentLine.slice(col);
+        const start = Math.max(0, col - prefix.length);
         const copy = lines.slice();
-        copy[line] = next;
-        return { lines: copy, cursorLine: line, cursorCol: Math.max(0, col - prefix.length) + item.value.length };
+        copy[line] = currentLine.slice(0, start) + item.value + currentLine.slice(col);
+        return { lines: copy, cursorLine: line, cursorCol: start + item.value.length };
       },
     }));
   });
