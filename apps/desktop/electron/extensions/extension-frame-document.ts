@@ -23,9 +23,17 @@ window.addEventListener('message', async (event) => {
   const pending = new Map();
   const theme = event.data.theme;
   const applyTheme = (next) => {
-    Object.assign(theme,next);
+    Object.assign(theme, next);
+    if (next.snapshot) theme.snapshot = next.snapshot;
+    document.documentElement.dataset.themeId = theme.snapshot && theme.snapshot.id || '';
     document.documentElement.style.colorScheme = theme.mode;
-    for (const name of ['background','foreground','accent']) document.documentElement.style.setProperty('--' + name,theme[name]);
+    for (const name of ['background', 'foreground', 'accent']) document.documentElement.style.setProperty('--' + name, theme[name]);
+    document.documentElement.style.setProperty('--bg', theme.background);
+    document.documentElement.style.setProperty('--fg', theme.foreground);
+    const tokens = theme.snapshot && theme.snapshot.tokens;
+    if (tokens) {
+      for (const name of Object.keys(tokens)) document.documentElement.style.setProperty(name, tokens[name]);
+    }
   };
   let sequence = 0;
   let dispose;

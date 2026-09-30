@@ -25,6 +25,22 @@ export interface DesktopViewContext {
     readonly background: string;
     readonly foreground: string;
     readonly accent: string;
+    /** Semantic snapshot of the active Pi Garden theme. Present on the desktop host. */
+    readonly snapshot?: {
+      readonly id: string;
+      readonly name: string;
+      readonly variant: "light" | "dark";
+      readonly syntaxTheme: string;
+      readonly seed: {
+        readonly surface: string;
+        readonly ink: string;
+        readonly accent: string;
+        readonly added: string;
+        readonly removed: string;
+        readonly warning: string;
+      };
+      readonly tokens: Readonly<Record<string, string>>;
+    };
   };
   readonly actions: {
     openFile(target: DesktopFileTarget): Promise<void>;

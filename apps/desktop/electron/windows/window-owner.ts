@@ -300,6 +300,11 @@ export class WindowOwner {
     );
   }
 
+  projectedState(window: BrowserWindow): DesktopAppState | undefined {
+    if (window.isDestroyed()) return undefined;
+    return this.projectState(window.webContents.id);
+  }
+
   private projectState(
     webContentsId: number,
     state: DesktopAppState = this.stateOwner.snapshot(),

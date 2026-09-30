@@ -1,4 +1,5 @@
 import type { HostUiRequest, SessionConfig, SessionUsageSnapshot } from "@pi-garden/session-driver";
+import type { ThemeCatalogEntry } from "./theme-catalog";
 import type {
   ModelSettingsSnapshot,
   RuntimeCommandRecord,
@@ -26,6 +27,7 @@ export type WorktreeStatus = "ready" | "missing" | "error";
 export type NewThreadEnvironment = "local" | "worktree";
 export type ThemeMode = "system" | "light" | "dark";
 export const themePresetIds = [
+  "garden",
   "default",
   "catppuccin",
   "tokyo-night",
@@ -36,6 +38,8 @@ export const themePresetIds = [
   "vscode",
 ] as const;
 export type ThemePresetId = (typeof themePresetIds)[number];
+/** Built-in used when nothing is selected or a saved theme can no longer be resolved. */
+export const defaultThemePresetId: ThemePresetId = "garden";
 export type ModelSettingsScopeMode = "app-global" | "per-repo";
 export type ThreadGrouping = "time" | "workspace";
 
@@ -49,6 +53,30 @@ export function isThemeMode(value: unknown): value is ThemeMode {
 
 export function isThemePresetId(value: unknown): value is ThemePresetId {
   return typeof value === "string" && themePresetIds.includes(value as ThemePresetId);
+}
+
+export type ThemeSelectionScope = "builtin" | "user" | "project";
+
+export function isThemeSelectionScope(value: unknown): value is ThemeSelectionScope {
+  return value === "builtin" || value === "user" || value === "project";
+}
+
+/** Catalog ids: built-in preset ids and external theme names. Colons are reserved for the launch cache. */
+export function isThemeId(value: unknown): value is string {
+  if (
+    typeof value !== "string" ||
+    value.length < 1 ||
+    value.length > 80 ||
+    value !== value.trim()
+  ) {
+    return false;
+  }
+  if (value.includes("/") || value.includes("\\") || value.includes(":")) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) return false;
+  }
+  return true;
 }
 export type ComposerDraftSyncSource =
   | "state"
@@ -370,7 +398,15 @@ export interface DesktopAppState {
   readonly modelSettingsScopeMode: ModelSettingsScopeMode;
   readonly globalModelSettings: ModelSettingsSnapshot;
   readonly themeMode: ThemeMode;
-  readonly themePresetId: ThemePresetId;
+  /** Selected theme id. Built-in ids stay valid; external ids are catalog names. */
+  readonly themePresetId: string;
+  readonly themeSelectionScope: ThemeSelectionScope;
+  /** Set when the selection is a project-local theme, so other workspaces do not use it. */
+  readonly themeSelectionWorkspacePath?: string;
+  /** Themes visible in this view: built-ins, user themes, and this workspace's trusted project themes. */
+  readonly themeCatalog: readonly ThemeCatalogEntry[];
+  /** Theme id this view should paint. A project theme selected elsewhere resolves to `default`. */
+  readonly resolvedThemeId: string;
   readonly sidebarCollapsed: boolean;
   readonly threadGrouping: ThreadGrouping;
   readonly enableTransparency: boolean;
@@ -424,7 +460,10 @@ export function createEmptyDesktopAppState(): DesktopAppState {
       enabledModelPatterns: [],
     },
     themeMode: "system",
-    themePresetId: "default",
+    themePresetId: defaultThemePresetId,
+    themeSelectionScope: "builtin",
+    themeCatalog: [],
+    resolvedThemeId: defaultThemePresetId,
     sidebarCollapsed: false,
     threadGrouping: "time",
     enableTransparency: false,

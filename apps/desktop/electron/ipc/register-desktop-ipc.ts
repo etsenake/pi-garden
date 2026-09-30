@@ -293,7 +293,9 @@ export function registerDesktopIpc({
   });
   ipcMain.handle(desktopIpc.setThemePresetId, (event, rawPresetId: unknown) => {
     const presetId = expectThemePresetId(rawPresetId);
-    return run(event, () => owners.state.setThemePresetId(presetId));
+    return run(event, () =>
+      owners.state.setThemePresetId(presetId, windows.viewForSender(event.sender)),
+    );
   });
   ipcMain.handle(desktopIpc.openExternal, (event, rawUrl: unknown) => {
     windows.windowForSender(event.sender);

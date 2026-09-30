@@ -80,7 +80,7 @@ test("presets derive every token, so no preset can inherit another's greys", () 
 
 test("each preset's surface is its syntax theme's editor background", () => {
   for (const preset of themePresets) {
-    if (preset.id === "default") continue;
+    if (preset.id === "default" || preset.id === "garden") continue;
     for (const variant of variants) {
       const { seed, syntaxTheme } = preset.variants[variant];
       const background = syntaxThemes[syntaxTheme].colors?.["editor.background"];

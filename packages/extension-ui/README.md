@@ -72,7 +72,8 @@ state with `env.replicatedState`, which uses the host's Chord instance.
 `host.actions.openFile({ path, line?, column? })` opens a scoped file target.
 `host.actions.prepareTaskDraft({ title, prompt, files? })` prepares a task draft.
 Neither accepts a workspace, session, or window identity. The desktop binds actions
-to the initiating connection. The host supplies theme colors and an `AbortSignal`
+to the initiating connection. The host supplies theme colors, a `theme.snapshot` of the
+active Pi Garden theme (id, variant, seed, syntax theme, and semantic tokens), and an `AbortSignal`
 that reports connection loss; the frontend should stop using old service handles
 when that signal aborts.
 

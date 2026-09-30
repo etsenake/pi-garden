@@ -6,13 +6,13 @@ import type {
 import type {
   ModelSettingsScopeMode,
   NotificationPreferences,
-  ThemePresetId,
   WorkspaceRecord,
 } from "../../../contracts/desktop-state";
 import type {
   CustomProviderConfig,
   DesktopNotificationPermissionStatus,
 } from "../../../contracts/ipc";
+import type { ThemeCatalogEntry } from "../../../contracts/theme-catalog";
 import { SettingsAppearanceSection } from "./settings-appearance-section";
 import { SettingsGeneralSection } from "./settings-general-section";
 import { SettingsModelsSection } from "./settings-models-section";
@@ -37,7 +37,8 @@ interface SettingsViewProps {
   readonly modelSettingsScopeMode: ModelSettingsScopeMode;
   readonly integratedTerminalShell: string;
   readonly themeMode: "system" | "light" | "dark";
-  readonly themePresetId: ThemePresetId;
+  readonly themePresetId: string;
+  readonly themeCatalog: readonly ThemeCatalogEntry[];
   readonly enableTransparency: boolean;
   readonly onSetModelSettingsScopeMode: (mode: ModelSettingsScopeMode) => void;
   readonly onSetDefaultModel: (provider: string, modelId: string) => void;
@@ -57,7 +58,7 @@ interface SettingsViewProps {
   readonly onRequestNotificationPermission: () => void;
   readonly onOpenSystemNotificationSettings: () => void;
   readonly onSetThemeMode: (mode: "system" | "light" | "dark") => void;
-  readonly onSetThemePresetId: (presetId: ThemePresetId) => void;
+  readonly onSetThemePresetId: (presetId: string) => void;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
 }
 
@@ -75,6 +76,7 @@ export function SettingsView({
   integratedTerminalShell,
   themeMode,
   themePresetId,
+  themeCatalog,
   enableTransparency,
   onSetModelSettingsScopeMode,
   onSetDefaultModel,
@@ -138,6 +140,7 @@ export function SettingsView({
             <SettingsAppearanceSection
               themeMode={themeMode}
               themePresetId={themePresetId}
+              themeCatalog={themeCatalog}
               onSetThemeMode={onSetThemeMode}
               onSetThemePresetId={onSetThemePresetId}
               enableTransparency={enableTransparency}

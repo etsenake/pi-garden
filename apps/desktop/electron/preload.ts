@@ -71,7 +71,6 @@ import type {
   SetChildSupervisionLoopInput,
   SelectedTranscriptRecord,
   StartThreadInput,
-  ThemePresetId,
   ThreadGrouping,
   WorkspaceSessionTarget,
   CreateScheduledTaskInput,
@@ -409,7 +408,7 @@ contextBridge.exposeInMainWorld("piApp", {
     ) as Promise<DesktopAppState>,
   setEnableTransparency: (enabled: boolean) =>
     ipcRenderer.invoke(desktopIpc.setEnableTransparency, enabled) as Promise<DesktopAppState>,
-  setThemePresetId: (presetId: ThemePresetId) =>
+  setThemePresetId: (presetId: string) =>
     ipcRenderer.invoke(desktopIpc.setThemePresetId, presetId) as Promise<DesktopAppState>,
   ensureTerminalPanel: (
     workspaceId: string,

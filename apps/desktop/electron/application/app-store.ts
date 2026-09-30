@@ -58,16 +58,24 @@ import {
   type StartThreadInput,
   type StartupDiagnostic,
   type ThemeMode,
-  type ThemePresetId,
   type ThreadGrouping,
   type TranscriptMessage,
   type WorkspaceSessionTarget,
   isThemeMode,
-  isThemePresetId,
+  isThemeId,
   type CreateScheduledTaskInput,
   type ScheduledTaskRecord,
   type UpdateScheduledTaskInput,
 } from "../../contracts/desktop-state";
+import {
+  builtinThemeCatalog,
+  effectiveThemeId,
+  reconcileThemeSelection,
+  themesForWorkspace,
+  type ThemeCatalogEntry,
+  type ThemeSelection,
+} from "../../contracts/theme-catalog";
+import { discoverThemeCatalog, resolveThemeAgentDir } from "../platform/theme-resources";
 import {
   applyTimelineEvent,
   appendAssistantDelta,
@@ -166,7 +174,10 @@ export interface DesktopAppStoreOptions {
 }
 
 export class DesktopAppStore {
-  private state = createEmptyDesktopAppState();
+  private state = {
+    ...createEmptyDesktopAppState(),
+    themeCatalog: builtinThemeCatalog(),
+  };
   private readonly listeners = new Set<StateListener>();
   /** Monotonic publish counter; emit() stamps every published state with it. */
   private publishRevision = 1;
@@ -275,6 +286,12 @@ export class DesktopAppStore {
             `${this.sessionState.composerDraftsBySession.get(sessionKey(sessionRef)) ?? ""}${text}`,
             "extension-editor-text",
           ),
+      },
+      hostTheme: {
+        refresh: () => this.refreshThemeCatalog(),
+        listThemes: (workspacePath) => this.extensionThemes(workspacePath),
+        activeThemeName: (workspacePath) => this.extensionActiveThemeName(workspacePath),
+        setTheme: (workspacePath, name) => this.applyExtensionTheme(workspacePath, name),
       },
       ...(options.generateThreadTitleOverride
         ? { generateThreadTitleOverride: options.generateThreadTitleOverride }
@@ -600,8 +617,10 @@ export class DesktopAppStore {
   }
 
   applyView(view: DesktopAppViewState): DesktopAppState {
-    this.state = this.projectStateForView(view);
-    return structuredClone(this.state);
+    const themeCatalog = this.state.themeCatalog;
+    const projected = this.projectStateForView(view);
+    this.state = { ...projected, themeCatalog };
+    return structuredClone(this.projectStateForView(view));
   }
 
   findSessionRefByCwdAndSessionId(cwd: string, sessionId: string): SessionRef | undefined {
@@ -713,6 +732,7 @@ export class DesktopAppStore {
       lastError:
         this.resolveSelectedSessionError(selectedWorkspaceId, selectedSessionId, false) ??
         (selectedSessionId ? undefined : state.lastError),
+      ...this.projectedTheme(state, selectedWorkspaceId),
     };
   }
 
@@ -844,7 +864,9 @@ export class DesktopAppStore {
   /* ── Workspace methods (delegated) ─────────────────────── */
 
   async addWorkspace(path: string): Promise<DesktopAppState> {
-    return this.workspaceOwner.addWorkspace(path);
+    await this.workspaceOwner.addWorkspace(path);
+    await this.refreshThemeCatalog();
+    return this.snapshot();
   }
 
   getWorkspacePath(workspaceId: string): string | undefined {
@@ -867,7 +889,9 @@ export class DesktopAppStore {
   }
 
   async removeWorkspace(workspaceId: string): Promise<DesktopAppState> {
-    return this.workspaceOwner.removeWorkspace(workspaceId);
+    await this.workspaceOwner.removeWorkspace(workspaceId);
+    await this.refreshThemeCatalog();
+    return this.snapshot();
   }
 
   async reorderWorkspaces(order: readonly string[]): Promise<DesktopAppState> {
@@ -1373,22 +1397,162 @@ export class DesktopAppStore {
     return this.emit();
   }
 
-  async setThemePresetId(themePresetId: ThemePresetId): Promise<DesktopAppState> {
+  async setThemePresetId(
+    themePresetId: string,
+    view?: DesktopAppViewState,
+  ): Promise<DesktopAppState> {
     await this.initialize();
-    if (!isThemePresetId(themePresetId)) {
-      throw new Error(`Unsupported theme preset: ${String(themePresetId)}`);
+    if (!isThemeId(themePresetId)) {
+      throw new Error(`Unsupported theme: ${String(themePresetId)}`);
     }
-    if (this.state.themePresetId === themePresetId) {
-      return structuredClone(this.state);
+    const workspacePath = this.workspacePathForView(view);
+    const entry = themesForWorkspace(this.state.themeCatalog, workspacePath).find(
+      (theme) => theme.id === themePresetId,
+    );
+    if (!entry) {
+      throw new Error(`Unknown theme: ${themePresetId}`);
     }
+    return this.applyThemeSelection({
+      id: entry.id,
+      scope: entry.scope,
+      ...(entry.scope === "project" && entry.workspacePath
+        ? { workspacePath: entry.workspacePath }
+        : {}),
+    });
+  }
+
+  private async applyThemeSelection(selection: ThemeSelection): Promise<DesktopAppState> {
+    const unchanged =
+      this.state.themePresetId === selection.id &&
+      this.state.themeSelectionScope === selection.scope &&
+      this.state.themeSelectionWorkspacePath === selection.workspacePath;
+    if (unchanged) return structuredClone(this.state);
     this.state = {
       ...this.state,
-      themePresetId,
+      themePresetId: selection.id,
+      themeSelectionScope: selection.scope,
+      themeSelectionWorkspacePath: selection.workspacePath,
       lastError: undefined,
       revision: this.state.revision + 1,
     };
     await this.persistUiState();
     return this.emit();
+  }
+
+  private extensionThemes(workspacePath: string) {
+    return themesForWorkspace(this.state.themeCatalog, workspacePath).map((theme) => ({
+      name: theme.id,
+      ...(theme.sourcePath ? { path: theme.sourcePath } : {}),
+    }));
+  }
+
+  private extensionActiveThemeName(workspacePath: string): string {
+    return effectiveThemeId(this.state.themeCatalog, this.themeSelection(), workspacePath);
+  }
+
+  private applyExtensionTheme(
+    workspacePath: string,
+    name: string,
+  ): { success: boolean; error?: string } {
+    const entry = themesForWorkspace(this.state.themeCatalog, workspacePath).find(
+      (theme) => theme.id === name,
+    );
+    if (!entry) return { success: false, error: `Theme not found: ${name}` };
+    const selection: ThemeSelection = {
+      id: entry.id,
+      scope: entry.scope,
+      ...(entry.scope === "project" && entry.workspacePath
+        ? { workspacePath: entry.workspacePath }
+        : {}),
+    };
+    if (
+      this.state.themePresetId === selection.id &&
+      this.state.themeSelectionScope === selection.scope &&
+      this.state.themeSelectionWorkspacePath === selection.workspacePath
+    ) {
+      return { success: true };
+    }
+    this.state = {
+      ...this.state,
+      themePresetId: selection.id,
+      themeSelectionScope: selection.scope,
+      themeSelectionWorkspacePath: selection.workspacePath,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    void this.persistUiState().catch((error: unknown) => {
+      console.error("[app-store] theme persistence failed", error);
+    });
+    this.emit();
+    return { success: true };
+  }
+
+  private themeSelection(): ThemeSelection {
+    return {
+      id: this.state.themePresetId,
+      scope: this.state.themeSelectionScope,
+      ...(this.state.themeSelectionWorkspacePath
+        ? { workspacePath: this.state.themeSelectionWorkspacePath }
+        : {}),
+    };
+  }
+
+  private projectedTheme(
+    state: DesktopAppState,
+    selectedWorkspaceId: string,
+  ): Pick<DesktopAppState, "themeCatalog" | "resolvedThemeId"> {
+    const workspacePath = state.workspaces.find(
+      (workspace) => workspace.id === selectedWorkspaceId,
+    )?.path;
+    const selection: ThemeSelection = {
+      id: state.themePresetId,
+      scope: state.themeSelectionScope,
+      ...(state.themeSelectionWorkspacePath
+        ? { workspacePath: state.themeSelectionWorkspacePath }
+        : {}),
+    };
+    return {
+      themeCatalog: themesForWorkspace(state.themeCatalog, workspacePath),
+      resolvedThemeId: effectiveThemeId(state.themeCatalog, selection, workspacePath),
+    };
+  }
+
+  private workspacePathForView(view: DesktopAppViewState | undefined): string | undefined {
+    const workspaceId = view?.selectedWorkspaceId || this.state.selectedWorkspaceId;
+    return this.state.workspaces.find((workspace) => workspace.id === workspaceId)?.path;
+  }
+
+  private async refreshThemeCatalog(): Promise<void> {
+    let discovered: readonly ThemeCatalogEntry[];
+    try {
+      discovered = await discoverThemeCatalog({
+        agentDir: resolveThemeAgentDir(),
+        workspaces: this.state.workspaces.map((workspace) => ({ path: workspace.path })),
+      });
+    } catch (error) {
+      console.error("[app-store] theme discovery failed", error);
+      return;
+    }
+    const reconciled = reconcileThemeSelection(discovered, this.themeSelection());
+    const catalogChanged =
+      themeCatalogSignature(discovered) !== themeCatalogSignature(this.state.themeCatalog);
+    const selectionChanged =
+      reconciled.selection.id !== this.state.themePresetId ||
+      reconciled.selection.scope !== this.state.themeSelectionScope ||
+      reconciled.selection.workspacePath !== this.state.themeSelectionWorkspacePath;
+    if (!catalogChanged && !selectionChanged) return;
+    this.state = {
+      ...this.state,
+      themeCatalog: discovered,
+      themePresetId: reconciled.selection.id,
+      themeSelectionScope: reconciled.selection.scope,
+      themeSelectionWorkspacePath: reconciled.selection.workspacePath,
+      revision: this.state.revision + 1,
+    };
+    if (reconciled.fellBack || selectionChanged) {
+      await this.persistUiState();
+    }
+    this.emit();
   }
 
   async setModelSettingsScopeMode(
@@ -1993,6 +2157,7 @@ export class DesktopAppStore {
         hydrateSelectedSession: false,
         markSelectedSessionViewed: false,
       });
+      await this.refreshThemeCatalog();
       // Startup GC of leaked pi/* worktrees and branches; self-contained and
       // error-swallowing, so fire-and-forget without blocking initialization.
       void this.workspaceOwner.reconcileWorktrees().catch((error: unknown) => {
@@ -2053,6 +2218,8 @@ export class DesktopAppStore {
       workspaceOrder: persisted.workspaceOrder ?? [],
       themeMode: persisted.themeMode ?? this.state.themeMode,
       themePresetId: persisted.themePresetId ?? this.state.themePresetId,
+      themeSelectionScope: persisted.themeSelectionScope ?? this.state.themeSelectionScope,
+      themeSelectionWorkspacePath: persisted.themeSelectionWorkspacePath,
       sidebarCollapsed: persisted.sidebarCollapsed ?? this.state.sidebarCollapsed,
       threadGrouping: persisted.threadGrouping ?? "time",
       enableTransparency: persisted.enableTransparency ?? this.state.enableTransparency,
@@ -3694,6 +3861,8 @@ export class DesktopAppStore {
         : undefined,
       themeMode: this.state.themeMode,
       themePresetId: this.state.themePresetId,
+      themeSelectionScope: this.state.themeSelectionScope,
+      themeSelectionWorkspacePath: this.state.themeSelectionWorkspacePath,
       sidebarCollapsed: this.state.sidebarCollapsed || undefined,
       threadGrouping: this.state.threadGrouping,
       enableTransparency: this.state.enableTransparency,
@@ -4504,6 +4673,15 @@ async function statMtimeMs(path: string): Promise<number | undefined> {
   } catch {
     return undefined;
   }
+}
+
+function themeCatalogSignature(catalog: readonly ThemeCatalogEntry[]): string {
+  return catalog
+    .map(
+      (entry) =>
+        `${entry.scope}:${entry.id}:${entry.workspacePath ?? ""}:${entry.variants.light?.seed.surface ?? ""}:${entry.variants.dark?.seed.surface ?? ""}:${entry.variants.light?.syntaxTheme ?? ""}:${entry.variants.dark?.syntaxTheme ?? ""}`,
+    )
+    .join("\n");
 }
 
 function resolveGlobalSettingsPath(): string {

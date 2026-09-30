@@ -52,7 +52,6 @@ import type {
   SetChildSupervisionLoopInput,
   SelectedTranscriptRecord,
   StartThreadInput,
-  ThemePresetId,
   ThreadGrouping,
   WorkspaceSessionTarget,
   CreateScheduledTaskInput,
@@ -769,7 +768,7 @@ export interface PiDesktopApi {
   ): Promise<DesktopAppState>;
   setIntegratedTerminalShell(shell: string): Promise<DesktopAppState>;
   setEnableTransparency(enabled: boolean): Promise<DesktopAppState>;
-  setThemePresetId(presetId: ThemePresetId): Promise<DesktopAppState>;
+  setThemePresetId(presetId: string): Promise<DesktopAppState>;
   ensureTerminalPanel(
     workspaceId: string,
     terminalScopeId: string,

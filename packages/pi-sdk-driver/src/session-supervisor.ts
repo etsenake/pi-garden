@@ -48,6 +48,13 @@ import type {
   WorkspaceRef,
 } from "@pi-garden/session-driver";
 import type { RuntimeCommandRecord } from "@pi-garden/session-driver/runtime-types";
+import {
+  createLiveTheme,
+  createSemanticTheme,
+  setExtensionTheme,
+  themeCatalogForExtension,
+  type HostThemePort,
+} from "./extension-theme.js";
 import { isMissingFileError, JsonCatalogStore } from "@pi-garden/catalogs/node";
 import type { SessionFileCatalogStorage } from "@pi-garden/catalogs";
 import { sessionKey } from "@pi-garden/session-driver";
@@ -182,6 +189,8 @@ export interface PiSdkDriverOptions {
    * extensions set.
    */
   readonly hostEditor?: PiHostEditor;
+  /** Live desktop theme catalog. Absent hosts keep a semantic default theme and refuse setTheme. */
+  readonly hostTheme?: HostThemePort;
   readonly onTurnCaptureBoundary?: import("@pi-garden/session-driver").TurnCaptureObserver;
   readonly turnCaptureTimeoutMs?: number;
   readonly generateThreadTitleOverride?: (
@@ -295,6 +304,7 @@ export class SessionSupervisor {
   private readonly builtinExtensions: readonly InlineExtension[];
   private readonly desktopExtensions: PiDesktopExtensionObserver | undefined;
   private readonly hostEditor: PiHostEditor | undefined;
+  private readonly hostTheme: HostThemePort | undefined;
   private readonly onTurnCaptureBoundary: PiSdkDriverOptions["onTurnCaptureBoundary"];
   private readonly turnCaptureTimeoutMs: number | undefined;
   private readonly records = new Map<string, ManagedSessionRecord>();
@@ -324,6 +334,7 @@ export class SessionSupervisor {
     );
     this.desktopExtensions = options.desktopExtensions;
     this.hostEditor = options.hostEditor;
+    this.hostTheme = options.hostTheme;
     this.onTurnCaptureBoundary = options.onTurnCaptureBoundary;
     this.turnCaptureTimeoutMs = options.turnCaptureTimeoutMs;
     this.agentDir = options.agentDir;
@@ -1283,8 +1294,17 @@ export class SessionSupervisor {
 
   async reloadSession(sessionRef: SessionRef): Promise<void> {
     const record = await this.ensureRecord(sessionRef);
-    const session = this.requireSession(record);
+    await this.reloadRecord(record);
+  }
 
+  /** Pi's `/reload` re-reads resources on disk; themes are one of them. */
+  private async reloadRecord(record: ManagedSessionRecord): Promise<void> {
+    const session = this.requireSession(record);
+    try {
+      await this.hostTheme?.refresh();
+    } catch (error) {
+      console.error("[pi-garden] theme refresh failed", error);
+    }
     this.resetExtensionUi(record);
     await session.reload();
     await this.syncRecordAfterSessionMutation(record, { emitUpdate: true });
@@ -1819,16 +1839,15 @@ export class SessionSupervisor {
         await this.syncRecordAfterSessionMutation(record, { emitUpdate: true });
         return { cancelled };
       },
-      reload: async () => {
-        this.resetExtensionUi(record);
-        await this.requireSession(record).reload();
-        await this.syncRecordAfterSessionMutation(record, { emitUpdate: true });
-      },
+      reload: () => this.reloadRecord(record),
     };
   }
 
   private createExtensionUiContext(record: ManagedSessionRecord): ExtensionUIContext {
-    const noOpTheme = extensionUiThemeStub;
+    const workspacePath = record.workspace.path;
+    const activeTheme = createLiveTheme(
+      () => this.hostTheme?.activeThemeName(workspacePath) ?? "default",
+    );
 
     const createDialogPromise = <T>(
       opts: ExtensionUIDialogOptions | undefined,
@@ -2070,15 +2089,15 @@ export class SessionSupervisor {
       setEditorComponent: () => {},
       getEditorComponent: () => undefined,
       addAutocompleteProvider: () => {},
-      get theme() {
-        return noOpTheme;
+      theme: activeTheme,
+      getAllThemes: () => themeCatalogForExtension(this.hostTheme, workspacePath),
+      getTheme: (name) => {
+        const known = themeCatalogForExtension(this.hostTheme, workspacePath).some(
+          (theme) => theme.name === name,
+        );
+        return known ? createSemanticTheme(name) : undefined;
       },
-      getAllThemes: () => [],
-      getTheme: () => undefined,
-      setTheme: () => ({
-        success: false,
-        error: "Theme switching not supported in pi-garden host UI",
-      }),
+      setTheme: (theme) => setExtensionTheme(this.hostTheme, workspacePath, theme),
       getToolsExpanded: () => record.extensionUiState.toolsExpanded,
       setToolsExpanded: (expanded) => {
         this.emitHostUiRequest(record, {
@@ -3240,18 +3259,6 @@ function previewForTreeContent(content: unknown): string | undefined {
     ) || undefined
   );
 }
-
-const extensionUiThemeStub = new Proxy(
-  {},
-  {
-    get:
-      () =>
-      (...args: unknown[]) => {
-        const last = args.at(-1);
-        return typeof last === "string" ? last : "";
-      },
-  },
-) as ExtensionUIContext["theme"];
 
 function cloneQueuedMessage(message: SessionQueuedMessage): SessionQueuedMessage {
   return {

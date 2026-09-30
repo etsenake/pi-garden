@@ -1,15 +1,17 @@
-import type { ThemeMode, ThemePresetId } from "../../../contracts/desktop-state";
+import type { ThemeMode } from "../../../contracts/desktop-state";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 import type { CSSProperties } from "react";
-import { themePreset, themePresets, themeSwatches, themeTokensFor } from "../../../contracts/theme";
+import type { ThemeCatalogEntry } from "../../../contracts/theme-catalog";
+import { presentTheme, swatchesForTheme } from "../../../contracts/theme-catalog";
 import { useActiveTheme } from "../../ui/active-theme";
 
 interface SettingsAppearanceSectionProps {
   readonly themeMode: ThemeMode;
-  readonly themePresetId: ThemePresetId;
+  readonly themePresetId: string;
+  readonly themeCatalog: readonly ThemeCatalogEntry[];
   readonly onSetThemeMode: (mode: ThemeMode) => void;
-  readonly onSetThemePresetId: (presetId: ThemePresetId) => void;
+  readonly onSetThemePresetId: (presetId: string) => void;
   readonly enableTransparency: boolean;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
 }
@@ -23,13 +25,14 @@ const THEME_MODES: readonly { readonly mode: ThemeMode; readonly label: string }
 export function SettingsAppearanceSection({
   themeMode,
   themePresetId,
+  themeCatalog,
   onSetThemeMode,
   onSetThemePresetId,
   enableTransparency,
   onSetEnableTransparency,
 }: SettingsAppearanceSectionProps) {
-  const activePreset = themePreset(themePresetId);
   const { variant } = useActiveTheme();
+  const active = presentTheme(themeCatalog, themePresetId, variant);
   return (
     <>
       <SettingsGroup title="Theme" plain>
@@ -37,7 +40,7 @@ export function SettingsAppearanceSection({
           aria-label="Theme"
           className="theme-mode-tiles"
           role="radiogroup"
-          style={tilePalette(themePresetId)}
+          style={tilePalette(themeCatalog, themePresetId)}
         >
           {THEME_MODES.map((option) => (
             <label className="theme-mode-tile" key={option.mode}>
@@ -64,16 +67,16 @@ export function SettingsAppearanceSection({
       </SettingsGroup>
 
       <SettingsGroup>
-        <SettingsRow title="Color preset" description={activePreset.description}>
+        <SettingsRow title="Color preset" description={active.description}>
           <span className="settings-preset-control">
             <span aria-hidden="true" className="settings-preset-swatches">
-              {themeSwatches(themePresetId, variant).map((swatch, index) => (
+              {swatchesForTheme(active).map((swatch, index) => (
                 <span key={index} style={{ background: swatch }} />
               ))}
             </span>
             <SettingsSelect
               label="Color preset"
-              options={themePresets.map((preset) => ({ value: preset.id, label: preset.name }))}
+              options={themeCatalog.map((preset) => ({ value: preset.id, label: preset.name }))}
               value={themePresetId}
               onChange={onSetThemePresetId}
             />
@@ -94,15 +97,15 @@ export function SettingsAppearanceSection({
   );
 }
 
-function tilePalette(presetId: ThemePresetId): CSSProperties {
-  const light = themeTokensFor(presetId, "light");
-  const dark = themeTokensFor(presetId, "dark");
+function tilePalette(catalog: readonly ThemeCatalogEntry[], themeId: string): CSSProperties {
+  const light = presentTheme(catalog, themeId, "light");
+  const dark = presentTheme(catalog, themeId, "dark");
   return {
-    "--tile-light-bg": light["--sidebar"],
-    "--tile-light-window": light["--main"],
-    "--tile-light-line": light["--line-strong"],
-    "--tile-dark-bg": dark["--sidebar"],
-    "--tile-dark-window": dark["--main"],
-    "--tile-dark-line": dark["--line-strong"],
+    "--tile-light-bg": light.tokens["--sidebar"],
+    "--tile-light-window": light.tokens["--main"],
+    "--tile-light-line": light.tokens["--line-strong"],
+    "--tile-dark-bg": dark.tokens["--sidebar"],
+    "--tile-dark-window": dark.tokens["--main"],
+    "--tile-dark-line": dark.tokens["--line-strong"],
   } as CSSProperties;
 }

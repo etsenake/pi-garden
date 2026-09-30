@@ -428,7 +428,8 @@ export function SecondarySurfaces({
           modelSettingsScopeMode={snapshot.modelSettingsScopeMode}
           integratedTerminalShell={snapshot.integratedTerminalShell}
           themeMode={snapshot.themeMode}
-          themePresetId={snapshot.themePresetId}
+          themePresetId={snapshot.resolvedThemeId}
+          themeCatalog={snapshot.themeCatalog}
           enableTransparency={snapshot.enableTransparency}
           onLoginProvider={handleLoginProvider}
           onSelectSection={onSelectSettingsSection}

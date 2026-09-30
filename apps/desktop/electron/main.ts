@@ -52,8 +52,13 @@ import { NotificationPermissionService } from "./platform/notification-permissio
 import { checkForUpdate, initUpdateChecker, openReleasesPage } from "./platform/update-checker";
 import { ThemeManager } from "./platform/theme-manager";
 import { windowBackgroundFor } from "../contracts/theme";
+import { effectiveThemeId, presentTheme, themesForWorkspace } from "../contracts/theme-catalog";
 import { TerminalService } from "./platform/terminal-service";
-import type { DesktopAppState, DesktopAppViewState } from "../contracts/desktop-state";
+import {
+  defaultThemePresetId,
+  type DesktopAppState,
+  type DesktopAppViewState,
+} from "../contracts/desktop-state";
 import {
   desktopCommands,
   desktopIpc,
@@ -382,23 +387,51 @@ function dispatchCloseFocusedSurface(window: BrowserWindow, event: Electron.Even
 
 // The native window colour matches the renderer's theme, so load, reload and
 // resize never flash another theme's colour.
-function currentWindowBackground(): string {
-  return windowBackgroundFor(
-    store?.snapshot().themePresetId ?? "default",
-    themeManager.getResolvedTheme(),
+function themeBackgroundKey(state: DesktopAppState): string {
+  const seeds = state.themeCatalog
+    .map(
+      (entry) =>
+        `${entry.scope}:${entry.id}:${entry.workspacePath ?? ""}:${entry.variants.light?.seed.surface ?? ""}:${entry.variants.dark?.seed.surface ?? ""}`,
+    )
+    .join("|");
+  return `${state.themePresetId}:${state.themeSelectionScope}:${state.themeSelectionWorkspacePath ?? ""}:${seeds}`;
+}
+
+function currentWindowBackground(state?: DesktopAppState): string {
+  const variant = themeManager.getResolvedTheme();
+  const source = state ?? store?.snapshot();
+  if (!source) {
+    return windowBackgroundFor(defaultThemePresetId, variant);
+  }
+  const workspacePath = source.workspaces.find(
+    (workspace) => workspace.id === source.selectedWorkspaceId,
+  )?.path;
+  const selection = {
+    id: source.themePresetId,
+    scope: source.themeSelectionScope,
+    ...(source.themeSelectionWorkspacePath
+      ? { workspacePath: source.themeSelectionWorkspacePath }
+      : {}),
+  };
+  const catalog = themesForWorkspace(source.themeCatalog, workspacePath);
+  const themeId = effectiveThemeId(source.themeCatalog, selection, workspacePath);
+  return (
+    presentTheme(catalog, themeId, variant).tokens["--window"] ??
+    windowBackgroundFor(defaultThemePresetId, variant)
   );
+}
+
+function refreshWindowBackgrounds(): void {
+  if (!store) return;
+  for (const window of opaqueAppWindows) {
+    if (window.isDestroyed()) continue;
+    const projected = windowOwner?.projectedState(window) ?? store.snapshot();
+    window.setBackgroundColor(currentWindowBackground(projected));
+  }
 }
 
 // Windows created transparent keep their glass until the next launch.
 const opaqueAppWindows = new Set<BrowserWindow>();
-
-function refreshWindowBackgrounds(): void {
-  if (!store) return;
-  const color = currentWindowBackground();
-  for (const window of opaqueAppWindows) {
-    if (!window.isDestroyed()) window.setBackgroundColor(color);
-  }
-}
 
 function createWindow(): BrowserWindow {
   const backgroundTestMode = windowTestMode === "background";
@@ -980,11 +1013,12 @@ app
     themeManager.setMode(store.snapshot().themeMode);
     integratedTerminalShell = (await store.getState()).integratedTerminalShell;
     nativeTheme.on("updated", refreshWindowBackgrounds);
-    let windowBackgroundPresetId = store.snapshot().themePresetId;
+    let windowBackgroundKey = themeBackgroundKey(store.snapshot());
     stopPruningTerminals = store.subscribe((state) => {
       integratedTerminalShell = state.integratedTerminalShell;
-      if (state.themePresetId !== windowBackgroundPresetId) {
-        windowBackgroundPresetId = state.themePresetId;
+      const nextKey = themeBackgroundKey(state);
+      if (nextKey !== windowBackgroundKey) {
+        windowBackgroundKey = nextKey;
         refreshWindowBackgrounds();
       }
       const workspacePaths = state.workspaces.map((workspace) => workspace.path);

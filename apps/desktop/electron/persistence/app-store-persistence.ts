@@ -8,10 +8,15 @@ import type {
   OrchestrationChildTranscriptMessage,
   OrchestrationSupervisionLoop,
   ThemeMode,
-  ThemePresetId,
+  ThemeSelectionScope,
   ThreadGrouping,
 } from "../../contracts/desktop-state";
-import { isThemeMode, isThemePresetId, isThreadGrouping } from "../../contracts/desktop-state";
+import {
+  isThemeId,
+  isThemeMode,
+  isThemeSelectionScope,
+  isThreadGrouping,
+} from "../../contracts/desktop-state";
 import type { ModelSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import { readJsonWithBackup, writeFileAtomicQueued } from "./atomic-file-write";
 import { decodeAttachments } from "./attachment-store";
@@ -48,7 +53,9 @@ export interface PersistedUiState {
   readonly allowMultiple?: boolean;
   readonly enableTransparency?: boolean;
   readonly themeMode?: ThemeMode;
-  readonly themePresetId?: ThemePresetId;
+  readonly themePresetId?: string;
+  readonly themeSelectionScope?: ThemeSelectionScope;
+  readonly themeSelectionWorkspacePath?: string;
   readonly orchestrationChildren?: readonly OrchestrationChildThread[];
 }
 
@@ -123,7 +130,15 @@ export function decodePersistedUiState(parsed: unknown): LegacyPersistedUiState 
     enableTransparency:
       typeof candidate.enableTransparency === "boolean" ? candidate.enableTransparency : undefined,
     themeMode: toThemeMode(candidate.themeMode),
-    themePresetId: toThemePresetId(candidate.themePresetId),
+    themePresetId: toThemeId(candidate.themePresetId),
+    themeSelectionScope: isThemeSelectionScope(candidate.themeSelectionScope)
+      ? candidate.themeSelectionScope
+      : undefined,
+    themeSelectionWorkspacePath:
+      typeof candidate.themeSelectionWorkspacePath === "string" &&
+      candidate.themeSelectionWorkspacePath.trim()
+        ? candidate.themeSelectionWorkspacePath
+        : undefined,
     orchestrationChildren: toPersistedOrchestrationChildren(candidate.orchestrationChildren),
     composerAttachmentsBySession: toObjectArrayRecord(candidate.composerAttachmentsBySession),
     transcripts: toObjectArrayRecord(candidate.transcripts),
@@ -215,6 +230,8 @@ function validateUiState(value: unknown): Record<string, unknown> {
       "enableTransparency",
       "themeMode",
       "themePresetId",
+      "themeSelectionScope",
+      "themeSelectionWorkspacePath",
       "orchestrationChildren",
       "composerAttachmentsBySession",
       "transcripts",
@@ -264,7 +281,9 @@ function validateUiState(value: unknown): Record<string, unknown> {
   optional(root, "activeView", (v) => toAppView(v) !== undefined);
   optional(root, "threadGrouping", isThreadGrouping);
   optional(root, "themeMode", isThemeMode);
-  optional(root, "themePresetId", isThemePresetId);
+  optional(root, "themePresetId", (value) => typeof value === "string");
+  optional(root, "themeSelectionScope", isThemeSelectionScope);
+  optional(root, "themeSelectionWorkspacePath", string);
   optional(root, "modelSettingsScopeMode", (v) => v === "per-repo" || v === "app-global");
   if (root.notificationPreferences !== undefined) {
     const preferences =
@@ -485,8 +504,8 @@ function toThemeMode(value: unknown): ThemeMode | undefined {
   return isThemeMode(value) ? value : undefined;
 }
 
-function toThemePresetId(value: unknown): ThemePresetId | undefined {
-  return isThemePresetId(value) ? value : undefined;
+function toThemeId(value: unknown): string | undefined {
+  return isThemeId(value) ? value : undefined;
 }
 
 function toAppView(value: unknown): AppView | undefined {

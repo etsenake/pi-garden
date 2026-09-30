@@ -81,7 +81,13 @@ import { ExtensionDialog } from "../features/extensions/extension-session-ui";
 import { TreeModal } from "../features/conversation/tree-modal";
 import { ForkModal } from "../features/conversation/fork-modal";
 import { getEffectiveModelRuntime } from "../features/settings/model-settings";
-import { applyTheme, getActiveTheme, useActiveTheme } from "../ui/active-theme";
+import {
+  activeThemeFromCatalog,
+  applyPresentedTheme,
+  getActiveTheme,
+  useActiveTheme,
+} from "../ui/active-theme";
+import { themeSnapshot } from "../../contracts/theme-catalog";
 import { deriveWorkspaceContext } from "./workspace-context";
 import { useTreeForkModals } from "../features/conversation/hooks/use-tree-fork-modals";
 import { useComposerDraftSync } from "../features/conversation/hooks/use-composer-draft-sync";
@@ -135,10 +141,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const themePresetId = snapshot?.themePresetId;
-    if (!resolvedTheme || !themePresetId) return;
-    applyTheme(themePresetId, resolvedTheme);
-  }, [resolvedTheme, snapshot?.themePresetId]);
+    const themeId = snapshot?.resolvedThemeId;
+    if (!resolvedTheme || !themeId || !snapshot) return;
+    applyPresentedTheme(activeThemeFromCatalog(snapshot.themeCatalog, themeId, resolvedTheme));
+  }, [resolvedTheme, snapshot]);
 
   useEffect(() => {
     document.documentElement.classList.toggle(
@@ -148,15 +154,24 @@ export default function App() {
   }, [snapshot?.enableTransparency]);
 
   const activeTheme = useActiveTheme();
-  const extensionViewTheme = useMemo<ExtensionViewTheme>(
-    () => ({
+  const extensionViewTheme = useMemo<ExtensionViewTheme>(() => {
+    const snapshotTheme = themeSnapshot({
+      id: activeTheme.id,
+      name: activeTheme.name,
+      description: "",
+      variant: activeTheme.variant,
+      tokens: activeTheme.tokens,
+      syntaxTheme: activeTheme.syntaxTheme,
+      seed: activeTheme.seed,
+    });
+    return {
       mode: activeTheme.variant,
       background: activeTheme.tokens["--main"] ?? "",
       foreground: activeTheme.tokens["--text"] ?? "",
       accent: activeTheme.tokens["--accent"] ?? "",
-    }),
-    [activeTheme],
-  );
+      snapshot: snapshotTheme,
+    };
+  }, [activeTheme]);
 
   const {
     activeWorktrees,

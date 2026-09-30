@@ -54,13 +54,17 @@ test("IPC request validation rejects unknown enum values", () => {
   expect(expectAppView("scheduled")).toBe("scheduled");
   expect(expectThemeMode("dark")).toBe("dark");
   expect(expectThemePresetId("tokyo-night")).toBe("tokyo-night");
+  expect(expectThemePresetId("harbor")).toBe("harbor");
   expect(expectModelSettingsScopeMode("per-repo")).toBe("per-repo");
   expect(expectThinkingLevel("xhigh")).toBe("xhigh");
 
   expect(() => expectAppView("terminal")).toThrow("view must be a supported app view");
   expect(() => expectThemeMode("auto")).toThrow("mode must be system, light, or dark");
-  expect(() => expectThemePresetId("solarized")).toThrow(
-    "presetId must be a supported theme preset",
+  expect(() => expectThemePresetId("bad/id")).toThrow(
+    "presetId must be a theme id without slashes or colons",
+  );
+  expect(() => expectThemePresetId("light:dark")).toThrow(
+    "presetId must be a theme id without slashes or colons",
   );
   expect(() => expectModelSettingsScopeMode("workspace")).toThrow(
     "mode must be app-global or per-repo",

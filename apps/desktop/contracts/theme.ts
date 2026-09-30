@@ -58,9 +58,27 @@ export interface ThemePreset {
 // foreground, focus/link colour, git decoration colours).
 export const themePresets: readonly ThemePreset[] = [
   {
+    id: "garden",
+    name: "Garden",
+    description: "Cream paper, forest ink, and the coral flower.",
+    variants: {
+      light: {
+        // Sampled from the Living Pi artwork: cream ground, wordmark green, flower coral.
+        seed: seed("#fdfbf0", "#12380c", "#d4532e", "#2f6b28", "#b23a2e", "#9a6b12"),
+        syntaxTheme: "github-light-default",
+      },
+      dark: {
+        // Dusk: a near-neutral forest ground (the OnePlace journal dark paper),
+        // soft leaf status colours, and the coral flower kept as the accent.
+        seed: seed("#1d241f", "#e9f0e7", "#f08a62", "#88c9a0", "#e29a9a", "#d8b871"),
+        syntaxTheme: "github-dark-default",
+      },
+    },
+  },
+  {
     id: "default",
     name: "Default",
-    description: "The pi-garden palette.",
+    description: "Neutral paper and ink.",
     variants: {
       light: {
         seed: seed("#ffffff", "#282825", "#526795", "#2ea043", "#c45666", "#d97706"),

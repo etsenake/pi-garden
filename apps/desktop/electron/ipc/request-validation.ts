@@ -3,7 +3,7 @@ import type { NavigateSessionTreeOptions } from "@pi-garden/session-driver/types
 import type { RuntimeSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import {
   isThemeMode,
-  isThemePresetId,
+  isThemeId,
   type AppView,
   type ComposerAttachment,
   type CreateSessionInput,
@@ -16,7 +16,6 @@ import {
   type SetChildSupervisionLoopInput,
   type StartThreadInput,
   type ThemeMode,
-  type ThemePresetId,
   type ThreadGrouping,
   type WorkspaceSessionTarget,
   isThreadGrouping,
@@ -153,9 +152,9 @@ export function expectThemeMode(value: unknown, name = "mode"): ThemeMode {
   return value;
 }
 
-export function expectThemePresetId(value: unknown, name = "presetId"): ThemePresetId {
-  if (!isThemePresetId(value)) {
-    throw new TypeError(`${name} must be a supported theme preset`);
+export function expectThemePresetId(value: unknown, name = "presetId"): string {
+  if (!isThemeId(value)) {
+    throw new TypeError(`${name} must be a theme id without slashes or colons`);
   }
   return value;
 }

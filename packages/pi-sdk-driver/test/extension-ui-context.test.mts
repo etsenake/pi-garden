@@ -23,7 +23,20 @@ type Emitted = {
   request?: { kind: string; requestId: string } & Record<string, unknown>;
 };
 
-function makeHarness(options: { hostEditor?: PiHostEditor } = {}) {
+function makeHarness(
+  options: {
+    hostEditor?: PiHostEditor;
+    hostTheme?: {
+      refresh(): Promise<void>;
+      listThemes(workspacePath: string): readonly { name: string; path?: string }[];
+      activeThemeName(workspacePath: string): string;
+      setTheme(
+        workspacePath: string,
+        name: string,
+      ): { readonly success: boolean; readonly error?: string };
+    };
+  } = {},
+) {
   const emitted: Emitted[] = [];
   const extensionUiState: ExtensionUiState = createEmptyExtensionUiState();
   const record = {
@@ -61,6 +74,7 @@ function makeHarness(options: { hostEditor?: PiHostEditor } = {}) {
       setSessionFile: async () => undefined,
     } as never,
     ...(options.hostEditor ? { hostEditor: options.hostEditor } : {}),
+    ...(options.hostTheme ? { hostTheme: options.hostTheme } : {}),
   }) as unknown as {
     createExtensionUiContext: (
       record: unknown,
@@ -316,4 +330,50 @@ await test("reset restores every default and replay rebuilds only non-default st
   resetExtensionUiState(state);
   assert.deepEqual(state, createEmptyExtensionUiState());
   assert.deepEqual(replayRequestsForExtensionUiState(state), []);
+});
+
+await test("theme members read and switch the desktop catalog", async () => {
+  let active = "default";
+  const catalog = [{ name: "harbor", path: "/themes/harbor.json" }, { name: "default" }];
+  const h = makeHarness({
+    hostTheme: {
+      refresh: async () => undefined,
+      listThemes: () => catalog,
+      activeThemeName: () => active,
+      setTheme: (_workspacePath, name) => {
+        if (!catalog.some((theme) => theme.name === name)) {
+          return { success: false, error: `Theme not found: ${name}` };
+        }
+        active = name;
+        return { success: true };
+      },
+    },
+  });
+
+  // Pi's runner hands extensions a spread copy of the UI context, so `theme`
+  // must stay live after being read once.
+  const spread = { ...h.ui };
+  assert.equal(spread.theme.name, "default");
+  assert.match(spread.theme.fg("accent", "painted"), /\u001b\[38;5;4mpainted/);
+  active = "harbor";
+  assert.equal(spread.theme.name, "harbor");
+  assert.equal(h.ui.theme.name, "harbor");
+  assert.deepEqual(
+    h.ui.getAllThemes().map((theme) => theme.name),
+    ["default", "harbor"],
+  );
+  assert.equal(h.ui.getAllThemes().find((theme) => theme.name === "default")?.path, undefined);
+  assert.equal(h.ui.getTheme("missing"), undefined);
+  assert.equal(h.ui.getTheme("harbor")?.name, "harbor");
+
+  assert.deepEqual(h.ui.setTheme("default"), { success: true });
+  assert.equal(h.ui.theme.name, "default");
+  const missing = h.ui.setTheme("invented-palette");
+  assert.equal(missing.success, false);
+  assert.equal(missing.error, "Theme not found: invented-palette");
+  assert.equal(h.ui.theme.name, "default");
+  const unrepresentable = h.ui.setTheme({});
+  assert.equal(unrepresentable.success, false);
+  assert.match(unrepresentable.error ?? "", /cannot be represented/);
+  assert.equal(h.ui.theme.name, "default");
 });
