@@ -14,7 +14,8 @@ import type {
 } from "../../../contracts/desktop-state";
 import type { ComposerEditorHandle } from "../conversation/composer-editor";
 import type { MentionOption } from "../conversation/hooks/use-mention-menu";
-import { ArrowUpIcon, PiGardenMark, PlusIcon } from "../../ui/icons";
+import { ArrowUpIcon, PlusIcon } from "../../ui/icons";
+import { PiGardenMark } from "../../ui/pi-garden-mark";
 import {
   MODEL_OPTIONS_EMPTY_TITLE,
   type ComposerSlashCommand,

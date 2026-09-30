@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import piGardenMarkUrl from "../../resources/icon.png";
-
 function Icon({ children }: { readonly children: ReactNode }) {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 20 20">
@@ -173,10 +171,6 @@ export function ArrowUpIcon() {
       />
     </Icon>
   );
-}
-
-export function PiGardenMark() {
-  return <img alt="" aria-hidden="true" draggable={false} src={piGardenMarkUrl} />;
 }
 
 export function StopSquareIcon() {
