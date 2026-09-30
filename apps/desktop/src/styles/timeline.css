@@ -275,8 +275,38 @@
   color: var(--error-ink);
 }
 
+.timeline-activity--warning {
+  color: var(--warning-ink);
+}
+
+.timeline-activity--success {
+  color: var(--success-ink);
+}
+
 .timeline-activity--summary {
   margin-top: 2px;
+}
+
+/* Pi `ctx.ui.notify`: warning/error carry Pi's prefix and the theme color. */
+.timeline-activity__level {
+  font-weight: 600;
+}
+
+/* Pi working row: message from `setWorkingMessage`, frames from `setWorkingIndicator`. */
+.timeline-activity__indicator {
+  display: inline-block;
+  min-width: 1ch;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-strong);
+}
+
+/* Pi `setHiddenThinkingLabel`: the collapsed thinking marker on a reply. */
+.timeline-message__hidden-thinking {
+  margin: 0 0 4px;
+  color: var(--muted-soft);
+  font-size: 12px;
+  font-style: italic;
 }
 
 .timeline-activity__label {

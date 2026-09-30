@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type { HostUiWorkingIndicator } from "@pi-garden/session-driver";
 import { SessionSupervisor } from "../dist/session-supervisor.js";
 import {
   applyHostUiRequestToExtensionUiState,
   createEmptyExtensionUiState,
   replayRequestsForExtensionUiState,
   resetExtensionUiState,
+  type ExtensionUiState,
 } from "../dist/extension-ui-state.js";
 
 /**
@@ -15,10 +17,14 @@ import {
  * `respondToHostUiRequest` exactly as the desktop main process does.
  */
 
-type Emitted = { type: string; request?: { kind: string; requestId: string } & Record<string, unknown> };
+type Emitted = {
+  type: string;
+  request?: { kind: string; requestId: string } & Record<string, unknown>;
+};
 
 function makeHarness(options: { hostEditorText?: () => string | undefined } = {}) {
   const emitted: Emitted[] = [];
+  const extensionUiState: ExtensionUiState = createEmptyExtensionUiState();
   const record = {
     ref: { workspaceId: "ws-1", sessionId: "sess-1" },
     workspace: { workspaceId: "ws-1", path: "/tmp/ws-1", displayName: "ws-1" },
@@ -42,7 +48,7 @@ function makeHarness(options: { hostEditorText?: () => string | undefined } = {}
     eventQueue: Promise.resolve(),
     unsubscribeAgent: undefined,
     pendingHostUiRequests: new Map(),
-    extensionUiState: createEmptyExtensionUiState(),
+    extensionUiState,
     bindingExtensions: false,
     sessionCommands: [],
     leasePath: undefined,
@@ -55,7 +61,9 @@ function makeHarness(options: { hostEditorText?: () => string | undefined } = {}
     } as never,
     ...(options.hostEditorText ? { hostEditorText: options.hostEditorText } : {}),
   }) as unknown as {
-    createExtensionUiContext: (record: unknown) => import("@earendil-works/pi-coding-agent").ExtensionUIContext;
+    createExtensionUiContext: (
+      record: unknown,
+    ) => import("@earendil-works/pi-coding-agent").ExtensionUIContext;
     ensureRecord: (ref: unknown) => Promise<unknown>;
     respondToHostUiRequest: (ref: unknown, response: Record<string, unknown>) => Promise<void>;
     records: Map<string, unknown>;
@@ -69,7 +77,10 @@ function makeHarness(options: { hostEditorText?: () => string | undefined } = {}
     await record.eventQueue;
     const request = lastRequest();
     assert.ok(request, "expected a pending dialog request");
-    await supervisor.respondToHostUiRequest(record.ref, { requestId: request.requestId, ...response });
+    await supervisor.respondToHostUiRequest(record.ref, {
+      requestId: request.requestId,
+      ...response,
+    });
   };
   return { ui, record, emitted, requests, lastRequest, answer };
 }
@@ -167,9 +178,11 @@ await test("timeout settles the dialog with the default and closes it", async ()
 await test("working, hidden-thinking and tools state follow Pi's defaults and setters", async () => {
   const h = makeHarness();
   const state = h.record.extensionUiState;
+  // Read through a function so node:assert's type assertions don't narrow the field.
+  const indicator = (): HostUiWorkingIndicator | undefined => state.workingIndicator;
   assert.equal(state.workingMessage, undefined);
   assert.equal(state.workingVisible, true);
-  assert.equal(state.workingIndicator, undefined);
+  assert.equal(indicator(), undefined);
   assert.equal(state.hiddenThinkingLabel, undefined);
   assert.equal(h.ui.getToolsExpanded(), false);
 
@@ -182,25 +195,25 @@ await test("working, hidden-thinking and tools state follow Pi's defaults and se
 
   assert.equal(state.workingMessage, "Deploying");
   assert.equal(state.workingVisible, false);
-  assert.deepEqual(state.workingIndicator, { frames: ["-", "\\", "|", "/"], intervalMs: 120 });
+  assert.deepEqual(indicator(), { frames: ["-", "\\", "|", "/"], intervalMs: 120 });
   assert.equal(state.hiddenThinkingLabel, "Pondering");
   assert.equal(h.ui.getToolsExpanded(), true);
 
   // Static indicator, empty frames (hidden), interval-only (default frames).
   h.ui.setWorkingIndicator({ frames: ["●"] });
   await h.record.eventQueue;
-  assert.deepEqual(state.workingIndicator, { frames: ["●"] });
+  assert.deepEqual(indicator(), { frames: ["●"] });
   h.ui.setWorkingIndicator({ frames: [] });
   await h.record.eventQueue;
-  assert.deepEqual(state.workingIndicator, { frames: [] });
+  assert.deepEqual(indicator(), { frames: [] });
   h.ui.setWorkingIndicator({ intervalMs: 50 });
   await h.record.eventQueue;
-  assert.equal(state.workingIndicator?.frames.length, 10);
-  assert.equal(state.workingIndicator?.intervalMs, 50);
+  assert.equal(indicator()?.frames.length, 10);
+  assert.equal(indicator()?.intervalMs, 50);
   // Non-positive intervals fall back to the default interval, as in Pi.
   h.ui.setWorkingIndicator({ frames: ["a", "b"], intervalMs: 0 });
   await h.record.eventQueue;
-  assert.deepEqual(state.workingIndicator, { frames: ["a", "b"] });
+  assert.deepEqual(indicator(), { frames: ["a", "b"] });
 
   // Clearing restores defaults.
   h.ui.setWorkingMessage();
@@ -211,7 +224,7 @@ await test("working, hidden-thinking and tools state follow Pi's defaults and se
   await h.record.eventQueue;
   assert.equal(state.workingMessage, undefined);
   assert.equal(state.workingVisible, true);
-  assert.equal(state.workingIndicator, undefined);
+  assert.equal(indicator(), undefined);
   assert.equal(state.hiddenThinkingLabel, undefined);
   assert.equal(h.ui.getToolsExpanded(), false);
 });

@@ -2781,6 +2781,126 @@
   overflow-wrap: anywhere;
 }
 
+.extension-widgets__truncated {
+  color: var(--muted-soft);
+}
+
+/* ---- ANSI text from Pi extensions ----------------------------------------
+ * Pi widgets and statuses arrive as terminal text styled by Pi's theme. The
+ * parser in src/lib/ansi-text.ts keeps text attributes and the 16-color
+ * palette; these rules map that palette onto the desktop theme's semantic
+ * tokens so extension text follows every theme without terminal colors.
+ * -------------------------------------------------------------------------- */
+
+.ansi--bold {
+  font-weight: 600;
+}
+
+.ansi--dim {
+  opacity: 0.7;
+}
+
+.ansi--italic {
+  font-style: italic;
+}
+
+.ansi--underline {
+  text-decoration: underline;
+}
+
+.ansi--strikethrough {
+  text-decoration: line-through;
+}
+
+.ansi--underline.ansi--strikethrough {
+  text-decoration: underline line-through;
+}
+
+.ansi--inverse {
+  background: var(--text);
+  color: var(--main);
+}
+
+.ansi-fg-black,
+.ansi-fg-bright-black {
+  color: var(--muted-soft);
+}
+
+.ansi-fg-red,
+.ansi-fg-bright-red {
+  color: var(--error-ink);
+}
+
+.ansi-fg-green,
+.ansi-fg-bright-green {
+  color: var(--success-ink);
+}
+
+.ansi-fg-yellow,
+.ansi-fg-bright-yellow {
+  color: var(--warning-ink);
+}
+
+.ansi-fg-blue,
+.ansi-fg-bright-blue {
+  color: var(--accent);
+}
+
+.ansi-fg-magenta,
+.ansi-fg-bright-magenta {
+  color: color-mix(in srgb, var(--accent) 65%, var(--error));
+}
+
+.ansi-fg-cyan,
+.ansi-fg-bright-cyan {
+  color: color-mix(in srgb, var(--accent) 65%, var(--success));
+}
+
+.ansi-fg-white,
+.ansi-fg-bright-white {
+  color: var(--text-strong);
+}
+
+.ansi-bg-black,
+.ansi-bg-bright-black {
+  background: var(--surface-overlay-hover);
+}
+
+.ansi-bg-red,
+.ansi-bg-bright-red {
+  background: var(--danger-tint-bg);
+}
+
+.ansi-bg-green,
+.ansi-bg-bright-green {
+  background: var(--success-tint-bg);
+}
+
+.ansi-bg-yellow,
+.ansi-bg-bright-yellow {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+}
+
+.ansi-bg-blue,
+.ansi-bg-bright-blue {
+  background: var(--accent-tint-bg);
+}
+
+.ansi-bg-magenta,
+.ansi-bg-bright-magenta {
+  background: color-mix(in srgb, var(--accent) 10%, var(--danger-tint-bg));
+}
+
+.ansi-bg-cyan,
+.ansi-bg-bright-cyan {
+  background: color-mix(in srgb, var(--accent) 10%, var(--success-tint-bg));
+}
+
+.ansi-bg-white,
+.ansi-bg-bright-white {
+  background: var(--surface-overlay);
+}
+
 .extension-dialog-backdrop {
   position: fixed;
   inset: 0;

@@ -241,6 +241,22 @@ export type SessionExtensionDialogRecord = Extract<
   { readonly kind: "confirm" | "select" | "input" | "editor" }
 >;
 
+/** Pi `setWorkingIndicator` frames; one frame is static, none hides the indicator. */
+export interface SessionExtensionWorkingIndicatorRecord {
+  readonly frames: readonly string[];
+  readonly intervalMs?: number;
+}
+
+/** Pi `setWorkingMessage` / `setWorkingVisible` / `setWorkingIndicator` state for a session. */
+export interface SessionExtensionWorkingRecord {
+  /** Custom working message; absent means the host default. */
+  readonly message?: string;
+  /** Whether the transcript working row is shown while a run is active. */
+  readonly visible: boolean;
+  /** Custom spinner frames; absent means the host default indicator. */
+  readonly indicator?: SessionExtensionWorkingIndicatorRecord;
+}
+
 export interface SessionExtensionUiStateRecord {
   readonly instanceId: string;
   readonly statuses: readonly SessionExtensionStatusRecord[];
@@ -248,6 +264,11 @@ export interface SessionExtensionUiStateRecord {
   readonly pendingDialogs: readonly SessionExtensionDialogRecord[];
   readonly title?: string;
   readonly editorText?: string;
+  readonly working: SessionExtensionWorkingRecord;
+  /** Pi `setHiddenThinkingLabel`; absent means the host default label. */
+  readonly hiddenThinkingLabel?: string;
+  /** Pi `setToolsExpanded`; the default expansion for tool calls in this session. */
+  readonly toolsExpanded: boolean;
 }
 
 export type ExtensionCommandCompatibilityStatus = "supported" | "terminal-only";

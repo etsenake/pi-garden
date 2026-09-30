@@ -1,22 +1,37 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { HostUiResponse } from "@pi-garden/session-driver";
 import { trapDialogFocus } from "../../ui/dialog-focus";
+import {
+  ansiStyleClassNames,
+  hasAnsiStyle,
+  parseAnsiText,
+  type AnsiTextSegment,
+} from "../../lib/ansi-text";
 import type {
   SessionExtensionDialogRecord,
   SessionExtensionUiStateRecord,
   SessionExtensionWidgetRecord,
 } from "../../../contracts/desktop-state";
 
-const ANSI_ESCAPE_PATTERN = /\u001B\[[0-?]*[ -/]*[@-~]/g;
+/** Pi's TUI shows at most this many widget lines, then a muted truncation marker. */
+export const MAX_WIDGET_LINES = 10;
+const WIDGET_TRUNCATED_MARKER = "... (widget truncated)";
 
 export interface ExtensionWidgetView {
   readonly key: string;
-  readonly lines: readonly string[];
+  /** Styled lines after Pi's line cap; each line is a run of ANSI-styled segments. */
+  readonly lines: readonly (readonly AnsiTextSegment[])[];
+  /** Whether Pi's line cap dropped trailing lines. */
+  readonly truncated: boolean;
 }
 
 export interface ExtensionStatusView {
   readonly key: string;
-  readonly text: string;
+  readonly segments: readonly AnsiTextSegment[];
+}
+
+export function plainText(segments: readonly AnsiTextSegment[]): string {
+  return segments.map((segment) => segment.text).join("");
 }
 
 export function widgetsForPlacement(
@@ -31,8 +46,23 @@ export function widgetsForPlacement(
     if (widget.placement !== placement) {
       return [];
     }
-    const lines = visibleWidgetLines(widget.lines);
-    return lines ? [{ key: widget.key, lines }] : [];
+    const lines = widget.lines.flatMap((line) =>
+      line
+        .replaceAll("\r\n", "\n")
+        .replaceAll("\r", "\n")
+        .split("\n")
+        .map((part) => parseAnsiText(part)),
+    );
+    if (!lines.some((line) => plainText(line).trim().length > 0)) {
+      return [];
+    }
+    return [
+      {
+        key: widget.key,
+        lines: lines.slice(0, MAX_WIDGET_LINES),
+        truncated: lines.length > MAX_WIDGET_LINES,
+      },
+    ];
   });
 }
 
@@ -44,12 +74,47 @@ export function statusesForDisplay(
   }
 
   return uiState.statuses
-    .map((status) => ({
-      key: status.key,
-      text: sanitizeStatusText(status.text),
-    }))
-    .filter((status) => status.text.length > 0)
+    .map((status) => ({ key: status.key, segments: statusSegments(status.text) }))
+    .filter((status) => plainText(status.segments).length > 0)
     .sort((left, right) => left.key.localeCompare(right.key));
+}
+
+/** Flatten a status to one line while keeping its styling. */
+function statusSegments(text: string): readonly AnsiTextSegment[] {
+  const segments = parseAnsiText(text.replace(/[\r\n\t]/g, " ")).map((segment) => ({
+    ...segment,
+    text: segment.text.replace(/ +/g, " "),
+  }));
+  // Trim leading/trailing whitespace across segment boundaries.
+  let start = 0;
+  while (start < segments.length && segments[start]!.text.trim().length === 0) start += 1;
+  let end = segments.length;
+  while (end > start && segments[end - 1]!.text.trim().length === 0) end -= 1;
+  const trimmed = segments.slice(start, end);
+  if (trimmed.length === 0) {
+    return [];
+  }
+  const lastIndex = trimmed.length - 1;
+  trimmed[0] = { ...trimmed[0]!, text: trimmed[0]!.text.trimStart() };
+  trimmed[lastIndex] = { ...trimmed[lastIndex]!, text: trimmed[lastIndex]!.text.trimEnd() };
+  return trimmed.filter((segment) => segment.text.length > 0);
+}
+
+/** Render styled segments as spans; unstyled runs stay bare text nodes. */
+export function AnsiText({ segments }: { readonly segments: readonly AnsiTextSegment[] }) {
+  return (
+    <>
+      {segments.map((segment, index) =>
+        hasAnsiStyle(segment.style) ? (
+          <span className={`ansi ${ansiStyleClassNames(segment.style)}`} key={index}>
+            {segment.text}
+          </span>
+        ) : (
+          <Fragment key={index}>{segment.text}</Fragment>
+        ),
+      )}
+    </>
+  );
 }
 
 export function ExtensionWidgets({
@@ -78,7 +143,18 @@ export function ExtensionWidgets({
     >
       {widgets.map((widget) => (
         <pre className="extension-widgets__item" data-widget-key={widget.key} key={widget.key}>
-          {widget.lines.join("\n")}
+          {widget.lines.map((line, index) => (
+            <Fragment key={index}>
+              {index > 0 ? "\n" : null}
+              <AnsiText segments={line} />
+            </Fragment>
+          ))}
+          {widget.truncated ? (
+            <span className="extension-widgets__truncated" data-testid="extension-widget-truncated">
+              {"\n"}
+              {WIDGET_TRUNCATED_MARKER}
+            </span>
+          ) : null}
         </pre>
       ))}
     </div>
@@ -102,7 +178,7 @@ export function ExtensionStatusLine({
     >
       {statuses.map((status) => (
         <span className="extension-status-line__item" data-status-key={status.key} key={status.key}>
-          {status.text}
+          <AnsiText segments={status.segments} />
         </span>
       ))}
     </div>
@@ -263,23 +339,4 @@ export function ExtensionDialog({
       </div>
     </div>
   );
-}
-
-function visibleWidgetLines(lines: readonly string[]): readonly string[] | undefined {
-  const sanitized = lines.map((line) => stripAnsi(line));
-  if (!sanitized.some((line) => line.trim().length > 0)) {
-    return undefined;
-  }
-  return sanitized;
-}
-
-function sanitizeStatusText(text: string): string {
-  return stripAnsi(text)
-    .replace(/[\r\n\t]/g, " ")
-    .replace(/ +/g, " ")
-    .trim();
-}
-
-function stripAnsi(text: string): string {
-  return text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replace(ANSI_ESCAPE_PATTERN, "");
 }

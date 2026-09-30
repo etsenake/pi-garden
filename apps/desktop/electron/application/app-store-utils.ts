@@ -467,7 +467,7 @@ export function makeActivityItem(
   label: string,
   options: Pick<
     Extract<TranscriptMessage, { kind: "activity" }>,
-    "detail" | "metadata" | "tone"
+    "detail" | "metadata" | "tone" | "source"
   > = {},
 ): TranscriptMessage {
   return {

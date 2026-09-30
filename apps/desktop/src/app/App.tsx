@@ -197,11 +197,15 @@ export default function App() {
   });
   const queuedComposerMessages = snapshot?.queuedComposerMessages ?? [];
   const editingQueuedMessageId = snapshot?.editingQueuedMessageId;
-  const runningLabel = useRunningLabel(
-    selectedSession?.status === "running" ? selectedSession.runningSince : undefined,
-  );
   const selectedSessionKey =
     selectedWorkspace && selectedSession ? `${selectedWorkspace.id}:${selectedSession.id}` : "";
+  const selectedExtensionUi = selectedSession
+    ? snapshot?.sessionExtensionUiBySession[selectedSessionKey]
+    : undefined;
+  const runningLabel = useRunningLabel(
+    selectedSession?.status === "running" ? selectedSession.runningSince : undefined,
+    selectedExtensionUi?.working.message,
+  );
   const workbenchTarget = useMemo(
     () =>
       selectedWorkspace && selectedSession
@@ -268,7 +272,17 @@ export default function App() {
     selectedTranscript.sessionId === selectedSession.id
       ? selectedTranscript
       : null;
-  const activeTranscript = selectedTranscriptForSession?.transcript ?? [];
+  const rawTranscript = selectedTranscriptForSession?.transcript ?? [];
+  // Pi `setWorkingVisible(false)` hides the working row without touching the
+  // rest of the run presentation.
+  const workingRowHidden = selectedExtensionUi?.working.visible === false;
+  const activeTranscript = useMemo(
+    () =>
+      workingRowHidden
+        ? rawTranscript.filter((item) => !(item.kind === "activity" && item.source === "working"))
+        : rawTranscript,
+    [rawTranscript, workingRowHidden],
+  );
   const scheduledOrigins = useMemo(() => {
     if (!snapshot || !selectedWorkspace || !selectedSession) {
       return new Map();
@@ -321,9 +335,6 @@ export default function App() {
   const selectedSessionCommands = selectedSession
     ? (snapshot?.sessionCommandsBySession[selectedSessionKey] ?? [])
     : [];
-  const selectedExtensionUi = selectedSession
-    ? snapshot?.sessionExtensionUiBySession[selectedSessionKey]
-    : undefined;
   const selectedWorkspaceCommandCompatibility = selectedWorkspace
     ? (snapshot?.extensionCommandCompatibilityByWorkspace[selectedWorkspace.id] ?? [])
     : [];
@@ -1137,6 +1148,7 @@ export default function App() {
                     scheduledOrigins={scheduledOrigins}
                     annotations={transcriptAnnotations}
                     platform={api?.platform ?? "linux"}
+                    extensionUi={selectedExtensionUi}
                   />
                 </div>
               </section>

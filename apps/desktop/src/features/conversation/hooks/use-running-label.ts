@@ -1,38 +1,49 @@
 import { useEffect, useState } from "react";
 
-export function useRunningLabel(startedAt: string | undefined) {
-  const [label, setLabel] = useState(() => formatRunningLabel(startedAt));
+/**
+ * Header status while a run is active. `workingMessage` is Pi's
+ * `setWorkingMessage` text; it replaces the default "Working" wording and the
+ * elapsed time keeps ticking after it.
+ */
+export function useRunningLabel(startedAt: string | undefined, workingMessage?: string) {
+  const [label, setLabel] = useState(() => formatRunningLabel(startedAt, workingMessage));
 
   useEffect(() => {
-    setLabel(formatRunningLabel(startedAt));
+    setLabel(formatRunningLabel(startedAt, workingMessage));
     if (!startedAt) {
       return undefined;
     }
 
     const interval = window.setInterval(() => {
-      setLabel(formatRunningLabel(startedAt));
+      setLabel(formatRunningLabel(startedAt, workingMessage));
     }, 1000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [startedAt]);
+  }, [startedAt, workingMessage]);
 
   return label;
 }
 
-function formatRunningLabel(startedAt: string | undefined): string {
+function formatRunningLabel(
+  startedAt: string | undefined,
+  workingMessage: string | undefined,
+): string {
+  const message = workingMessage?.trim() || "Working";
   if (!startedAt) {
-    return "Working…";
+    return `${message}…`;
   }
 
   const diffMs = Math.max(0, Date.now() - Date.parse(startedAt));
   const seconds = Math.max(1, Math.floor(diffMs / 1000));
   if (seconds < 60) {
-    return `Working for ${seconds}s`;
+    return `${message} for ${seconds}s`;
   }
 
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
-  return remaining === 0 ? `Working for ${minutes}m` : `Working for ${minutes}m ${remaining}s`;
+  return remaining === 0
+    ? `${message} for ${minutes}m`
+    : `${message} for ${minutes}m ${remaining}s`;
 }

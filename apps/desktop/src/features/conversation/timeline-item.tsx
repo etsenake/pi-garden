@@ -1,5 +1,6 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SessionTranscriptMessage } from "@pi-garden/session-driver";
+import type { SessionExtensionWorkingRecord } from "../../../contracts/desktop-state";
 import type {
   DisplayTimelineItem,
   TimelineActivity,
@@ -31,9 +32,43 @@ import {
 } from "../../ui/icons";
 import { extensionToLanguage } from "../../ui/syntax-highlight";
 
+/**
+ * Pi `ExtensionUIContext` state that shapes transcript rows: the working row,
+ * the collapsed-thinking label, and the default tool expansion.
+ */
+export interface TimelineExtensionUi {
+  readonly working: SessionExtensionWorkingRecord;
+  readonly hiddenThinkingLabel?: string;
+  readonly toolsExpanded: boolean;
+}
+
+/** Pi's defaults when no extension has set anything. */
+export const DEFAULT_TIMELINE_EXTENSION_UI: TimelineExtensionUi = {
+  working: { visible: true },
+  toolsExpanded: false,
+};
+export const DEFAULT_HIDDEN_THINKING_LABEL = "Thinking...";
+/** Pi's TUI loader frames and interval. */
+export const DEFAULT_WORKING_INDICATOR_FRAMES: readonly string[] = [
+  "⠋",
+  "⠙",
+  "⠹",
+  "⠸",
+  "⠼",
+  "⠴",
+  "⠦",
+  "⠧",
+  "⠇",
+  "⠏",
+];
+export const DEFAULT_WORKING_INDICATOR_INTERVAL_MS = 80;
+/** Fastest animation the renderer will run; Pi allows any positive interval. */
+const MIN_WORKING_INDICATOR_INTERVAL_MS = 40;
+
 export function TimelineItem({
   item,
-  expandedToolCallIds,
+  toggledToolCallIds,
+  extensionUi = DEFAULT_TIMELINE_EXTENSION_UI,
   onToggleToolCall,
   onViewFileInDiff,
   sourceMessageIndex,
@@ -46,7 +81,9 @@ export function TimelineItem({
   onOpenAnnotation,
 }: {
   readonly item: DisplayTimelineItem;
-  readonly expandedToolCallIds?: ReadonlySet<string>;
+  /** Tool calls the user toggled away from the session's default expansion. */
+  readonly toggledToolCallIds?: ReadonlySet<string>;
+  readonly extensionUi?: TimelineExtensionUi;
   readonly onToggleToolCall?: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly sourceMessageIndex?: number;
@@ -67,6 +104,7 @@ export function TimelineItem({
       return (
         <TimelineMessage
           item={item}
+          hiddenThinkingLabel={extensionUi.hiddenThinkingLabel ?? DEFAULT_HIDDEN_THINKING_LABEL}
           sourceMessageIndex={sourceMessageIndex}
           onForkFromMessage={onForkFromMessage}
           onOpenWorkspaceFileLine={onOpenWorkspaceFileLine}
@@ -77,12 +115,16 @@ export function TimelineItem({
         />
       );
     case "activity":
-      return <TimelineActivityItem item={item} />;
+      return item.source === "working" ? (
+        <TimelineWorkingItem item={item} working={extensionUi.working} />
+      ) : (
+        <TimelineActivityItem item={item} />
+      );
     case "tool":
       return (
         <TimelineToolCallItem
           item={item}
-          expanded={expandedToolCallIds?.has(item.callId) ?? false}
+          expanded={extensionUi.toolsExpanded !== (toggledToolCallIds?.has(item.callId) ?? false)}
           onToggle={onToggleToolCall}
           onViewFileInDiff={onViewFileInDiff}
         />
@@ -96,6 +138,7 @@ export function TimelineItem({
 
 function TimelineMessage({
   item,
+  hiddenThinkingLabel,
   sourceMessageIndex,
   onForkFromMessage,
   scheduledOrigin,
@@ -105,6 +148,7 @@ function TimelineMessage({
   onOpenAnnotation,
 }: {
   readonly item: SessionTranscriptMessage;
+  readonly hiddenThinkingLabel: string;
   readonly sourceMessageIndex?: number;
   readonly onForkFromMessage?: (messageIndex: number, preview?: string) => void;
   readonly scheduledOrigin?: ScheduledTaskOrigin;
@@ -189,6 +233,14 @@ function TimelineMessage({
   const forkable = sourceMessageIndex !== undefined;
   return (
     <article className="timeline-item timeline-item--assistant" ref={articleRef}>
+      {item.hasThinking ? (
+        // Pi shows this label in place of a thinking block the user has hidden.
+        // The desktop transcript never renders thinking text, so the label is
+        // the whole marker; `setHiddenThinkingLabel` changes only its wording.
+        <p className="timeline-message__hidden-thinking" data-testid="hidden-thinking">
+          {hiddenThinkingLabel}
+        </p>
+      ) : null}
       <MessageMarkdown
         annotationRoot
         onOpenWorkspaceFileLine={onOpenWorkspaceFileLine}
@@ -221,13 +273,93 @@ function TimelineMessage({
 }
 
 function TimelineActivityItem({ item }: { readonly item: TimelineActivity }) {
+  const notifyLevel =
+    item.source === "notify"
+      ? item.tone === "error"
+        ? "error"
+        : item.tone === "warning"
+          ? "warning"
+          : "info"
+      : undefined;
   return (
-    <div className={`timeline-activity timeline-activity--${item.tone ?? "neutral"}`}>
-      <span className="timeline-activity__label">{item.label}</span>
+    <div
+      className={`timeline-activity timeline-activity--${item.tone ?? "neutral"}`}
+      data-notify-level={notifyLevel}
+      role={notifyLevel === "error" ? "alert" : notifyLevel ? "status" : undefined}
+    >
+      <span className="timeline-activity__label">
+        {notifyLevel === "error" ? (
+          <span className="timeline-activity__level">Error: </span>
+        ) : notifyLevel === "warning" ? (
+          <span className="timeline-activity__level">Warning: </span>
+        ) : null}
+        {item.label}
+      </span>
       {item.detail ? <span className="timeline-activity__detail">{item.detail}</span> : null}
       {item.metadata ? <span className="timeline-activity__meta">{item.metadata}</span> : null}
     </div>
   );
+}
+
+/**
+ * The live working row. Pi's `setWorkingMessage` replaces the text and
+ * `setWorkingIndicator` replaces the spinner: one frame is static, no frames
+ * hides it, several animate at the configured interval.
+ */
+function TimelineWorkingItem({
+  item,
+  working,
+}: {
+  readonly item: TimelineActivity;
+  readonly working: SessionExtensionWorkingRecord;
+}) {
+  const frames = working.indicator?.frames ?? DEFAULT_WORKING_INDICATOR_FRAMES;
+  const intervalMs = Math.max(
+    MIN_WORKING_INDICATOR_INTERVAL_MS,
+    working.indicator?.intervalMs ?? DEFAULT_WORKING_INDICATOR_INTERVAL_MS,
+  );
+  const frame = useWorkingIndicatorFrame(frames, intervalMs);
+  const indicatorKind = frames.length === 0 ? "hidden" : working.indicator ? "custom" : "default";
+  return (
+    <div
+      className="timeline-activity timeline-activity--neutral timeline-activity--working"
+      data-testid="working-row"
+      data-working-indicator={indicatorKind}
+      data-working-message={working.message === undefined ? "default" : "custom"}
+    >
+      {frame !== undefined ? (
+        <span aria-hidden="true" className="timeline-activity__indicator">
+          {frame}
+        </span>
+      ) : null}
+      <span className="timeline-activity__label">{working.message ?? item.label}</span>
+    </div>
+  );
+}
+
+function useWorkingIndicatorFrame(
+  frames: readonly string[],
+  intervalMs: number,
+): string | undefined {
+  const [index, setIndex] = useState(0);
+  // Snapshots rebuild the frames array every publish; key the timer on its
+  // contents so streaming ticks don't restart the animation.
+  const framesKey = frames.join("\u0000");
+  const frameCount = frames.length;
+  useEffect(() => {
+    setIndex(0);
+    if (frameCount <= 1) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % frameCount);
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [framesKey, frameCount, intervalMs]);
+  if (frames.length === 0) {
+    return undefined;
+  }
+  return frames[index % frames.length];
 }
 
 function TimelineToolCallItem({

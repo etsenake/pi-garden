@@ -150,13 +150,6 @@ type SessionEventListener = (
   event: SessionDriverEvent,
   state: DesktopAppState,
 ) => void | Promise<void>;
-type ExtensionUiDialogRequest = Extract<
-  SessionDriverEvent,
-  { type: "hostUiRequest" }
->["request"] & {
-  readonly requestId: string;
-  readonly timeoutMs?: number;
-};
 export interface DesktopAppStoreOptions {
   readonly userDataDir: string;
   readonly initialWorkspacePaths: readonly string[];
@@ -250,7 +243,6 @@ export class DesktopAppStore {
   private scheduledOrchestrationSupervisionRunAt: string | undefined;
   private scheduledTaskTimer: NodeJS.Timeout | undefined;
   private scheduledTaskWakeAt: string | undefined;
-  private readonly extensionDialogTimeoutTimers = new Map<string, NodeJS.Timeout>();
   private readonly restoredSelectedSessionKeysAwaitingSelection = new Set<string>();
   private initPromise: Promise<void> | undefined;
   private selectionEpoch = 0;
@@ -269,6 +261,10 @@ export class DesktopAppStore {
       catalogStorage: this.catalogStore,
       ...(options.driverOptions ?? {}),
       isBuiltinExtensionEnabled: (name) => !this.disabledBuiltinExtensions.has(name),
+      // Pi's `ctx.ui.getEditorText()` reads the live desktop draft, not only text
+      // an extension set through `setEditorText`.
+      hostEditorText: (sessionRef) =>
+        this.sessionState.composerDraftsBySession.get(sessionKey(sessionRef)),
       ...(options.generateThreadTitleOverride
         ? { generateThreadTitleOverride: options.generateThreadTitleOverride }
         : {}),
@@ -2761,9 +2757,6 @@ export class DesktopAppStore {
 
     const pendingDialogs = [...uiState.pendingDialogs];
     uiState.pendingDialogs = [];
-    for (const dialog of pendingDialogs) {
-      this.clearExtensionDialogTimeout(sessionRef, dialog.requestId);
-    }
     this.state = this.syncDerivedSessionState(
       {
         ...this.state,
@@ -2809,7 +2802,6 @@ export class DesktopAppStore {
     response: HostUiResponse,
   ): Promise<DesktopAppState> {
     this.removePendingExtensionDialog(sessionRef, response.requestId);
-    this.clearExtensionDialogTimeout(sessionRef, response.requestId);
 
     return this.withErrorHandling(async () => {
       await this.driver.respondToHostUiRequest(sessionRef, response);
@@ -2931,7 +2923,6 @@ export class DesktopAppStore {
       return;
     }
 
-    this.clearExtensionDialogTimeoutsForSession(sessionRef);
     this.sessionState.extensionUiBySession.delete(key);
     this.state = this.syncDerivedSessionState(this.state, sessionRef);
   }
@@ -3026,8 +3017,19 @@ export class DesktopAppStore {
   private applyHostUiRequest(event: Extract<SessionDriverEvent, { type: "hostUiRequest" }>): void {
     const key = sessionKey(event.sessionRef);
     if (event.request.kind === "reset") {
-      this.clearExtensionDialogTimeoutsForSession(event.sessionRef);
       this.sessionState.extensionUiBySession.delete(key);
+      return;
+    }
+    if (event.request.kind === "dialogClosed") {
+      // The driver settled this dialog (AbortSignal or timeout); drop the modal.
+      // handleSessionEvent syncs and publishes after this returns.
+      const closedId = event.request.requestId;
+      const uiState = this.sessionState.extensionUiBySession.get(key);
+      if (uiState) {
+        uiState.pendingDialogs = uiState.pendingDialogs.filter(
+          (entry) => entry.requestId !== closedId,
+        );
+      }
       return;
     }
 
@@ -3042,42 +3044,25 @@ export class DesktopAppStore {
           "extension-editor-text",
         );
         break;
+      case "editorPaste":
+        // Pi pastes into the editor at the cursor; the desktop draft has no
+        // cursor in main, so the paste appends to the live draft and keeps
+        // attachments, queue state, and pending drafts untouched.
+        this.setComposerDraftForSession(
+          event.sessionRef,
+          `${this.sessionState.composerDraftsBySession.get(key) ?? ""}${event.request.text}`,
+          "extension-editor-text",
+        );
+        break;
       default:
         if (isExtensionUiDialogRequest(event.request)) {
           const dialog = event.request;
-          this.clearExtensionDialogTimeout(event.sessionRef, dialog.requestId);
           uiState.pendingDialogs = [
             ...uiState.pendingDialogs.filter((entry) => entry.requestId !== dialog.requestId),
             dialog,
           ];
-          this.scheduleExtensionDialogTimeout(event.sessionRef, dialog);
         }
         break;
-    }
-  }
-
-  private extensionDialogTimeoutKey(sessionRef: SessionRef, requestId: string): string {
-    return `${sessionKey(sessionRef)}:${requestId}`;
-  }
-
-  private clearExtensionDialogTimeout(sessionRef: SessionRef, requestId: string): void {
-    const key = this.extensionDialogTimeoutKey(sessionRef, requestId);
-    const timer = this.extensionDialogTimeoutTimers.get(key);
-    if (!timer) {
-      return;
-    }
-    clearTimeout(timer);
-    this.extensionDialogTimeoutTimers.delete(key);
-  }
-
-  private clearExtensionDialogTimeoutsForSession(sessionRef: SessionRef): void {
-    const prefix = `${sessionKey(sessionRef)}:`;
-    for (const [key, timer] of this.extensionDialogTimeoutTimers) {
-      if (!key.startsWith(prefix)) {
-        continue;
-      }
-      clearTimeout(timer);
-      this.extensionDialogTimeoutTimers.delete(key);
     }
   }
 
@@ -3103,22 +3088,6 @@ export class DesktopAppStore {
     );
     this.emit();
     return true;
-  }
-
-  private scheduleExtensionDialogTimeout(
-    sessionRef: SessionRef,
-    dialog: ExtensionUiDialogRequest,
-  ): void {
-    if (dialog.timeoutMs === undefined) {
-      return;
-    }
-
-    const timerKey = this.extensionDialogTimeoutKey(sessionRef, dialog.requestId);
-    const timer = setTimeout(() => {
-      this.extensionDialogTimeoutTimers.delete(timerKey);
-      this.removePendingExtensionDialog(sessionRef, dialog.requestId);
-    }, dialog.timeoutMs);
-    this.extensionDialogTimeoutTimers.set(timerKey, timer);
   }
 
   private async handleSessionEvent(
@@ -3204,7 +3173,6 @@ export class DesktopAppStore {
           this.reportExtensionCompatibilityIssue(event.sessionRef, event.issue, event.timestamp);
           break;
         case "sessionClosed":
-          this.clearExtensionDialogTimeoutsForSession(event.sessionRef);
           this.sessionState.extensionUiBySession.delete(key);
           this.sessionState.sessionCommandsBySession.delete(key);
           this.sessionState.sessionUsageBySession.delete(key);

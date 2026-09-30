@@ -167,6 +167,14 @@ export function applyTimelineEvent(
       if (activeId) state.pendingAssistantMessageBySession.set(key, activeId);
       else state.pendingAssistantMessageBySession.delete(key);
       clearActiveAssistantMessage(state.activeAssistantMessageBySession, event.sessionRef);
+      if (event.hasThinking && activeId) {
+        const index = transcript.findIndex((item) => item.id === activeId);
+        const ended = transcript[index];
+        if (ended?.kind === "message" && ended.role === "assistant") {
+          transcript[index] = { ...ended, hasThinking: true };
+          break;
+        }
+      }
       return;
     }
     case "assistantMessagePersisted": {
@@ -197,7 +205,7 @@ export function applyTimelineEvent(
           searchCount: 0,
           fileCount: 0,
         });
-        const activity = makeActivityItem("Working…");
+        const activity = makeActivityItem("Working…", { source: "working" });
         state.activeWorkingActivityBySession.set(key, activity.id);
         transcript.push(activity);
       }
@@ -299,8 +307,15 @@ export function applyTimelineEvent(
       break;
     case "hostUiRequest":
       if (event.request.kind === "notify") {
+        // Pi: info is a dim status line, warning and error use their theme
+        // colors. The renderer adds Pi's "Warning:"/"Error:" prefixes.
+        const level = event.request.level ?? "info";
         transcript.push(
-          makeActivityItem(event.request.message, { metadata: relativeDetail(event.timestamp) }),
+          makeActivityItem(event.request.message, {
+            source: "notify",
+            tone: level === "error" ? "error" : level === "warning" ? "warning" : "neutral",
+            metadata: relativeDetail(event.timestamp),
+          }),
         );
       }
       break;

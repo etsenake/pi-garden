@@ -5,6 +5,11 @@ export type SessionRole = SessionTranscriptRole;
 export type TimelineTone = "neutral" | "success" | "warning" | "error";
 export type TimelineToolStatus = "running" | "success" | "error";
 export type TimelineSummaryPresentation = "inline" | "divider";
+/**
+ * Activity rows that Pi extensions can shape: the live working row
+ * (`setWorkingMessage` / `setWorkingIndicator`) and `ctx.ui.notify` rows.
+ */
+export type TimelineActivitySource = "working" | "notify";
 
 export interface TimelineActivity {
   readonly kind: "activity";
@@ -14,6 +19,7 @@ export interface TimelineActivity {
   readonly detail?: string;
   readonly metadata?: string;
   readonly tone?: TimelineTone;
+  readonly source?: TimelineActivitySource;
 }
 
 export interface TimelineToolCall {

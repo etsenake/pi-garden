@@ -189,5 +189,14 @@ export function serializeExtensionUiState(
     pendingDialogs: [...state.pendingDialogs],
     ...(state.title ? { title: state.title } : {}),
     ...(state.editorText ? { editorText: state.editorText } : {}),
+    working: {
+      ...(state.workingMessage !== undefined ? { message: state.workingMessage } : {}),
+      visible: state.workingVisible,
+      ...(state.workingIndicator ? { indicator: state.workingIndicator } : {}),
+    },
+    ...(state.hiddenThinkingLabel !== undefined
+      ? { hiddenThinkingLabel: state.hiddenThinkingLabel }
+      : {}),
+    toolsExpanded: state.toolsExpanded,
   };
 }

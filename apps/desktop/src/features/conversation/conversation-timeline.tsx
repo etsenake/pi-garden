@@ -15,7 +15,11 @@ import type { AnnotationMarker, OpenAnnotation } from "./annotations/annotation-
 import { useAnnotationSelection } from "./annotations/annotation-selection";
 import type { TranscriptAnnotations } from "./annotations/use-transcript-annotations";
 import { ThreadSearchBar } from "./thread-search";
-import { TimelineItem } from "./timeline-item";
+import {
+  DEFAULT_TIMELINE_EXTENSION_UI,
+  TimelineItem,
+  type TimelineExtensionUi,
+} from "./timeline-item";
 import type { OpenTurnChange } from "./turn-changes-card";
 import type { WorkspaceFileLine } from "./workspace-file-line";
 import { SparkIcon } from "../../ui/icons";
@@ -45,6 +49,8 @@ interface ConversationTimelineProps {
   readonly workspacePath?: string;
   readonly annotations?: TranscriptAnnotations;
   readonly platform: NodeJS.Platform;
+  /** Pi extension UI state for this session; Pi's defaults when absent. */
+  readonly extensionUi?: TimelineExtensionUi;
 }
 const NO_MARKERS: readonly AnnotationMarker[] = [];
 export function ConversationTimeline({
@@ -62,6 +68,7 @@ export function ConversationTimeline({
   workspacePath,
   annotations,
   platform,
+  extensionUi = DEFAULT_TIMELINE_EXTENSION_UI,
 }: ConversationTimelineProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const annotationSelection = useAnnotationSelection({
@@ -82,10 +89,14 @@ export function ConversationTimeline({
     });
     return markers;
   }, [annotationList]);
-  const [expandedToolCallIds, setExpandedToolCallIds] = useState<Set<string>>(() => new Set());
+  // Pi's `setToolsExpanded` is the session default; a row the user clicks
+  // flips away from it. A new default (an extension toggling) wins over
+  // earlier clicks, exactly like Pi re-rendering every tool row.
+  const toolsExpanded = extensionUi.toolsExpanded;
+  const [toggledToolCallIds, setToggledToolCallIds] = useState<Set<string>>(() => new Set());
   const toggleToolCall = useCallback(
     (id: string) =>
-      setExpandedToolCallIds((current) => {
+      setToggledToolCallIds((current) => {
         const next = new Set(current);
         if (next.has(id)) next.delete(id);
         else next.add(id);
@@ -94,10 +105,13 @@ export function ConversationTimeline({
     [],
   );
   useLayoutEffect(() => {
+    setToggledToolCallIds((current) => (current.size === 0 ? current : new Set()));
+  }, [toolsExpanded]);
+  useLayoutEffect(() => {
     const available = new Set(
       transcript.filter((item) => item.kind === "tool").map((item) => item.callId),
     );
-    setExpandedToolCallIds((current) => {
+    setToggledToolCallIds((current) => {
       if ([...current].every((id) => available.has(id))) return current;
       return new Set([...current].filter((id) => available.has(id)));
     });
@@ -158,7 +172,8 @@ export function ConversationTimeline({
                   className="timeline__virtual-row"
                   onHeightChange={viewport.measureRow}
                   generation={viewport.layoutGeneration}
-                  expandedToolCallIds={expandedToolCallIds}
+                  toggledToolCallIds={toggledToolCallIds}
+                  extensionUi={extensionUi}
                   onToggleToolCall={toggleToolCall}
                   onViewFileInDiff={onViewFileInDiff}
                   onOpenTurnChange={onOpenTurnChange}
@@ -265,7 +280,8 @@ interface MeasuredTimelineItemProps {
   readonly top?: number;
   readonly onHeightChange: (id: string, height: number, generation: number) => void;
   readonly generation: number;
-  readonly expandedToolCallIds: ReadonlySet<string>;
+  readonly toggledToolCallIds: ReadonlySet<string>;
+  readonly extensionUi: TimelineExtensionUi;
   readonly onToggleToolCall: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onOpenTurnChange?: OpenTurnChange;
@@ -284,7 +300,8 @@ function MeasuredTimelineItemBase({
   top,
   onHeightChange,
   generation,
-  expandedToolCallIds,
+  toggledToolCallIds,
+  extensionUi,
   onToggleToolCall,
   onViewFileInDiff,
   onOpenTurnChange,
@@ -329,7 +346,8 @@ function MeasuredTimelineItemBase({
     >
       <TimelineItem
         item={item}
-        expandedToolCallIds={expandedToolCallIds}
+        toggledToolCallIds={toggledToolCallIds}
+        extensionUi={extensionUi}
         onToggleToolCall={onToggleToolCall}
         onViewFileInDiff={onViewFileInDiff}
         onOpenTurnChange={onOpenTurnChange}
@@ -362,7 +380,8 @@ function isSameDisplayItem(a: DisplayTimelineItem, b: DisplayTimelineItem): bool
       a.role === b.role &&
       a.text === b.text &&
       a.attachments === b.attachments &&
-      a.sourceMessageId === b.sourceMessageId
+      a.sourceMessageId === b.sourceMessageId &&
+      a.hasThinking === b.hasThinking
     );
   }
   if (a.kind === "tool" && b.kind === "tool") {
@@ -380,7 +399,11 @@ function isSameDisplayItem(a: DisplayTimelineItem, b: DisplayTimelineItem): bool
   }
   if (a.kind === "activity" && b.kind === "activity") {
     return (
-      a.label === b.label && a.detail === b.detail && a.metadata === b.metadata && a.tone === b.tone
+      a.label === b.label &&
+      a.detail === b.detail &&
+      a.metadata === b.metadata &&
+      a.tone === b.tone &&
+      a.source === b.source
     );
   }
   if (a.kind === "summary" && b.kind === "summary") {
@@ -406,7 +429,8 @@ function areMeasuredTimelineItemPropsEqual(
     prev.top === next.top &&
     prev.generation === next.generation &&
     prev.onHeightChange === next.onHeightChange &&
-    prev.expandedToolCallIds === next.expandedToolCallIds &&
+    prev.toggledToolCallIds === next.toggledToolCallIds &&
+    isSameTimelineExtensionUi(prev.extensionUi, next.extensionUi) &&
     prev.onToggleToolCall === next.onToggleToolCall &&
     prev.onViewFileInDiff === next.onViewFileInDiff &&
     prev.onOpenTurnChange === next.onOpenTurnChange &&
@@ -417,6 +441,24 @@ function areMeasuredTimelineItemPropsEqual(
     prev.annotationMarkers === next.annotationMarkers &&
     prev.onOpenAnnotation === next.onOpenAnnotation &&
     prev.scheduledOrigin?.taskId === next.scheduledOrigin?.taskId
+  );
+}
+
+// The extension UI record is rebuilt with every app snapshot; compare the
+// values rows actually render so streaming ticks don't re-render every row.
+function isSameTimelineExtensionUi(a: TimelineExtensionUi, b: TimelineExtensionUi): boolean {
+  if (a === b) return true;
+  return (
+    a.toolsExpanded === b.toolsExpanded &&
+    a.hiddenThinkingLabel === b.hiddenThinkingLabel &&
+    a.working.visible === b.working.visible &&
+    a.working.message === b.working.message &&
+    a.working.indicator?.intervalMs === b.working.indicator?.intervalMs &&
+    (a.working.indicator?.frames === b.working.indicator?.frames ||
+      (a.working.indicator?.frames.length === b.working.indicator?.frames.length &&
+        (a.working.indicator?.frames ?? []).every(
+          (frame, index) => frame === b.working.indicator?.frames[index],
+        )))
   );
 }
 
