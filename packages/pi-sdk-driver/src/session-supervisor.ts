@@ -165,10 +165,12 @@ export interface PiSdkDriverOptions {
   readonly isBuiltinExtensionEnabled?: BuiltinExtensionEnabled;
   readonly desktopExtensions?: PiDesktopExtensionObserver;
   /**
-   * The host's current editor text for a session, read synchronously for Pi's
-   * `ctx.ui.getEditorText()`. Without it the driver only knows text an extension set.
+   * The host's editor for Pi's `getEditorText` / `setEditorText` / `pasteToEditor`.
+   * Calls are synchronous so an extension that sets text and reads it back in the
+   * same handler sees its own write. Without it the driver only mirrors text
+   * extensions set.
    */
-  readonly hostEditorText?: (sessionRef: SessionRef) => string | undefined;
+  readonly hostEditor?: PiHostEditor;
   readonly onTurnCaptureBoundary?: import("@pi-garden/session-driver").TurnCaptureObserver;
   readonly turnCaptureTimeoutMs?: number;
   readonly generateThreadTitleOverride?: (
@@ -241,6 +243,16 @@ interface PromptTemplateAdapter {
 
 const NEW_THREAD_PLACEHOLDER_TITLE = "New thread";
 
+/** Host editor hooks backing Pi's editor members of `ExtensionUIContext`. */
+export interface PiHostEditor {
+  /** Current editor text for the session; empty when there is no draft. */
+  getText(sessionRef: SessionRef): string;
+  /** Replace the editor text (`setEditorText`). */
+  setText(sessionRef: SessionRef, text: string): void;
+  /** Insert text as a paste (`pasteToEditor`). */
+  paste(sessionRef: SessionRef, text: string): void;
+}
+
 /** Pi's TUI loader frames, used when `setWorkingIndicator({ intervalMs })` omits `frames`. */
 const DEFAULT_WORKING_INDICATOR_FRAMES: readonly string[] = [
   "⠋",
@@ -271,7 +283,7 @@ export class SessionSupervisor {
   private readonly agentDir: string | undefined;
   private readonly builtinExtensions: readonly InlineExtension[];
   private readonly desktopExtensions: PiDesktopExtensionObserver | undefined;
-  private readonly hostEditorText: PiSdkDriverOptions["hostEditorText"];
+  private readonly hostEditor: PiHostEditor | undefined;
   private readonly onTurnCaptureBoundary: PiSdkDriverOptions["onTurnCaptureBoundary"];
   private readonly turnCaptureTimeoutMs: number | undefined;
   private readonly records = new Map<string, ManagedSessionRecord>();
@@ -298,7 +310,7 @@ export class SessionSupervisor {
       options.isBuiltinExtensionEnabled ?? (() => true),
     );
     this.desktopExtensions = options.desktopExtensions;
-    this.hostEditorText = options.hostEditorText;
+    this.hostEditor = options.hostEditor;
     this.onTurnCaptureBoundary = options.onTurnCaptureBoundary;
     this.turnCaptureTimeoutMs = options.turnCaptureTimeoutMs;
     this.agentDir = options.agentDir;
@@ -1924,6 +1936,7 @@ export class SessionSupervisor {
         throw createUnsupportedHostUiError("custom");
       },
       pasteToEditor: (text) => {
+        this.hostEditor?.paste(record.ref, text);
         this.emitHostUiRequest(record, {
           kind: "editorPaste",
           requestId: crypto.randomUUID(),
@@ -1931,6 +1944,7 @@ export class SessionSupervisor {
         });
       },
       setEditorText: (text) => {
+        this.hostEditor?.setText(record.ref, text);
         this.emitHostUiRequest(record, {
           kind: "editorText",
           requestId: crypto.randomUUID(),
@@ -1938,7 +1952,9 @@ export class SessionSupervisor {
         });
       },
       getEditorText: () =>
-        this.hostEditorText?.(record.ref) ?? record.extensionUiState.editorText ?? "",
+        this.hostEditor
+          ? this.hostEditor.getText(record.ref)
+          : (record.extensionUiState.editorText ?? ""),
       editor: (title, initialValue) =>
         createDialogPromise(
           undefined,

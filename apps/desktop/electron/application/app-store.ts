@@ -261,10 +261,21 @@ export class DesktopAppStore {
       catalogStorage: this.catalogStore,
       ...(options.driverOptions ?? {}),
       isBuiltinExtensionEnabled: (name) => !this.disabledBuiltinExtensions.has(name),
-      // Pi's `ctx.ui.getEditorText()` reads the live desktop draft, not only text
-      // an extension set through `setEditorText`.
-      hostEditorText: (sessionRef) =>
-        this.sessionState.composerDraftsBySession.get(sessionKey(sessionRef)),
+      // Pi's editor members operate on the live desktop draft: reads see what the
+      // user typed, writes keep attachments and queue state untouched. Pi pastes
+      // at the cursor; main has no cursor, so a paste appends to the draft.
+      hostEditor: {
+        getText: (sessionRef) =>
+          this.sessionState.composerDraftsBySession.get(sessionKey(sessionRef)) ?? "",
+        setText: (sessionRef, text) =>
+          this.setComposerDraftForSession(sessionRef, text, "extension-editor-text"),
+        paste: (sessionRef, text) =>
+          this.setComposerDraftForSession(
+            sessionRef,
+            `${this.sessionState.composerDraftsBySession.get(sessionKey(sessionRef)) ?? ""}${text}`,
+            "extension-editor-text",
+          ),
+      },
       ...(options.generateThreadTitleOverride
         ? { generateThreadTitleOverride: options.generateThreadTitleOverride }
         : {}),
@@ -3036,33 +3047,24 @@ export class DesktopAppStore {
     const uiState = this.getOrCreateExtensionUiState(event.sessionRef);
     applyHostUiRequestToExtensionUiState(uiState, event.request);
 
-    switch (event.request.kind) {
-      case "editorText":
-        this.setComposerDraftForSession(
-          event.sessionRef,
-          event.request.text,
-          "extension-editor-text",
-        );
-        break;
-      case "editorPaste":
-        // Pi pastes into the editor at the cursor; the desktop draft has no
-        // cursor in main, so the paste appends to the live draft and keeps
-        // attachments, queue state, and pending drafts untouched.
-        this.setComposerDraftForSession(
-          event.sessionRef,
-          `${this.sessionState.composerDraftsBySession.get(key) ?? ""}${event.request.text}`,
-          "extension-editor-text",
-        );
-        break;
-      default:
-        if (isExtensionUiDialogRequest(event.request)) {
-          const dialog = event.request;
-          uiState.pendingDialogs = [
-            ...uiState.pendingDialogs.filter((entry) => entry.requestId !== dialog.requestId),
-            dialog,
-          ];
-        }
-        break;
+    if (event.request.kind === "editorText" || event.request.kind === "editorPaste") {
+      // The synchronous hostEditor hook already wrote the draft so a later
+      // getEditorText() in the same handler reads it back. A refresh can prune
+      // that write when the session is not in the catalog yet (an extension
+      // prefilling a child it just created), so settle the draft again from
+      // the mirrored editor text once the event lands; the mirror already
+      // includes every earlier set and paste, so the final value is stable.
+      this.setComposerDraftForSession(
+        event.sessionRef,
+        uiState.editorText ?? "",
+        "extension-editor-text",
+      );
+    } else if (isExtensionUiDialogRequest(event.request)) {
+      const dialog = event.request;
+      uiState.pendingDialogs = [
+        ...uiState.pendingDialogs.filter((entry) => entry.requestId !== dialog.requestId),
+        dialog,
+      ];
     }
   }
 

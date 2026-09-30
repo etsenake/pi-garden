@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { HostUiWorkingIndicator } from "@pi-garden/session-driver";
+import type { PiHostEditor } from "../dist/session-supervisor.js";
 import { SessionSupervisor } from "../dist/session-supervisor.js";
 import {
   applyHostUiRequestToExtensionUiState,
@@ -22,7 +23,7 @@ type Emitted = {
   request?: { kind: string; requestId: string } & Record<string, unknown>;
 };
 
-function makeHarness(options: { hostEditorText?: () => string | undefined } = {}) {
+function makeHarness(options: { hostEditor?: PiHostEditor } = {}) {
   const emitted: Emitted[] = [];
   const extensionUiState: ExtensionUiState = createEmptyExtensionUiState();
   const record = {
@@ -59,7 +60,7 @@ function makeHarness(options: { hostEditorText?: () => string | undefined } = {}
       sessions: { upsertSession: async () => undefined },
       setSessionFile: async () => undefined,
     } as never,
-    ...(options.hostEditorText ? { hostEditorText: options.hostEditorText } : {}),
+    ...(options.hostEditor ? { hostEditor: options.hostEditor } : {}),
   }) as unknown as {
     createExtensionUiContext: (
       record: unknown,
@@ -229,24 +230,44 @@ await test("working, hidden-thinking and tools state follow Pi's defaults and se
   assert.equal(h.ui.getToolsExpanded(), false);
 });
 
-await test("getEditorText reads the host draft, pasteToEditor appends, setEditorText replaces", async () => {
-  let hostText: string | undefined = "host draft";
-  const h = makeHarness({ hostEditorText: () => hostText });
+await test("editor members operate on the host draft synchronously", async () => {
+  let hostText = "host draft";
+  const h = makeHarness({
+    hostEditor: {
+      getText: () => hostText,
+      setText: (_ref, text) => {
+        hostText = text;
+      },
+      paste: (_ref, text) => {
+        hostText += text;
+      },
+    },
+  });
   assert.equal(h.ui.getEditorText(), "host draft");
 
-  h.ui.pasteToEditor(" + pasted");
-  await h.record.eventQueue;
-  assert.equal(h.lastRequest()?.kind, "editorPaste");
-  assert.equal(h.lastRequest()?.text, " + pasted");
-
+  // Set-then-read in one handler sees the write before any event is delivered.
   h.ui.setEditorText("replaced");
-  await h.record.eventQueue;
-  assert.equal(h.lastRequest()?.kind, "editorText");
-
-  hostText = undefined;
-  // Without a host draft the driver falls back to what extensions set.
-  assert.equal(h.record.extensionUiState.editorText, "replaced");
   assert.equal(h.ui.getEditorText(), "replaced");
+  h.ui.pasteToEditor(" +pasted");
+  assert.equal(h.ui.getEditorText(), "replaced +pasted");
+  await h.record.eventQueue;
+  assert.deepEqual(
+    h.requests().map((request) => [request.kind, request.text]),
+    [
+      ["editorText", "replaced"],
+      ["editorPaste", " +pasted"],
+    ],
+  );
+  // The mirrored state follows for replay to late subscribers.
+  assert.equal(h.record.extensionUiState.editorText, "replaced +pasted");
+});
+
+await test("without a host editor the driver serves the text extensions set", async () => {
+  const h = makeHarness();
+  assert.equal(h.ui.getEditorText(), "");
+  h.ui.setEditorText("only mirror");
+  await h.record.eventQueue;
+  assert.equal(h.ui.getEditorText(), "only mirror");
 });
 
 await test("setWidget accepts string arrays only and clears on undefined", async () => {
