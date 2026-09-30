@@ -38,6 +38,13 @@ import {
   type TerminalSize,
 } from "../contracts/ipc";
 import type { ClipboardImageRead } from "../contracts/composer-attachments";
+import type {
+  DesktopEditorInfo,
+  EditorAutocompleteApplied,
+  EditorAutocompleteApplyInput,
+  EditorAutocompleteQuery,
+  EditorAutocompleteResponse,
+} from "../contracts/desktop-editor";
 import type { SaveTaskWorkbenchTemplateInput, TaskWorkbenchTemplate } from "../contracts/workbench";
 import type {
   TurnChangesInput,
@@ -125,6 +132,15 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.listExtensionViews, target) as Promise<
       readonly DesktopExtensionViewInfo[]
     >,
+  listDesktopEditors: (target: SessionRef) =>
+    ipcRenderer.invoke(desktopIpc.listDesktopEditors, target) as Promise<
+      readonly DesktopEditorInfo[]
+    >,
+  openDesktopEditor: (input: {
+    readonly target: SessionRef;
+    readonly extensionId: string;
+    readonly editorId: string;
+  }) => ipcRenderer.invoke(desktopIpc.openDesktopEditor, input) as Promise<ExtensionViewConnection>,
   openExtensionView: (input: OpenExtensionViewInput) =>
     ipcRenderer.invoke(desktopIpc.openExtensionView, input) as Promise<ExtensionViewConnection>,
   sendExtensionViewMessage: (input: ExtensionViewMessage) =>
@@ -534,6 +550,21 @@ contextBridge.exposeInMainWorld("piApp", {
       composerDraft,
       target,
     ) as Promise<DesktopAppState>,
+  mirrorComposerDraft: (composerDraft: string, target: SessionRef) =>
+    ipcRenderer.invoke(desktopIpc.mirrorComposerDraft, {
+      draft: composerDraft,
+      target,
+    }) as Promise<void>,
+  queryEditorAutocomplete: (input: EditorAutocompleteQuery) =>
+    ipcRenderer.invoke(
+      desktopIpc.queryEditorAutocomplete,
+      input,
+    ) as Promise<EditorAutocompleteResponse>,
+  applyEditorAutocomplete: (input: EditorAutocompleteApplyInput) =>
+    ipcRenderer.invoke(
+      desktopIpc.applyEditorAutocomplete,
+      input,
+    ) as Promise<EditorAutocompleteApplied | null>,
   submitComposer: (text: string, options?: { readonly deliverAs?: "steer" | "followUp" }) =>
     ipcRenderer.invoke(desktopIpc.submitComposer, text, options) as Promise<DesktopAppState>,
   getSessionTree: (target: WorkspaceSessionTarget) =>

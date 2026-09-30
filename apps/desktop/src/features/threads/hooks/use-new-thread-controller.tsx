@@ -18,6 +18,7 @@ import {
   type StartThreadInput,
   type WorkspaceRecord,
 } from "../../../../contracts/desktop-state";
+import type { ComposerEditorHandle } from "../../conversation/composer-editor";
 import { acceptComposerAttachments } from "../../../../contracts/composer-attachments";
 import { updateSnapshot } from "../../../app/desktop-app-state";
 import {
@@ -69,7 +70,7 @@ export function useNewThreadController(params: UseNewThreadControllerParams) {
   const [modelId, setModelId] = useState<string | undefined>();
   const [thinkingLevel, setThinkingLevel] = useState<string | undefined>();
   const [composerError, setComposerError] = useState<string | undefined>();
-  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerRef = useRef<ComposerEditorHandle | null>(null);
   const previousActiveViewRef = useRef<AppView | null>(null);
   // Set while an in-app open is switching to New thread, so its chosen folder
   // is not replaced by the selected one when the view change arrives.

@@ -72,6 +72,7 @@ export interface ExtensionViewMessage {
 export interface ExtensionViewCatalogChange {
   readonly target: SessionRef;
   readonly views: readonly DesktopExtensionViewInfo[];
+  readonly editors?: readonly import("./desktop-editor").DesktopEditorInfo[];
 }
 
 export interface ExtensionViewOpenFile {

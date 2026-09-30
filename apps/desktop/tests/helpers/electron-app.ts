@@ -1934,9 +1934,12 @@ export async function createNamedThread(
   await createSessionViaIpc(window, targetWorkspaceId, title);
   await selectSession(window, title);
   const composer = window.getByTestId("composer");
-  await expect(composer).toBeVisible({ timeout: 15_000 });
-  await composer.click();
-  await expect(composer).toBeFocused({ timeout: 15_000 });
+  const customEditor = window.getByTestId("desktop-editor");
+  await expect(composer.or(customEditor)).toBeVisible({ timeout: 15_000 });
+  if ((await composer.count()) > 0) {
+    await composer.click();
+    await expect(composer).toBeFocused({ timeout: 15_000 });
+  }
 }
 
 export async function chooseThreadGrouping(

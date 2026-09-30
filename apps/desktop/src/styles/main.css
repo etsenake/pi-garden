@@ -978,6 +978,21 @@ button.host-contribution {
   max-height: 220px;
 }
 
+.composer-editor {
+  min-height: 72px;
+  height: 120px;
+  max-height: 220px;
+}
+
+.composer-editor__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color-scheme: inherit;
+}
+
 .composer textarea:focus-visible {
   box-shadow: none;
 }

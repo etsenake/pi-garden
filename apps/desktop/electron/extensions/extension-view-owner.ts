@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createFacetHost, type FacetHost } from "@earendil-works/chord";
-import type { DesktopViewDeclaration, RichSurfaceDeclaration } from "@pi-garden/extension-ui";
+import type {
+  DesktopEditorDeclaration,
+  DesktopViewDeclaration,
+  RichSurfaceDeclaration,
+} from "@pi-garden/extension-ui";
 import {
   compareRichSurfacePlacement,
   compareSingletonOwners,
@@ -12,6 +16,7 @@ import {
 import type { DesktopHostAction, DesktopOverlayResult } from "@pi-garden/extension-ui/browser";
 import { createChordServerConnection } from "@pi-garden/extension-ui/transport";
 import { sessionKey, type SessionRef } from "@pi-garden/session-driver";
+import type { DesktopEditorInfo } from "../../contracts/desktop-editor";
 import type {
   DesktopExtensionViewInfo,
   DesktopRichSurface,
@@ -38,6 +43,8 @@ export interface DesktopExtensionRuntimeInput {
   readonly declarations: readonly DesktopViewDeclaration[];
   /** Generalized rich surfaces, including tool renderers and rich workbench views. */
   readonly richSurfaces?: readonly RichSurfaceDeclaration[];
+  /** Prompt-region editors. These are not rich surfaces. */
+  readonly editors?: readonly DesktopEditorDeclaration[];
 }
 
 export interface DesktopExtensionOverlayEvent {
@@ -70,6 +77,7 @@ export interface DesktopExtensionViewOwnerOptions {
     readonly frontendUrl: string;
     readonly bridgeUrl: string;
     readonly nonce: string;
+    readonly mode?: "view" | "editor";
   }) => string;
   readonly hostAssets?: Readonly<Record<string, DesktopExtensionHostAsset>>;
   readonly onHostAction: (
@@ -84,9 +92,13 @@ interface RuntimeEntry {
   readonly target: SessionRef;
   readonly generation: string;
   readonly views: Map<string, ViewEntry>;
+  readonly editors: Map<string, EditorEntry>;
   readonly pending: Map<SurfaceDeclaration, Promise<void>>;
+  readonly pendingEditors: Map<DesktopEditorDeclaration, Promise<void>>;
   readonly activating: Map<string, SurfaceDeclaration>;
+  readonly activatingEditors: Map<string, DesktopEditorDeclaration>;
   desired: ReadonlySet<SurfaceDeclaration>;
+  desiredEditors: ReadonlySet<DesktopEditorDeclaration>;
   alive: boolean;
 }
 
@@ -112,10 +124,19 @@ interface PendingOverlay {
   readonly resolve: (result: DesktopOverlayResult) => void;
 }
 
+interface EditorEntry {
+  readonly declaration: DesktopEditorDeclaration;
+  readonly source: DesktopExtensionSourceIdentity;
+  readonly assets?: ValidatedDesktopExtensionSource;
+  readonly info: DesktopEditorInfo;
+  readonly host?: FacetHost;
+}
+
 interface ConnectionEntry {
   readonly context: DesktopExtensionConnectionContext;
   readonly runtime: RuntimeEntry;
-  readonly view: ViewEntry;
+  readonly view?: ViewEntry;
+  readonly editor?: EditorEntry;
   readonly assets: ValidatedDesktopExtensionSource;
   readonly send: (message: unknown) => void;
   readonly transport: ReturnType<typeof createChordServerConnection>;
@@ -208,6 +229,22 @@ export class DesktopExtensionViewOwner {
     return () => this.listeners.delete(listener);
   }
 
+  listEditors(target: SessionRef): readonly DesktopEditorInfo[] {
+    const runtime = this.runtimes.get(sessionKey(target));
+    if (!runtime?.alive) return [];
+    return [...runtime.editors.values()]
+      .map(({ info }) => ({
+        ...info,
+        ...(info.conflict ? { conflict: [...info.conflict] } : {}),
+      }))
+      .sort((left, right) =>
+        compareSingletonOwners(
+          { extensionId: left.extensionId, id: left.id },
+          { extensionId: right.extensionId, id: right.id },
+        ),
+      );
+  }
+
   listViews(target: SessionRef): readonly DesktopExtensionViewInfo[] {
     const runtime = this.runtimes.get(sessionKey(target));
     if (!runtime?.alive) return [];
@@ -233,9 +270,13 @@ export class DesktopExtensionViewOwner {
         target: { ...input.target },
         generation: input.generation,
         views: new Map(),
+        editors: new Map(),
         pending: new Map(),
+        pendingEditors: new Map(),
         activating: new Map(),
+        activatingEditors: new Map(),
         desired: new Set(surfaces),
+        desiredEditors: new Set(input.editors ?? []),
         alive: true,
       };
       this.runtimes.set(key, runtime);
@@ -270,8 +311,37 @@ export class DesktopExtensionViewOwner {
       runtime.pending.set(declaration, activation);
       activations.push(activation);
     }
+    const editorDeclarations = new Set(input.editors ?? []);
+    runtime.desiredEditors = editorDeclarations;
+    for (const [registeredKey, editor] of runtime.editors) {
+      if (editorDeclarations.has(editor.declaration)) continue;
+      runtime.editors.delete(registeredKey);
+      this.closeEditorConnections(runtime, editor, "Desktop editor was removed");
+      if (editor.host)
+        editor.host.dispose().catch((error: unknown) => {
+          this.options.onDiagnostic?.(runtime.target, editor.source.sourcePath, messageOf(error));
+        });
+    }
+    for (const declaration of editorDeclarations) {
+      if ([...runtime.editors.values()].some((editor) => editor.declaration === declaration)) {
+        continue;
+      }
+      const pending = runtime.pendingEditors.get(declaration);
+      if (pending) {
+        activations.push(pending);
+        continue;
+      }
+      const activation = this.activateEditor(runtime, declaration, input.extensions).finally(() => {
+        runtime.pendingEditors.delete(declaration);
+      });
+      runtime.pendingEditors.set(declaration, activation);
+      activations.push(activation);
+    }
     await Promise.all(activations);
-    if (runtime.alive) this.reconcile(runtime);
+    if (runtime.alive) {
+      this.reconcile(runtime);
+      this.reconcileEditors(runtime);
+    }
     this.publish(runtime.target);
   }
 
@@ -330,6 +400,55 @@ export class DesktopExtensionViewOwner {
       runtime,
       view,
       assets: view.assets,
+      send,
+      transport,
+    });
+    return { connectionId, frameUrl: `${DESKTOP_EXTENSION_SCHEME}://${connectionId}/` };
+  }
+
+  async openEditorConnection(
+    input: {
+      readonly target: SessionRef;
+      readonly extensionId: string;
+      readonly editorId: string;
+      readonly senderId: number;
+    },
+    send: (message: unknown) => void,
+  ): Promise<{ readonly connectionId: string; readonly frameUrl: string }> {
+    const runtime = this.runtimes.get(sessionKey(input.target));
+    const editor = runtime?.editors.get(editorKey(input.extensionId, input.editorId));
+    if (!runtime?.alive || editor?.info.state !== "ready" || !editor.host || !editor.assets) {
+      throw new Error(editor?.info.error ?? "Desktop editor is unavailable");
+    }
+    const connectionId = randomUUID();
+    const context: DesktopExtensionConnectionContext = {
+      connectionId,
+      senderId: input.senderId,
+      target: { ...runtime.target },
+      generation: runtime.generation,
+      extensionId: input.extensionId,
+      viewId: input.editorId,
+    };
+    const transport = createChordServerConnection({
+      provider: editor.host.services,
+      send: (message) => {
+        if (!this.connections.has(connectionId)) return;
+        try {
+          send(message);
+        } catch {
+          this.closeConnection(connectionId, input.senderId);
+        }
+      },
+      onError: (error) => {
+        this.options.onDiagnostic?.(runtime.target, editor.source.sourcePath, messageOf(error));
+        this.closeConnection(connectionId, input.senderId);
+      },
+    });
+    this.connections.set(connectionId, {
+      context,
+      runtime,
+      editor,
+      assets: editor.assets,
       send,
       transport,
     });
@@ -483,6 +602,7 @@ export class DesktopExtensionViewOwner {
           frontendUrl: `${origin}/assets/${encodeURIComponent(path.basename(connection.assets.frontendPath))}`,
           bridgeUrl: `${origin}/_host/frame-bridge.js`,
           nonce,
+          mode: connection.editor ? "editor" : "view",
         });
         return new Response(body, { headers });
       }
@@ -634,6 +754,157 @@ export class DesktopExtensionViewOwner {
     }
   }
 
+  private async activateEditor(
+    runtime: RuntimeEntry,
+    declaration: DesktopEditorDeclaration,
+    extensions: readonly LoadedDesktopExtensionSource[],
+  ): Promise<void> {
+    let source: DesktopExtensionSourceIdentity | undefined;
+    let key: string | undefined;
+    let reserved = false;
+    try {
+      if (!/^[a-z][a-z0-9._-]{0,63}$/.test(declaration.id)) {
+        throw new Error(
+          "Desktop editor ID must be a lowercase identifier of at most 64 characters",
+        );
+      }
+      source = await validateDesktopExtensionIdentity(declaration.source, extensions);
+      if (!runtime.alive || !runtime.desiredEditors.has(declaration)) return;
+      key = editorKey(source.extensionId, declaration.id);
+      const pendingDeclaration = runtime.activatingEditors.get(key);
+      if (
+        runtime.editors.has(key) ||
+        (pendingDeclaration && runtime.desiredEditors.has(pendingDeclaration))
+      ) {
+        throw new Error("Duplicate desktop editor ID in one extension");
+      }
+      runtime.activatingEditors.set(key, declaration);
+      reserved = true;
+      const assets = await validateDesktopExtensionFrontend(source, declaration.frontend);
+      if (!runtime.alive || !runtime.desiredEditors.has(declaration)) return;
+      const facets = declaration.backend ? [declaration.backend()] : [];
+      const activation = createFacetHost({
+        facets,
+        onError: (error) =>
+          this.options.onDiagnostic?.(runtime.target, declaration.source, messageOf(error)),
+      });
+      let expired = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      void activation
+        .then((host) => {
+          if (expired) return host.dispose();
+        })
+        .catch((error: unknown) => {
+          if (expired)
+            this.options.onDiagnostic?.(runtime.target, declaration.source, messageOf(error));
+        });
+      let host: FacetHost;
+      try {
+        host = await Promise.race([
+          activation,
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => {
+              expired = true;
+              reject(
+                new Error("Desktop editor activation timed out. Reload the extension to retry."),
+              );
+            }, this.options.activationTimeoutMs ?? 10_000);
+            timer.unref();
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+      if (!runtime.alive || !runtime.desiredEditors.has(declaration)) {
+        await host.dispose();
+        return;
+      }
+      runtime.editors.set(
+        key,
+        editorRecord(runtime, declaration, source, "ready", { assets, host }),
+      );
+    } catch (error) {
+      const message = messageOf(error);
+      this.options.onDiagnostic?.(runtime.target, declaration.source, message);
+      if (
+        runtime.alive &&
+        runtime.desiredEditors.has(declaration) &&
+        source &&
+        key &&
+        !runtime.editors.has(key) &&
+        (reserved || !runtime.activatingEditors.has(key))
+      ) {
+        runtime.editors.set(
+          key,
+          editorRecord(runtime, declaration, source, "error", { error: message }),
+        );
+      }
+    } finally {
+      if (key && reserved && runtime.activatingEditors.get(key) === declaration)
+        runtime.activatingEditors.delete(key);
+      if (runtime.alive) this.publish(runtime.target);
+    }
+  }
+
+  private reconcileEditors(runtime: RuntimeEntry): void {
+    const contenders = [...runtime.editors.values()].filter(
+      (editor) =>
+        editor.info.state === "conflict" || (editor.info.state === "ready" && editor.host),
+    );
+    if (contenders.length === 0) return;
+    const sorted = [...contenders].sort((left, right) =>
+      compareSingletonOwners(
+        { extensionId: left.source.extensionId, id: left.declaration.id },
+        { extensionId: right.source.extensionId, id: right.declaration.id },
+      ),
+    );
+    const winner = sorted.find((editor) => editor.info.state === "ready" && editor.host);
+    if (!winner?.host) return;
+    const losers = sorted.filter((editor) => editor !== winner);
+    const conflict = losers.map((peer) => ({
+      extensionId: peer.source.extensionId,
+      id: peer.declaration.id,
+      title: peer.info.title,
+    }));
+    if (losers.length === 0) {
+      const { conflict: _previous, ...info } = winner.info;
+      runtime.editors.set(editorKey(winner.source.extensionId, winner.declaration.id), {
+        ...winner,
+        info,
+      });
+      return;
+    }
+    const message = `Competing desktop editors: ${sorted.map((entry) => entry.info.title).join(", ")}`;
+    this.options.onDiagnostic?.(runtime.target, "desktop-editor", message);
+    runtime.editors.set(editorKey(winner.source.extensionId, winner.declaration.id), {
+      ...winner,
+      info: { ...winner.info, ...(conflict.length > 0 ? { conflict } : {}) },
+    });
+    for (const loser of losers) this.demoteEditor(runtime, loser, message);
+  }
+
+  private demoteEditor(runtime: RuntimeEntry, editor: EditorEntry, message: string): void {
+    const key = editorKey(editor.source.extensionId, editor.declaration.id);
+    this.closeEditorConnections(runtime, editor, message);
+    runtime.editors.set(key, {
+      ...editor,
+      host: undefined,
+      info: { ...editor.info, state: "conflict", error: message },
+    });
+    if (editor.host) {
+      editor.host.dispose().catch((error: unknown) => {
+        this.options.onDiagnostic?.(runtime.target, editor.source.sourcePath, messageOf(error));
+      });
+    }
+  }
+
+  private closeEditorConnections(runtime: RuntimeEntry, editor: EditorEntry, reason: string): void {
+    for (const connection of [...this.connections.values()]) {
+      if (connection.runtime === runtime && connection.editor === editor)
+        this.close(connection, reason);
+    }
+  }
+
   private closeViewConnections(runtime: RuntimeEntry, view: ViewEntry, reason: string): void {
     for (const connection of [...this.connections.values()]) {
       if (connection.runtime === runtime && connection.view === view)
@@ -651,8 +922,12 @@ export class DesktopExtensionViewOwner {
         this.close(connection, "Pi extension runtime was replaced");
     }
     await Promise.allSettled(runtime.pending.values());
-    const hosts = [...runtime.views.values()].flatMap(({ host }) => (host ? [host] : []));
+    const hosts = [
+      ...[...runtime.views.values()].flatMap(({ host }) => (host ? [host] : [])),
+      ...[...runtime.editors.values()].flatMap(({ host }) => (host ? [host] : [])),
+    ];
     runtime.views.clear();
+    runtime.editors.clear();
     const results = await Promise.allSettled(hosts.map((host) => host.dispose()));
     for (const result of results) {
       if (result.status === "rejected")
@@ -759,7 +1034,7 @@ export class DesktopExtensionViewOwner {
     result: DesktopOverlayResult,
   ): void {
     const connection = this.requireConnection(context.connectionId, context.senderId);
-    if (connection.view.surface !== "overlay") {
+    if (!connection.view || connection.view.surface !== "overlay") {
       throw new Error("Only an overlay can settle or cancel its result");
     }
     const key = overlayKey(context.senderId, context.extensionId, connection.view.declaration.id);
@@ -772,10 +1047,10 @@ export class DesktopExtensionViewOwner {
     for (const [key, pending] of this.pendingOverlays) {
       const presenter = pending.presenterConnectionId === connection.context.connectionId;
       const overlay =
-        connection.view.surface === "overlay" &&
+        connection.view?.surface === "overlay" &&
         pending.senderId === connection.context.senderId &&
         pending.extensionId === connection.context.extensionId &&
-        pending.viewId === connection.view.declaration.id;
+        pending.viewId === connection.view?.declaration.id;
       if (presenter || overlay) this.finishOverlay(key, { status: "cancelled" });
     }
   }
@@ -830,6 +1105,37 @@ function viewRecord(
       surface,
       order: orderOf(declaration),
       ...(toolName ? { toolName } : {}),
+      ...(extra.error ? { error: extra.error } : {}),
+    },
+  };
+}
+
+function editorKey(extensionId: string, editorId: string): string {
+  return `${extensionId}:editor:${editorId}`;
+}
+
+function editorRecord(
+  runtime: RuntimeEntry,
+  declaration: DesktopEditorDeclaration,
+  source: DesktopExtensionSourceIdentity,
+  state: DesktopEditorInfo["state"],
+  extra: {
+    readonly assets?: ValidatedDesktopExtensionSource;
+    readonly host?: FacetHost;
+    readonly error?: string;
+  },
+): EditorEntry {
+  return {
+    declaration,
+    source,
+    ...(extra.assets ? { assets: extra.assets } : {}),
+    ...(extra.host ? { host: extra.host } : {}),
+    info: {
+      id: declaration.id,
+      extensionId: source.extensionId,
+      title: declaration.title?.trim() || declaration.id,
+      generation: runtime.generation,
+      state,
       ...(extra.error ? { error: extra.error } : {}),
     },
   };

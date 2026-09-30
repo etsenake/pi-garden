@@ -24,6 +24,7 @@ import { parseTreeComposerCommand } from "../composer-commands";
 import { formatAnnotatedPrompt } from "../annotations/annotation-prompt";
 import type { TranscriptAnnotations } from "../annotations/use-transcript-annotations";
 import type { PiDesktopApi } from "../../../../contracts/ipc";
+import type { ComposerEditorHandle } from "../composer-editor";
 
 interface UseSessionComposerParams {
   readonly api: PiDesktopApi | undefined;
@@ -35,12 +36,13 @@ interface UseSessionComposerParams {
   readonly composerDraftRef: MutableRefObject<string>;
   /** Sends a debounced draft write now, so it cannot land after a host action that replaces the draft. */
   readonly flushComposerDraft: () => void;
-  readonly composerRef: MutableRefObject<HTMLTextAreaElement | null>;
+  readonly composerRef: MutableRefObject<ComposerEditorHandle | null>;
+  readonly handleAutocompleteKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
   readonly requiresModelSelection: boolean;
   readonly openTreeModal: () => void;
   readonly handleMentionKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
   readonly handleSlashKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
-  readonly newThreadComposerRef: MutableRefObject<HTMLTextAreaElement | null>;
+  readonly newThreadComposerRef: MutableRefObject<ComposerEditorHandle | null>;
   readonly appendNewThreadAttachment: (attachment: ComposerImageAttachment) => void;
   readonly onNewThreadComposerError: (message: string) => void;
   readonly annotations: TranscriptAnnotations;
@@ -52,11 +54,11 @@ export function useSessionComposer(params: UseSessionComposerParams) {
     snapshot,
     setSnapshot,
     selectedSession,
-    composerDraft,
     setComposerDraft,
     composerDraftRef,
     flushComposerDraft,
     composerRef,
+    handleAutocompleteKeyDown,
     requiresModelSelection,
     openTreeModal,
     handleMentionKeyDown,
@@ -85,7 +87,7 @@ export function useSessionComposer(params: UseSessionComposerParams) {
     }
 
     const hasComposerInput =
-      composerDraft.trim().length > 0 ||
+      composerDraftRef.current.trim().length > 0 ||
       composerAttachments.length > 0 ||
       annotations.list.length > 0;
     if (selectedSession.status === "running" && !hasComposerInput) {
@@ -100,7 +102,7 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       return;
     }
 
-    const treeCommand = parseTreeComposerCommand(composerDraft);
+    const treeCommand = parseTreeComposerCommand(composerDraftRef.current);
     if (treeCommand?.type === "error") {
       setSnapshot((current) =>
         current
@@ -117,9 +119,9 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       return;
     }
 
-    const previousDraft = composerDraft;
+    const previousDraft = composerDraftRef.current;
     // A slash command keeps its annotations for the next message rather than breaking the command.
-    const sentAnnotations = composerDraft.trimStart().startsWith("/") ? null : annotations.take();
+    const sentAnnotations = previousDraft.trimStart().startsWith("/") ? null : annotations.take();
     const text = sentAnnotations?.taken.length
       ? formatAnnotatedPrompt(sentAnnotations.taken, previousDraft)
       : previousDraft;
@@ -180,7 +182,9 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       return;
     }
     flushComposerDraft();
-    void updateSnapshot(setSnapshot, () => api.editQueuedComposerMessage(messageId, composerDraft))
+    void updateSnapshot(setSnapshot, () =>
+      api.editQueuedComposerMessage(messageId, composerDraftRef.current),
+    )
       .then(() => {
         composerRef.current?.focus();
       })
@@ -296,15 +300,14 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       if (!clipboardImage.message) {
         return;
       }
-      if (document.activeElement === newThreadComposerRef.current) {
+      if (newThreadComposerRef.current?.isFocused()) {
         onNewThreadComposerError(clipboardImage.message);
         return;
       }
       setComposerLimitError(clipboardImage.message);
       return;
     }
-    const activeElement = document.activeElement;
-    if (activeElement === composerRef.current) {
+    if (composerRef.current?.isFocused()) {
       if (!api) {
         return;
       }
@@ -316,7 +319,7 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       return;
     }
 
-    if (activeElement === newThreadComposerRef.current) {
+    if (newThreadComposerRef.current?.isFocused()) {
       appendNewThreadAttachment(clipboardImage.attachment);
     }
   }
@@ -350,6 +353,10 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       return;
     }
 
+    if (handleAutocompleteKeyDown?.(event)) {
+      return;
+    }
+
     if (
       event.key === "Enter" &&
       !event.shiftKey &&
@@ -367,7 +374,7 @@ export function useSessionComposer(params: UseSessionComposerParams) {
 
     event.preventDefault();
     if (
-      !composerDraft.trim() &&
+      !composerDraftRef.current.trim() &&
       composerAttachments.length === 0 &&
       annotations.list.length === 0
     ) {

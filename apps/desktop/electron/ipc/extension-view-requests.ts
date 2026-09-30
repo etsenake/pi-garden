@@ -52,13 +52,60 @@ export function registerExtensionViewRequests(
     const views = owner.listViews(target);
     for (const contents of senders.values()) {
       if (!contents.isDestroyed())
-        contents.send(desktopIpc.extensionViewCatalogChanged, { target, views });
+        contents.send(desktopIpc.extensionViewCatalogChanged, {
+          target,
+          views,
+          editors: owner.listEditors(target),
+        });
     }
   });
   handle(desktopIpc.listExtensionViews, expectSessionTarget, (target, request) => {
     track(request.contents);
     return owner.listViews(target);
   });
+  handle(desktopIpc.listDesktopEditors, expectSessionTarget, (target, request) => {
+    track(request.contents);
+    return owner.listEditors(target);
+  });
+  handle(
+    desktopIpc.openDesktopEditor,
+    (raw) => {
+      const input = expectRecord(raw, "desktop editor request");
+      return {
+        target: expectSessionTarget(input.target),
+        extensionId: expectNonEmptyString(input.extensionId, "extensionId"),
+        editorId: expectNonEmptyString(input.editorId, "editorId"),
+      };
+    },
+    (input, request) => {
+      const contents = track(request.contents);
+      const selected = windows.targetForSender(contents);
+      if (
+        selected?.workspaceId !== input.target.workspaceId ||
+        selected.sessionId !== input.target.sessionId
+      ) {
+        throw new Error("Open the desktop editor from its selected task");
+      }
+      let connectionId = "";
+      return owner
+        .openEditorConnection(
+          {
+            target: input.target,
+            extensionId: input.extensionId,
+            editorId: input.editorId,
+            senderId: contents.id,
+          },
+          (message) => {
+            if (!contents.isDestroyed())
+              contents.send(desktopIpc.extensionViewMessage, { connectionId, message });
+          },
+        )
+        .then((connection) => {
+          connectionId = connection.connectionId;
+          return connection;
+        });
+    },
+  );
   handle(desktopIpc.openExtensionView, decodeOpenRequest, (input, request) => {
     const contents = track(request.contents);
     const { target } = input;

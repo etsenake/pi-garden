@@ -111,6 +111,9 @@ type ConversationOwner = Pick<
   | "removeQueuedComposerMessage"
   | "steerQueuedComposerMessage"
   | "updateComposerDraft"
+  | "mirrorComposerDraft"
+  | "queryEditorAutocomplete"
+  | "applyEditorAutocomplete"
   | "submitComposer"
   | "composerSubmitNeedsSenderView"
   | "getSessionTree"
@@ -768,6 +771,65 @@ export function registerDesktopIpc({
       ),
     );
   });
+  handleMainFrame(
+    desktopIpc.mirrorComposerDraft,
+    (raw) => {
+      const input = expectRecord(raw, "composer draft");
+      return {
+        target: expectSessionTarget(input.target),
+        draft: expectString(input.draft, "draft"),
+      };
+    },
+    ({ target, draft }) => {
+      owners.conversation.mirrorComposerDraft(target, draft);
+    },
+  );
+  handleMainFrame(
+    desktopIpc.queryEditorAutocomplete,
+    (raw) => {
+      const input = expectRecord(raw, "editor autocomplete");
+      const cursor = input.cursor;
+      if (typeof cursor !== "number" || !Number.isInteger(cursor) || cursor < 0) {
+        throw new Error("cursor must be a non-negative integer");
+      }
+      return {
+        target: expectSessionTarget(input.target),
+        text: expectString(input.text, "text"),
+        cursor,
+        ...(input.force === true ? { force: true as const } : {}),
+      };
+    },
+    ({ target, text, cursor, force }) =>
+      owners.conversation.queryEditorAutocomplete(target, {
+        text,
+        cursor,
+        ...(force ? { force } : {}),
+      }),
+  );
+  handleMainFrame(
+    desktopIpc.applyEditorAutocomplete,
+    (raw) => {
+      const input = expectRecord(raw, "editor autocomplete");
+      const item = expectRecord(input.item, "item");
+      const cursor = input.cursor;
+      if (typeof cursor !== "number" || !Number.isInteger(cursor) || cursor < 0) {
+        throw new Error("cursor must be a non-negative integer");
+      }
+      const description = item.description;
+      return {
+        target: expectSessionTarget(input.target),
+        text: expectString(input.text, "text"),
+        cursor,
+        prefix: expectString(input.prefix, "prefix"),
+        item: {
+          label: expectString(item.label, "label"),
+          value: expectString(item.value, "value"),
+          ...(typeof description === "string" ? { description } : {}),
+        },
+      };
+    },
+    (input) => owners.conversation.applyEditorAutocomplete(input.target, input),
+  );
   handleMainFrame(
     desktopIpc.persistComposerDraft,
     (raw) => {

@@ -55,6 +55,10 @@ export function useComposerDraftSync(params: UseComposerDraftSyncParams) {
 
   composerDraftRef.current = composerDraft;
   const persistedComposerDraft = snapshot?.composerDraft ?? "";
+  const mirrorTargetRef = useRef(selectedSession);
+  mirrorTargetRef.current = selectedSession;
+  const apiRef = useRef(api);
+  apiRef.current = api;
   const setComposerDraft = useCallback((nextDraft: SetStateAction<string>) => {
     const currentDraft = composerDraftRef.current;
     const resolvedDraft = typeof nextDraft === "function" ? nextDraft(currentDraft) : nextDraft;
@@ -64,6 +68,13 @@ export function useComposerDraftSync(params: UseComposerDraftSyncParams) {
     composerDraftRef.current = resolvedDraft;
     localEditGenerationRef.current += 1;
     setComposerDraftState(resolvedDraft);
+    const target = mirrorTargetRef.current;
+    const desktop = apiRef.current;
+    if (target && desktop && "mirrorComposerDraft" in desktop) {
+      void desktop.mirrorComposerDraft(resolvedDraft, target).catch((error: unknown) => {
+        console.error("[composer] draft mirror failed", error);
+      });
+    }
   }, []);
 
   useEffect(() => {

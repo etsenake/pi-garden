@@ -1595,6 +1595,35 @@ export class DesktopAppStore {
     return this.driver.completeExtensionCommandArgument(target, generation, commandName, prefix);
   }
 
+  mirrorComposerDraft(sessionRef: SessionRef, draft: string): void {
+    const key = sessionKey(sessionRef);
+    if (draft) this.sessionState.composerDraftsBySession.set(key, draft);
+    else this.sessionState.composerDraftsBySession.delete(key);
+  }
+
+  queryEditorAutocomplete(
+    target: SessionRef,
+    query: { readonly text: string; readonly cursor: number; readonly force?: boolean },
+  ) {
+    return this.driver.queryEditorAutocomplete(target, query);
+  }
+
+  applyEditorAutocomplete(
+    target: SessionRef,
+    input: {
+      readonly text: string;
+      readonly cursor: number;
+      readonly prefix: string;
+      readonly item: {
+        readonly label: string;
+        readonly value: string;
+        readonly description?: string;
+      };
+    },
+  ) {
+    return this.driver.applyEditorAutocomplete(target, input);
+  }
+
   async refreshRuntime(workspaceId?: string): Promise<DesktopAppState> {
     await this.initialize();
     const resolvedWorkspaceId = workspaceId || this.state.selectedWorkspaceId;

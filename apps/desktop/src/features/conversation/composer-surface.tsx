@@ -35,6 +35,8 @@ import {
   SparkIcon,
   StatusIcon,
 } from "../../ui/icons";
+import type { ComposerEditorHandle } from "./composer-editor";
+import { bindTextareaEditor } from "./composer-editor";
 import { ImageAttachmentThumb } from "./image-attachment-thumb";
 import { QueuedComposerMessages } from "./queued-composer-messages";
 
@@ -48,7 +50,10 @@ interface ComposerSurfaceProps {
   readonly topNotice?: ReactNode;
   readonly composerDraft: string;
   readonly setComposerDraft: (draft: string) => void;
-  readonly composerRef: RefObject<HTMLTextAreaElement | null>;
+  readonly composerRef: RefObject<ComposerEditorHandle | null>;
+  readonly editorSlot?: ReactNode;
+  readonly suggestionMenu?: ReactNode;
+  readonly editorNotice?: ReactNode;
   readonly attachments: readonly ComposerAttachment[];
   readonly queuedMessages: readonly import("../../../contracts/desktop-state").QueuedComposerMessage[];
   readonly editingQueuedMessageId?: string;
@@ -93,6 +98,9 @@ export function ComposerSurface({
   composerDraft,
   setComposerDraft,
   composerRef,
+  editorSlot,
+  suggestionMenu,
+  editorNotice,
   attachments,
   queuedMessages,
   editingQueuedMessageId,
@@ -373,18 +381,30 @@ export function ComposerSurface({
           placement="above"
           widgets={widgetsForPlacement(extensionUi, "aboveComposer")}
         />
-        <textarea
-          aria-label={textareaLabel}
-          className={textareaClassName}
-          data-testid={textareaTestId}
-          ref={composerRef}
-          value={composerDraft}
-          onChange={(event) => {
-            setComposerDraft(event.target.value);
-          }}
-          onKeyDown={onComposerKeyDown}
-          placeholder={textareaPlaceholder}
-        />
+        {suggestionMenu}
+        {editorNotice}
+        {editorSlot ?? (
+          <textarea
+            aria-label={textareaLabel}
+            className={textareaClassName}
+            data-testid={textareaTestId}
+            ref={(node) => {
+              composerRef.current = node ? bindTextareaEditor(node) : null;
+            }}
+            value={composerDraft}
+            onChange={(event) => {
+              setComposerDraft(event.target.value);
+            }}
+            onCompositionStart={(event) => {
+              event.currentTarget.dataset.composing = "true";
+            }}
+            onCompositionEnd={(event) => {
+              delete event.currentTarget.dataset.composing;
+            }}
+            onKeyDown={onComposerKeyDown}
+            placeholder={textareaPlaceholder}
+          />
+        )}
         <ExtensionWidgets
           placement="below"
           widgets={widgetsForPlacement(extensionUi, "belowComposer")}

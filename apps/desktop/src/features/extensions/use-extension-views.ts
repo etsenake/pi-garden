@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SessionRef } from "@pi-garden/session-driver/types";
 import type { PiDesktopApi } from "../../../contracts/ipc";
+import type { DesktopEditorInfo } from "../../../contracts/desktop-editor";
 import type { DesktopExtensionViewInfo } from "../../../contracts/extension-views";
 
 interface ExtensionViewCatalog {
   readonly targetKey: string;
   readonly views: readonly DesktopExtensionViewInfo[];
+  readonly editors: readonly DesktopEditorInfo[];
   readonly loading: boolean;
   readonly error: string;
 }
@@ -34,6 +36,7 @@ export function useExtensionViews({
     setCatalog({
       targetKey,
       views: previous?.targetKey === targetKey ? previous.views : [],
+      editors: previous?.targetKey === targetKey ? previous.editors : [],
       loading: true,
       error: "",
     });
@@ -46,17 +49,28 @@ export function useExtensionViews({
       )
         return;
       receivedPush = true;
-      setCatalog({ targetKey, views: event.views, loading: false, error: "" });
+      setCatalog((current) => ({
+        targetKey,
+        views: event.views,
+        editors: event.editors ?? current?.editors ?? [],
+        loading: false,
+        error: "",
+      }));
     });
-    void api.listExtensionViews({ workspaceId, sessionId }).then(
-      (views) => {
-        if (!disposed && !receivedPush) setCatalog({ targetKey, views, loading: false, error: "" });
+    void Promise.all([
+      api.listExtensionViews({ workspaceId, sessionId }),
+      api.listDesktopEditors({ workspaceId, sessionId }),
+    ]).then(
+      ([views, editors]) => {
+        if (!disposed && !receivedPush)
+          setCatalog({ targetKey, views, editors, loading: false, error: "" });
       },
       (error: unknown) => {
         if (!disposed && !receivedPush)
           setCatalog({
             targetKey,
             views: previous?.targetKey === targetKey ? previous.views : [],
+            editors: previous?.targetKey === targetKey ? previous.editors : [],
             loading: false,
             error: error instanceof Error ? error.message : String(error),
           });
@@ -71,6 +85,7 @@ export function useExtensionViews({
   const current = catalog?.targetKey === targetKey ? catalog : null;
   return {
     views: current?.views ?? [],
+    editors: current?.editors ?? [],
     loading: Boolean(target) && (!current || current.loading),
     error: current?.error ?? "",
     reload,

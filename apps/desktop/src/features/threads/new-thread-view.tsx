@@ -12,6 +12,7 @@ import type {
   NewThreadEnvironment,
   WorkspaceRecord,
 } from "../../../contracts/desktop-state";
+import type { ComposerEditorHandle } from "../conversation/composer-editor";
 import type { MentionOption } from "../conversation/hooks/use-mention-menu";
 import { ArrowUpIcon, PiGardenMark, PlusIcon } from "../../ui/icons";
 import {
@@ -41,7 +42,7 @@ interface NewThreadViewProps {
   readonly modelId: string | undefined;
   readonly thinkingLevel: string | undefined;
   readonly modelOnboarding: ModelOnboardingState;
-  readonly composerRef: RefObject<HTMLTextAreaElement | null>;
+  readonly composerRef: RefObject<ComposerEditorHandle | null>;
   readonly activeSlashCommand?: ComposerSlashCommand;
   readonly activeSlashCommandMeta?: string;
   readonly slashSections: readonly ComposerSlashCommandSection[];
@@ -126,13 +127,7 @@ export function NewThreadView({
   }, [composerRef]);
 
   useEffect(() => {
-    const composer = composerRef.current;
-    if (!composer) {
-      return;
-    }
-
-    composer.style.height = "0px";
-    composer.style.height = `${Math.min(composer.scrollHeight, 260)}px`;
+    composerRef.current?.syncHeight?.(260);
   }, [composerRef, prompt]);
 
   if (!workspace) {

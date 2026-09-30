@@ -13,6 +13,7 @@ import type {
 } from "@pi-garden/session-driver/runtime-types";
 import { extensionSourceSummary } from "../../extensions/extension-display";
 import type { PiDesktopApi } from "../../../../contracts/ipc";
+import type { ComposerEditorHandle } from "../composer-editor";
 import { nextMenuIndex } from "./use-slash-menu";
 
 export type MentionOption =
@@ -36,7 +37,7 @@ export type MentionOption =
 interface UseMentionMenuParams {
   readonly composerDraft: string;
   readonly setComposerDraft: (draft: string) => void;
-  readonly composerRef: RefObject<HTMLTextAreaElement | null>;
+  readonly composerRef: RefObject<ComposerEditorHandle | null>;
   readonly workspaceId: string | undefined;
   readonly runtime?: RuntimeSnapshot;
   readonly api: PiDesktopApi | undefined;
@@ -166,10 +167,11 @@ export function useMentionMenu({
       setComposerDraft(newDraft);
       setSuppressed(true);
       requestAnimationFrame(() => {
-        const textarea = composerRef.current;
-        if (textarea) {
+        const editor = composerRef.current;
+        if (editor) {
           const newPos = before.length + inserted.length;
-          textarea.setSelectionRange(newPos, newPos);
+          editor.focus();
+          editor.setSelection(newPos, newPos);
         }
       });
     },

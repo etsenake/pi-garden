@@ -18,6 +18,13 @@ import type {
   ExtensionViewCatalogChange,
   ExtensionOverlayChange,
 } from "./extension-views";
+import type {
+  DesktopEditorInfo,
+  EditorAutocompleteApplied,
+  EditorAutocompleteApplyInput,
+  EditorAutocompleteQuery,
+  EditorAutocompleteResponse,
+} from "./desktop-editor";
 import type { RuntimeSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type {
   NavigateSessionTreeOptions,
@@ -86,6 +93,8 @@ export type CustomProviderProbeResult =
 export const desktopIpc = {
   extensionViewOpenFile: "pi-garden:extension-view-open-file",
   listExtensionViews: "pi-garden:list-extension-views",
+  listDesktopEditors: "pi-garden:list-desktop-editors",
+  openDesktopEditor: "pi-garden:open-desktop-editor",
   openExtensionView: "pi-garden:open-extension-view",
   sendExtensionViewMessage: "pi-garden:send-extension-view-message",
   closeExtensionView: "pi-garden:close-extension-view",
@@ -187,6 +196,9 @@ export const desktopIpc = {
   removeQueuedComposerMessage: "pi-garden:remove-queued-composer-message",
   steerQueuedComposerMessage: "pi-garden:steer-queued-composer-message",
   persistComposerDraft: "pi-garden:persist-composer-draft",
+  mirrorComposerDraft: "pi-garden:mirror-composer-draft",
+  queryEditorAutocomplete: "pi-garden:query-editor-autocomplete",
+  applyEditorAutocomplete: "pi-garden:apply-editor-autocomplete",
   updateComposerDraft: "pi-garden:update-composer-draft",
   submitComposer: "pi-garden:submit-composer",
   getSessionTree: "pi-garden:get-session-tree",
@@ -820,6 +832,12 @@ export interface PiDesktopApi {
   }): Promise<void>;
   /** Saves the draft typed in `target`, even if another task is selected by the time it lands. */
   updateComposerDraft(composerDraft: string, target: SessionRef): Promise<DesktopAppState>;
+  /** Updates the live draft map without emitting state or persisting. */
+  mirrorComposerDraft(composerDraft: string, target: SessionRef): Promise<void>;
+  queryEditorAutocomplete(input: EditorAutocompleteQuery): Promise<EditorAutocompleteResponse>;
+  applyEditorAutocomplete(
+    input: EditorAutocompleteApplyInput,
+  ): Promise<EditorAutocompleteApplied | null>;
   submitComposer(
     text: string,
     options?: { readonly deliverAs?: "steer" | "followUp" },
@@ -841,6 +859,12 @@ export interface PiDesktopApi {
   stageFile(workspaceId: string, filePath: string, stagingSourcePath?: string): Promise<void>;
   onExtensionViewOpenFile(listener: (event: ExtensionViewOpenFile) => void): () => void;
   listExtensionViews(target: SessionRef): Promise<readonly DesktopExtensionViewInfo[]>;
+  listDesktopEditors(target: SessionRef): Promise<readonly DesktopEditorInfo[]>;
+  openDesktopEditor(input: {
+    readonly target: SessionRef;
+    readonly extensionId: string;
+    readonly editorId: string;
+  }): Promise<ExtensionViewConnection>;
   listSurfaceContributions(target: SessionRef): Promise<readonly SurfaceContributionPresentation[]>;
   onSurfaceContributionsChanged(
     listener: (event: SurfaceContributionCatalogChange) => void,

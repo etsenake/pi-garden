@@ -578,3 +578,63 @@ test("a rich surface with a missing frontend is rejected without activating its 
     await rm(data.directory, { recursive: true, force: true });
   }
 });
+
+test("one desktop editor wins by extension id and the loser stays visible as a conflict", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  const diagnostics: string[] = [];
+  const owner = new DesktopExtensionViewOwner({
+    frameDocument: () => "<!doctype html>",
+    onHostAction: async () => undefined,
+    onDiagnostic: (_target, _source, message) => diagnostics.push(message),
+  });
+  const editor = (data: Awaited<ReturnType<typeof fixture>>, id: string) => ({
+    id,
+    title: id,
+    source: data.declaration.source,
+    frontend: data.declaration.frontend,
+  });
+  try {
+    const extensions = [{ resolvedPath: first.source }, { resolvedPath: second.source }];
+    const declarations = [editor(first, "alpha"), editor(second, "zeta")];
+    await owner.replaceRuntime({
+      target,
+      generation: "one",
+      extensions,
+      declarations: [],
+      editors: declarations,
+    });
+    const ready = owner.listEditors(target).filter((entry) => entry.state === "ready");
+    expect(ready).toHaveLength(1);
+    expect(owner.listViews(target)).toEqual([]);
+    await owner.replaceRuntime({
+      target,
+      generation: "one",
+      extensions,
+      declarations: [],
+      editors: [...declarations].reverse(),
+    });
+    const reversed = owner.listEditors(target).filter((entry) => entry.state === "ready");
+    expect(reversed.map((entry) => entry.extensionId)).toEqual(
+      ready.map((entry) => entry.extensionId),
+    );
+    expect(diagnostics.some((message) => message.includes("Competing desktop editors"))).toBe(true);
+    const loser = owner.listEditors(target).find((entry) => entry.state === "conflict");
+    expect(loser).toBeTruthy();
+    await expect(
+      owner.openEditorConnection(
+        {
+          target,
+          extensionId: loser?.extensionId ?? "",
+          editorId: loser?.id ?? "",
+          senderId: 1,
+        },
+        () => undefined,
+      ),
+    ).rejects.toThrow(/unavailable|competing/i);
+  } finally {
+    await owner.dispose();
+    await rm(first.directory, { recursive: true, force: true });
+    await rm(second.directory, { recursive: true, force: true });
+  }
+});

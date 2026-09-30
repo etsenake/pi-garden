@@ -15,6 +15,7 @@ import type {
   SessionExtensionUiStateRecord,
   SessionRecord,
 } from "../../../contracts/desktop-state";
+import type { ComposerEditorHandle } from "./composer-editor";
 import type { MentionOption } from "./hooks/use-mention-menu";
 import { ArrowUpIcon, PlusIcon, StopSquareIcon } from "../../ui/icons";
 import type {
@@ -49,7 +50,10 @@ interface ComposerPanelProps {
   readonly activeSlashCommandMeta?: string;
   readonly composerDraft: string;
   readonly setComposerDraft: Dispatch<SetStateAction<string>>;
-  readonly composerRef: RefObject<HTMLTextAreaElement | null>;
+  readonly composerRef: RefObject<ComposerEditorHandle | null>;
+  readonly editorSlot?: ReactNode;
+  readonly suggestionMenu?: ReactNode;
+  readonly editorNotice?: ReactNode;
   readonly attachments: readonly ComposerAttachment[];
   readonly queuedMessages: readonly QueuedComposerMessage[];
   readonly editingQueuedMessageId?: string;
@@ -108,6 +112,9 @@ export function ComposerPanel({
   composerDraft,
   setComposerDraft,
   composerRef,
+  editorSlot,
+  suggestionMenu,
+  editorNotice,
   attachments,
   queuedMessages,
   editingQueuedMessageId,
@@ -177,6 +184,9 @@ export function ComposerPanel({
           composerDraft={composerDraft}
           setComposerDraft={setComposerDraft}
           composerRef={composerRef}
+          editorSlot={editorSlot}
+          suggestionMenu={suggestionMenu}
+          editorNotice={editorNotice}
           attachments={attachments}
           queuedMessages={queuedMessages}
           editingQueuedMessageId={editingQueuedMessageId}
