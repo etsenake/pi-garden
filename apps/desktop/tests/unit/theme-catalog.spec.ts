@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -225,9 +225,9 @@ test("catalog scope, shadowing, and fallback stay on one selection", () => {
 });
 
 test("theme discovery reads user and trusted project files and skips invalid ones", async () => {
-  const agentDir = await mkdtemp(join(tmpdir(), "pi-themes-"));
-  const workspace = await mkdtemp(join(tmpdir(), "pi-theme-work-"));
-  const other = await mkdtemp(join(tmpdir(), "pi-theme-other-"));
+  const agentDir = await realpath(await mkdtemp(join(tmpdir(), "pi-themes-")));
+  const workspace = await realpath(await mkdtemp(join(tmpdir(), "pi-theme-work-")));
+  const other = await realpath(await mkdtemp(join(tmpdir(), "pi-theme-other-")));
   await mkdir(join(agentDir, "themes"), { recursive: true });
   await writeFile(join(agentDir, "themes", "harbor.json"), JSON.stringify(harbor));
   await writeFile(join(agentDir, "themes", "broken.json"), "{");
@@ -259,6 +259,117 @@ test("theme discovery reads user and trusted project files and skips invalid one
   expect(ids.some((id) => id.endsWith(":secret"))).toBe(false);
   expect(catalog.some((entry) => entry.id === "broken")).toBe(false);
 });
+
+test("Pi 0.87.1 package, settings, glob, and filter sources keep Pi precedence", async () => {
+  const agentDir = await realpath(await mkdtemp(join(tmpdir(), "pi-theme-sources-")));
+  const trusted = await realpath(await mkdtemp(join(tmpdir(), "pi-theme-trusted-")));
+  const untrusted = await realpath(await mkdtemp(join(tmpdir(), "pi-theme-untrusted-")));
+
+  await mkdir(join(agentDir, "themes"), { recursive: true });
+  await writeFile(join(agentDir, "themes", "harbor.json"), JSON.stringify(harbor));
+  await writeFile(join(agentDir, "themes", "tide.json"), JSON.stringify(piTheme()));
+  await writeFile(join(agentDir, "themes", "hidden.json"), JSON.stringify(gardenTheme("hidden")));
+  await writeFile(join(agentDir, "themes", "garden.json"), JSON.stringify(gardenTheme("garden")));
+  await writeFile(join(agentDir, "themes", ".ignore"), "hidden.json\n");
+  await writeFile(join(agentDir, "cove.json"), JSON.stringify(gardenTheme("cove", "Cove")));
+  await mkdir(join(agentDir, "extra"), { recursive: true });
+  await writeFile(
+    join(agentDir, "extra", "leaf.json"),
+    JSON.stringify(gardenTheme("leaf", "Leaf")),
+  );
+
+  const pkg = join(agentDir, "pkg");
+  await mkdir(join(pkg, "palette"), { recursive: true });
+  await mkdir(join(pkg, "themes"), { recursive: true });
+  await writeFile(join(pkg, "palette", "kelp.json"), JSON.stringify(gardenTheme("kelp", "Kelp")));
+  await writeFile(join(pkg, "themes", "skip.json"), JSON.stringify(gardenTheme("skip", "Skip")));
+  await writeFile(
+    join(pkg, "package.json"),
+    JSON.stringify({ name: "theme-pkg", pi: { themes: ["palette/*.json"] } }),
+  );
+
+  const filtered = join(agentDir, "filtered");
+  await mkdir(join(filtered, "themes"), { recursive: true });
+  await writeFile(
+    join(filtered, "themes", "keep.json"),
+    JSON.stringify(gardenTheme("keep", "Keep")),
+  );
+  await writeFile(
+    join(filtered, "themes", "drop.json"),
+    JSON.stringify(gardenTheme("drop", "Drop")),
+  );
+
+  await writeFile(
+    join(agentDir, "settings.json"),
+    JSON.stringify({
+      themes: ["cove.json", "extra", "!tide.json"],
+      packages: ["./pkg", { source: "./filtered", themes: ["!drop.json"] }],
+    }),
+  );
+
+  await mkdir(join(trusted, ".pi", "themes"), { recursive: true });
+  await writeFile(
+    join(trusted, ".pi", "themes", "harbor.json"),
+    JSON.stringify(gardenTheme("harbor", "Harbor")),
+  );
+  await writeFile(
+    join(agentDir, "themes", "moss.json"),
+    JSON.stringify(gardenTheme("moss", "Moss")),
+  );
+  const projectPkg = join(trusted, ".pi", "vendor");
+  await mkdir(join(projectPkg, "themes"), { recursive: true });
+  await writeFile(
+    join(projectPkg, "themes", "moss.json"),
+    JSON.stringify(gardenTheme("moss", "Moss")),
+  );
+  await writeFile(
+    join(trusted, ".pi", "settings.json"),
+    JSON.stringify({ packages: ["./vendor"] }),
+  );
+
+  await mkdir(join(untrusted, ".pi", "themes"), { recursive: true });
+  await writeFile(
+    join(untrusted, ".pi", "themes", "secret.json"),
+    JSON.stringify(gardenTheme("secret", "Secret")),
+  );
+  await writeFile(
+    join(agentDir, "trust.json"),
+    JSON.stringify({ [trusted]: true, [untrusted]: false }),
+  );
+
+  const catalog = await discoverThemeCatalog({
+    agentDir,
+    workspaces: [{ path: trusted }, { path: untrusted }],
+  });
+  const byId = (id: string) => catalog.filter((entry) => entry.id === id);
+
+  expect(byId("cove").map((entry) => entry.piResource?.source)).toEqual(["local"]);
+  expect(byId("leaf")).toHaveLength(1);
+  expect(byId("kelp")[0]?.piResource).toMatchObject({ origin: "package", scope: "user" });
+  expect(byId("skip")).toHaveLength(0);
+  expect(byId("keep")[0]?.piResource?.origin).toBe("package");
+  expect(byId("drop")).toHaveLength(0);
+  expect(byId("tide")).toHaveLength(0);
+  expect(byId("hidden")).toHaveLength(0);
+  expect(byId("garden")).toHaveLength(1);
+  expect(byId("garden")[0]?.scope).toBe("builtin");
+  expect(byId("secret")).toHaveLength(0);
+
+  const trustedHarbor = themesForWorkspace(catalog, trusted).filter(
+    (entry) => entry.id === "harbor",
+  );
+  expect(trustedHarbor.map((entry) => entry.scope)).toEqual(["project"]);
+  const elsewhere = themesForWorkspace(catalog, untrusted).filter((entry) => entry.id === "harbor");
+  expect(elsewhere.map((entry) => entry.scope)).toEqual(["user"]);
+
+  const moss = themesForWorkspace(catalog, trusted).filter((entry) => entry.id === "moss");
+  expect(moss.map((entry) => entry.scope)).toEqual(["user"]);
+  expect(byId("moss").some((entry) => entry.scope === "project")).toBe(false);
+});
+
+function gardenTheme(id: string, name = id) {
+  return { ...harbor, id, name };
+}
 
 test("persisted theme ids survive and malformed ids are dropped", () => {
   expect(

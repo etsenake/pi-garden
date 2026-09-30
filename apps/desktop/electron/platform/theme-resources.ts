@@ -1,32 +1,28 @@
-import { realpath, readFile, readdir, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
+import type { ProjectTrustStore, ResolvedResource } from "@earendil-works/pi-coding-agent";
 import { builtinThemeCatalog, type ThemeCatalogEntry } from "../../contracts/theme-catalog";
 import { parseExternalThemeDocument } from "../../contracts/theme-document";
 import { isThemePresetId } from "../../contracts/desktop-state";
 
 /**
- * Pi theme resources. User themes live in `PI_CODING_AGENT_DIR/themes` (default
- * `~/.pi/agent/themes`). Project themes live in `<workspace>/.pi/themes` and are
- * loaded only when Pi's trust store allows that project: a project with
- * trust-requiring `.pi` resources is excluded until `trust.json` says yes for
- * the directory or an ancestor. Invalid files are skipped.
+ * Theme discovery delegates to Pi 0.87.1's package manager. For each workspace
+ * it resolves the same enabled theme files Pi would: `themes/` directories,
+ * `settings.json` `themes` files and directories, package `pi.themes` globs,
+ * and `!` / `+` / `-` filters. Project resources are included only when Pi's
+ * trust store allows that project. Missing npm or git packages are skipped
+ * rather than installed. Each enabled file is then parsed by the desktop theme
+ * mapping; a file Pi would reject but the mapping accepts (a Garden document)
+ * is kept, and a file the mapping cannot represent is skipped.
  *
- * Pi package themes and npm package themes are not scanned. Pi's `settings.json`
- * theme globs are not reimplemented; exact `!`, `+`, and `-` overrides against
- * `themes/<file>` or the file name are.
+ * Precedence follows Pi's resolved order: the first theme that maps to an id
+ * wins. A project theme is published only when it wins in that workspace, so a
+ * later package theme does not hide an earlier user theme. User themes stay in
+ * the catalog for workspaces where no project theme won.
  */
 
 const CONFIG_DIR = ".pi";
-const TRUST_RESOURCES = [
-  "settings.json",
-  "extensions",
-  "skills",
-  "prompts",
-  "themes",
-  "SYSTEM.md",
-  "APPEND_SYSTEM.md",
-];
 const MAX_THEME_BYTES = 256 * 1024;
 
 export interface ThemeDiscoveryWorkspace {
@@ -37,47 +33,27 @@ export async function discoverThemeCatalog(input: {
   readonly agentDir: string;
   readonly workspaces: readonly ThemeDiscoveryWorkspace[];
 }): Promise<readonly ThemeCatalogEntry[]> {
+  const pi = await import("@earendil-works/pi-coding-agent");
   const entries: ThemeCatalogEntry[] = [...builtinThemeCatalog()];
-  const seen = new Set(entries.map((entry) => entry.id));
-  const userPatterns = await readThemeOverrides(join(input.agentDir, "settings.json"));
-  const userThemes = await readThemeDirectory(join(input.agentDir, "themes"), userPatterns);
-  for (const theme of userThemes) {
-    if (seen.has(theme.id) || isThemePresetId(theme.id)) {
-      console.warn(`[theme] skipping user theme ${theme.id}; it collides with a built-in id`);
-      continue;
+  const parsedByPath = new Map<string, ThemeCatalogEntry | undefined>();
+  const trust = new pi.ProjectTrustStore(input.agentDir);
+  let userThemesAdded = false;
+
+  for (const workspace of input.workspaces) {
+    const trusted = await projectIsTrusted(trust, workspace.path);
+    const resources = await resolveEnabledThemes(input.agentDir, workspace.path, trusted);
+    if (!resources) continue;
+    if (!userThemesAdded) {
+      await appendUserThemes(entries, resources, parsedByPath);
+      userThemesAdded = true;
     }
-    seen.add(theme.id);
-    entries.push({ ...theme, scope: "user" });
+    if (!trusted) continue;
+    await appendWinningProjectThemes(entries, resources, workspace.path, parsedByPath);
   }
 
-  const trust = await readTrustStore(join(input.agentDir, "trust.json"));
-  for (const workspace of input.workspaces) {
-    if (!(await projectThemesAllowed(workspace.path, trust))) continue;
-    const projectPatterns = await readThemeOverrides(
-      join(workspace.path, CONFIG_DIR, "settings.json"),
-    );
-    const projectThemes = await readThemeDirectory(
-      join(workspace.path, CONFIG_DIR, "themes"),
-      projectPatterns,
-    );
-    for (const theme of projectThemes) {
-      if (isThemePresetId(theme.id)) {
-        console.warn(`[theme] skipping project theme ${theme.id}; it collides with a built-in id`);
-        continue;
-      }
-      if (
-        entries.some(
-          (entry) =>
-            entry.scope === "project" &&
-            entry.id === theme.id &&
-            entry.workspacePath === workspace.path,
-        )
-      ) {
-        console.warn(`[theme] skipping duplicate project theme ${theme.id}`);
-        continue;
-      }
-      entries.push({ ...theme, scope: "project", workspacePath: workspace.path });
-    }
+  if (!userThemesAdded) {
+    const resources = await resolveEnabledThemes(input.agentDir, input.agentDir, false);
+    if (resources) await appendUserThemes(entries, resources, parsedByPath);
   }
   return entries;
 }
@@ -88,121 +64,120 @@ export function resolveThemeAgentDir(): string {
   return override.startsWith("~") ? join(homedir(), override.slice(1)) : override;
 }
 
-async function readThemeDirectory(
-  directory: string,
-  overrides: readonly string[],
-): Promise<
-  readonly (Omit<ThemeCatalogEntry, "scope" | "workspacePath"> & { readonly sourcePath: string })[]
-> {
-  let names: string[];
+async function projectIsTrusted(trust: ProjectTrustStore, workspacePath: string): Promise<boolean> {
+  const { hasTrustRequiringProjectResources } = await import("@earendil-works/pi-coding-agent");
+  if (!hasTrustRequiringProjectResources(workspacePath)) return true;
   try {
-    names = await readdir(directory);
-  } catch {
-    return [];
+    return trust.get(workspacePath) === true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[theme] project trust could not be read for ${workspacePath}: ${message}`);
+    return false;
   }
-  const themes = [];
-  for (const name of names.sort()) {
-    if (name.startsWith(".") || !name.endsWith(".json")) continue;
-    if (!themeFileEnabled(name, overrides)) continue;
-    const sourcePath = join(directory, name);
-    try {
-      const info = await stat(sourcePath);
-      if (!info.isFile() || info.size > MAX_THEME_BYTES) continue;
-      const raw = await readFile(sourcePath, "utf8");
-      const parsed = parseExternalThemeDocument(JSON.parse(stripBom(raw)));
-      themes.push({
-        id: parsed.id,
-        name: parsed.name,
-        description: parsed.description,
-        sourcePath,
-        variants: parsed.variants,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`[theme] skipped ${sourcePath}: ${message}`);
-    }
-  }
-  return themes;
 }
 
-function themeFileEnabled(fileName: string, patterns: readonly string[]): boolean {
-  const relative = `themes/${fileName}`;
-  let enabled = true;
-  for (const pattern of patterns) {
-    const prefix = pattern[0];
-    if (prefix !== "!" && prefix !== "+" && prefix !== "-") continue;
-    const target = pattern.slice(1).replaceAll("\\", "/").replace(/^\.\//, "");
-    const matches = target === fileName || target === relative;
-    if (!matches) continue;
-    if (prefix === "!") enabled = false;
-    else if (prefix === "+") enabled = true;
-    else enabled = false;
-  }
-  return enabled;
-}
-
-async function readThemeOverrides(settingsPath: string): Promise<readonly string[]> {
+async function resolveEnabledThemes(
+  agentDir: string,
+  cwd: string,
+  projectTrusted: boolean,
+): Promise<readonly ResolvedResource[] | undefined> {
   try {
-    const parsed: unknown = JSON.parse(stripBom(await readFile(settingsPath, "utf8")));
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return [];
-    const themes = (parsed as { themes?: unknown }).themes;
-    if (!Array.isArray(themes)) return [];
-    return themes.filter((entry): entry is string => typeof entry === "string");
-  } catch {
-    return [];
+    const { DefaultPackageManager, SettingsManager } =
+      await import("@earendil-works/pi-coding-agent");
+    const settingsManager = SettingsManager.create(cwd, agentDir, { projectTrusted });
+    const packageManager = new DefaultPackageManager({ cwd, agentDir, settingsManager });
+    const resolved = await packageManager.resolve(async () => "skip");
+    return resolved.themes.filter((theme) => theme.enabled);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[theme] Pi theme resolution failed for ${cwd}: ${message}`);
+    return undefined;
   }
 }
 
-async function projectThemesAllowed(
+async function appendUserThemes(
+  entries: ThemeCatalogEntry[],
+  resources: readonly ResolvedResource[],
+  parsedByPath: Map<string, ThemeCatalogEntry | undefined>,
+): Promise<void> {
+  const seen = new Set(entries.map((entry) => entry.id));
+  for (const resource of resources) {
+    if (resource.metadata.scope !== "user") continue;
+    const theme = await themeFromResource(resource, parsedByPath);
+    if (!theme || seen.has(theme.id)) continue;
+    seen.add(theme.id);
+    entries.push(theme);
+  }
+}
+
+async function appendWinningProjectThemes(
+  entries: ThemeCatalogEntry[],
+  resources: readonly ResolvedResource[],
   workspacePath: string,
-  trust: ReadonlyMap<string, boolean>,
-): Promise<boolean> {
-  if (!(await hasTrustRequiringResources(workspacePath))) return true;
-  let current = await canonicalPath(workspacePath);
-  while (true) {
-    const decision = trust.get(current);
-    if (decision !== undefined) return decision;
-    const parent = dirname(current);
-    if (parent === current) return false;
-    current = parent;
+  parsedByPath: Map<string, ThemeCatalogEntry | undefined>,
+): Promise<void> {
+  const claimed = new Set<string>();
+  for (const resource of resources) {
+    const theme = await themeFromResource(resource, parsedByPath);
+    if (!theme || claimed.has(theme.id)) continue;
+    claimed.add(theme.id);
+    if (resource.metadata.scope !== "project") continue;
+    const published = entries.some(
+      (entry) =>
+        entry.scope === "project" && entry.id === theme.id && entry.workspacePath === workspacePath,
+    );
+    if (published) continue;
+    entries.push({ ...theme, scope: "project", workspacePath });
   }
 }
 
-async function hasTrustRequiringResources(workspacePath: string): Promise<boolean> {
-  const configDir = join(workspacePath, CONFIG_DIR);
-  for (const entry of TRUST_RESOURCES) {
-    try {
-      await stat(join(configDir, entry));
-      return true;
-    } catch {
-      // absent
+async function themeFromResource(
+  resource: ResolvedResource,
+  parsedByPath: Map<string, ThemeCatalogEntry | undefined>,
+): Promise<ThemeCatalogEntry | undefined> {
+  if (resource.metadata.scope !== "user" && resource.metadata.scope !== "project") {
+    return undefined;
+  }
+  if (parsedByPath.has(resource.path)) return parsedByPath.get(resource.path);
+  const parsed = await readDiscoveredTheme(resource.path);
+  if (!parsed || isThemePresetId(parsed.id)) {
+    if (parsed && isThemePresetId(parsed.id)) {
+      console.warn(`[theme] skipping ${resource.path}; ${parsed.id} collides with a built-in id`);
     }
+    parsedByPath.set(resource.path, undefined);
+    return undefined;
   }
-  return false;
+  const entry: ThemeCatalogEntry = {
+    id: parsed.id,
+    name: parsed.name,
+    description: parsed.description,
+    scope: resource.metadata.scope,
+    sourcePath: resource.path,
+    piResource: {
+      source: resource.metadata.source,
+      origin: resource.metadata.origin,
+      scope: resource.metadata.scope,
+    },
+    variants: parsed.variants,
+  };
+  parsedByPath.set(resource.path, entry);
+  return entry;
 }
 
-async function readTrustStore(trustPath: string): Promise<ReadonlyMap<string, boolean>> {
-  const decisions = new Map<string, boolean>();
+async function readDiscoveredTheme(filePath: string) {
   try {
-    const parsed: unknown = JSON.parse(stripBom(await readFile(trustPath, "utf8")));
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return decisions;
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof value === "boolean") {
-        decisions.set(await canonicalPath(key), value);
-      }
+    const info = await stat(filePath);
+    if (!info.isFile()) return undefined;
+    if (info.size > MAX_THEME_BYTES) {
+      console.warn(`[theme] skipped ${filePath}: larger than ${MAX_THEME_BYTES} bytes`);
+      return undefined;
     }
-  } catch {
-    return decisions;
-  }
-  return decisions;
-}
-
-async function canonicalPath(path: string): Promise<string> {
-  const resolved = resolve(path);
-  try {
-    return await realpath(resolved);
-  } catch {
-    return resolved;
+    const raw = await readFile(filePath, "utf8");
+    return parseExternalThemeDocument(JSON.parse(stripBom(raw)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[theme] skipped ${filePath}: ${message}`);
+    return undefined;
   }
 }
 

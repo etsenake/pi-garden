@@ -1,4 +1,4 @@
-import { mkdir, realpath, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
@@ -58,6 +58,26 @@ test("user themes are discovered, selected, persisted, and shared with extension
   await seedAgentDir(agentDir);
   await mkdir(join(agentDir, "themes"), { recursive: true });
   await mkdir(join(agentDir, "extensions"), { recursive: true });
+  const packageDir = join(agentDir, "pkg");
+  await mkdir(join(packageDir, "palette"), { recursive: true });
+  await writeFile(
+    join(packageDir, "palette", "kelp.json"),
+    `${JSON.stringify({ ...harbor, id: "kelp", name: "Kelp" }, null, 2)}\n`,
+  );
+  await writeFile(
+    join(packageDir, "package.json"),
+    `${JSON.stringify({ name: "kelp-theme", pi: { themes: ["palette/*.json"] } }, null, 2)}\n`,
+  );
+  await writeFile(
+    join(agentDir, "cove.json"),
+    `${JSON.stringify({ ...harbor, id: "cove", name: "Cove" }, null, 2)}\n`,
+  );
+  const settingsPath = join(agentDir, "settings.json");
+  const settings = JSON.parse(await readFile(settingsPath, "utf8")) as Record<string, unknown>;
+  await writeFile(
+    settingsPath,
+    `${JSON.stringify({ ...settings, themes: ["cove.json"], packages: ["./pkg"] }, null, 2)}\n`,
+  );
   await writeFile(join(agentDir, "themes", "harbor.json"), `${JSON.stringify(harbor, null, 2)}\n`);
   await writeFile(join(agentDir, "themes", "broken.json"), "{ not json");
   await writeFile(
@@ -130,6 +150,8 @@ export default function themeView(pi) {
     await window.getByRole("radio", { name: "Light", exact: true }).click();
     const preset = window.getByLabel("Color preset");
     await expect(preset.locator("option", { hasText: "Harbor" })).toHaveCount(1);
+    await expect(preset.locator("option", { hasText: "Kelp" })).toHaveCount(1);
+    await expect(preset.locator("option", { hasText: "Cove" })).toHaveCount(1);
     await expect(preset.locator("option", { hasText: "broken" })).toHaveCount(0);
     await preset.selectOption({ label: "Harbor" });
     await expect.poll(() => rootThemeId(window)).toBe("harbor");
@@ -194,9 +216,18 @@ export default function themeView(pi) {
     await composer.press("Enter");
     const catalog = window.locator("[data-status-key='theme-catalog']");
     await expect(catalog).toContainText("harbor:yes");
+    await expect(catalog).toContainText("kelp");
+    await expect(catalog).toContainText("cove");
     await expect(catalog).toContainText("missing:no");
     await expect(catalog).toContainText("default");
     await expect(catalog).not.toContainText("broken");
+    await composer.fill("/theme-set kelp ");
+    await composer.press("Enter");
+    await expect(window.locator("[data-status-key='theme-set']")).toHaveText("ok");
+    await expect.poll(() => rootThemeId(window)).toBe("kelp");
+    await composer.fill("/theme-set harbor ");
+    await composer.press("Enter");
+    await expect.poll(() => rootThemeId(window)).toBe("harbor");
   } finally {
     await harness.close();
   }

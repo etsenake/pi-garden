@@ -17,6 +17,13 @@ import {
  * One discovered or built-in theme after validation. Built-ins and external
  * files share this shape; tokens are still derived from the seed.
  */
+/** Provenance copied from Pi 0.87.1 `PathMetadata` after package resolution. */
+export interface ThemeResourceProvenance {
+  readonly source: string;
+  readonly origin: "package" | "top-level";
+  readonly scope: "user" | "project";
+}
+
 export interface ThemeCatalogEntry {
   readonly id: string;
   readonly name: string;
@@ -24,6 +31,8 @@ export interface ThemeCatalogEntry {
   readonly scope: ThemeSelectionScope;
   readonly sourcePath?: string;
   readonly workspacePath?: string;
+  /** Set for themes Pi resolved. Distinguishes a package resource from a directory or settings path. */
+  readonly piResource?: ThemeResourceProvenance;
   readonly variants: {
     readonly light?: ThemeVariantDefinition;
     readonly dark?: ThemeVariantDefinition;
