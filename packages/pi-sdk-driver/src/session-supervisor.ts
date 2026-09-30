@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import {
   ModelRegistry,
   ModelRuntime,
+  ProjectTrustStore,
   SessionManager,
   type AgentSessionRuntime,
   type AgentSession,
@@ -1399,6 +1400,13 @@ export class SessionSupervisor {
       await this.hostTheme?.refresh();
     } catch (error) {
       console.error("[pi-garden] theme refresh failed", error);
+    }
+    // AgentSession.reload() preserves SettingsManager.projectTrusted. Sync from
+    // the trust store so live grant/revoke (and later /reload) pick up project
+    // extensions without recreating the session runtime.
+    if (this.agentDir) {
+      const trusted = new ProjectTrustStore(this.agentDir).get(record.workspace.path) === true;
+      session.settingsManager.setProjectTrusted(trusted);
     }
     this.resetExtensionUi(record);
     await session.reload();

@@ -92,3 +92,63 @@ export default function projectProbe(pi) {
   );
   assert.equal(await absent(), false);
 });
+
+await test("live trust grant reloads an open session so project commands appear", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-live-trust-"));
+  const agentDir = join(root, "agent");
+  const workspacePath = join(root, "workspace");
+  const marker = join(root, "project-extension-executed");
+  await mkdir(join(agentDir, "extensions"), { recursive: true });
+  await mkdir(join(workspacePath, ".pi", "extensions"), { recursive: true });
+  await writeFile(join(agentDir, "auth.json"), "{}");
+  await writeFile(join(agentDir, "settings.json"), JSON.stringify({ packages: [] }));
+  await writeFile(
+    join(workspacePath, ".pi", "extensions", "live-probe.ts"),
+    `import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "executed");
+export default function liveProbe(pi) {
+  pi.registerCommand("live-probe", { description: "project", handler: async () => {} });
+}
+`,
+  );
+
+  const workspace = { workspaceId: "ws-live", path: workspacePath };
+  const driver = new PiSdkDriver({ agentDir, catalogFilePath: join(root, "catalogs.json") });
+  const session = await driver.createSession(workspace);
+  const before = await driver.getSessionCommands(session.ref);
+  assert.equal(
+    before.some((command) => command.name === "live-probe"),
+    false,
+  );
+  assert.equal(
+    await access(marker).then(
+      () => true,
+      () => false,
+    ),
+    false,
+  );
+
+  await driver.runtimeSupervisor.setProjectTrust(workspace, true);
+  await driver.reloadSession(session.ref);
+  const after = await driver.getSessionCommands(session.ref);
+  assert.equal(
+    after.some((command) => command.name === "live-probe"),
+    true,
+  );
+  assert.equal(
+    await access(marker).then(
+      () => true,
+      () => false,
+    ),
+    true,
+  );
+
+  await driver.runtimeSupervisor.setProjectTrust(workspace, false);
+  await driver.reloadSession(session.ref);
+  const revoked = await driver.getSessionCommands(session.ref);
+  assert.equal(
+    revoked.some((command) => command.name === "live-probe"),
+    false,
+  );
+  await driver.closeSession(session.ref);
+});

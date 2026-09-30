@@ -112,6 +112,15 @@ await test("host actions reject foreign target identities and non-JSON values", 
       files: [{ path: "src/app.ts", line: 3 }],
     },
   );
+  assert.deepEqual(parseDesktopHostAction({ type: "presentOverlay", id: "picker" }), {
+    type: "presentOverlay",
+    id: "picker",
+  });
+  assert.deepEqual(parseDesktopHostAction({ type: "settleOverlay", value: { ok: true } }), {
+    type: "settleOverlay",
+    value: { ok: true },
+  });
+  assert.deepEqual(parseDesktopHostAction({ type: "cancelOverlay" }), { type: "cancelOverlay" });
   for (const action of [
     { type: "openFile", path: "src/app.ts", sessionId: "other" },
     { type: "openFile", path: "src/app.ts", line: 0 },
@@ -123,6 +132,11 @@ await test("host actions reject foreign target identities and non-JSON values", 
       files: [{ path: "a", workspaceId: "other" }],
     },
     { type: "prepareTaskDraft", title: "Fix", prompt: undefined },
+    { type: "presentOverlay", id: "Bad Id" },
+    { type: "settleOverlay", value: () => undefined },
+    { type: "cancelOverlay", extra: true },
+    { type: "shell", command: "rm -rf /" },
+    { type: "unknown" },
   ])
     assert.throws(() => parseDesktopHostAction(action));
 });

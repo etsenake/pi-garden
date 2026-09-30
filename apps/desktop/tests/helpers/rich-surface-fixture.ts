@@ -8,7 +8,9 @@ const helperPath = require.resolve("@pi-garden/extension-ui");
 function markModule(label: string, extra = ""): string {
   return `
 export async function mount(root, host) {
-  root.innerHTML = '<p class="rich-mark">${label}</p><output id="theme"></output><pre id="boundary"></pre><output id="overlay-result"></output>${extra}';
+  const mountToken = String(Math.random());
+  root.innerHTML = '<p class="rich-mark">${label}</p><output id="mount"></output><output id="theme"></output><pre id="boundary"></pre><output id="overlay-result"></output>${extra}';
+  root.querySelector("#mount").textContent = mountToken;
   const paint = () => {
     const theme = root.querySelector("#theme");
     if (theme) theme.textContent = (host.theme.snapshot && host.theme.snapshot.id) || host.theme.mode;
@@ -47,8 +49,13 @@ export async function mount(root, host) {
 
 const toolModule = `
 export async function mount(root, host) {
+  const mountToken = String(Math.random());
   const pre = document.createElement("pre");
   pre.id = "tool-state";
+  const mount = document.createElement("output");
+  mount.id = "mount";
+  mount.textContent = mountToken;
+  root.appendChild(mount);
   root.appendChild(pre);
   const paint = (tool) => {
     pre.textContent = JSON.stringify({
