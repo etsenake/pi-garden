@@ -2181,3 +2181,82 @@ export async function rejectIpcInvokes(
 ): Promise<void> {
   await installIpcInvokeControl(harness, channel, { mode: "reject", sentinel });
 }
+
+/** Resolve once the renderer's preload bridge is available in a (new) window. */
+export async function waitForPiApp(window: Page): Promise<void> {
+  await window.waitForLoadState("domcontentloaded");
+  await window.waitForFunction(() => Boolean(globalThis.window.piApp), undefined, {
+    timeout: 15_000,
+  });
+}
+
+export async function waitForWindowCount(harness: DesktopHarness, count: number): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          return await harness.electronApp.evaluate(
+            ({ BrowserWindow }) => BrowserWindow.getAllWindows().length,
+          );
+        } catch (error) {
+          const message = String(error);
+          if (
+            message.includes("context was destroyed") ||
+            message.includes("Target page, context or browser has been closed")
+          ) {
+            return -1;
+          }
+          throw error;
+        }
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(count);
+  await expect.poll(() => harness.electronApp.windows().length, { timeout: 15_000 }).toBe(count);
+}
+
+async function browserWindowIndexForPage(harness: DesktopHarness, source: Page): Promise<number> {
+  const marker = `pi-garden-window-${Date.now()}-${Math.random()}`;
+  await source.evaluate((value) => {
+    Object.assign(window, { __piGardenTestWindowMarker: value });
+  }, marker);
+  const index = await harness.electronApp.evaluate(async ({ BrowserWindow }, value) => {
+    const windows = BrowserWindow.getAllWindows();
+    for (const [candidateIndex, candidateWindow] of windows.entries()) {
+      const candidateMarker: unknown = await candidateWindow.webContents
+        .executeJavaScript("window.__piGardenTestWindowMarker", true)
+        .catch(() => undefined);
+      if (candidateMarker === value) {
+        return candidateIndex;
+      }
+    }
+    return -1;
+  }, marker);
+  if (index === -1) {
+    throw new Error("Expected source page to belong to the Electron app.");
+  }
+  return index;
+}
+
+/** Open another app window with the real Shift+Cmd/Ctrl+N shortcut and return its page. */
+export async function openWindowViaShortcut(harness: DesktopHarness, source: Page): Promise<Page> {
+  const existing = new Set(harness.electronApp.windows());
+  const sourceIndex = await browserWindowIndexForPage(harness, source);
+  await harness.electronApp.evaluate(
+    ({ BrowserWindow }, payload) => {
+      BrowserWindow.getAllWindows()[payload.sourceIndex]?.webContents.sendInputEvent({
+        type: "keyDown",
+        keyCode: "n",
+        modifiers: [payload.modifier, "shift"],
+      });
+    },
+    { sourceIndex, modifier: process.platform === "darwin" ? "meta" : "control" },
+  );
+  await waitForWindowCount(harness, existing.size + 1);
+  const opened = harness.electronApp.windows().find((candidate) => !existing.has(candidate));
+  if (!opened) {
+    throw new Error("Expected Shift+Cmd+N to create another Electron window.");
+  }
+  await waitForPiApp(opened);
+  return opened;
+}
