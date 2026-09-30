@@ -808,6 +808,7 @@
 }
 
 .host-contribution {
+  font-family: inherit;
   max-width: 12em;
   min-width: 0;
   overflow: hidden;
@@ -821,6 +822,10 @@
   font-size: 11px;
   font-weight: 650;
   line-height: 16px;
+}
+
+button.host-contribution {
+  cursor: pointer;
 }
 
 .host-contribution[data-tone="accent"] {

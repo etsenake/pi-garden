@@ -27,6 +27,7 @@ import {
   DesktopExtensionViewOwner,
   DESKTOP_EXTENSION_SCHEME,
 } from "./extensions/extension-view-owner";
+import { ExtensionActionRegistry } from "./extensions/extension-action-registry";
 import { SurfaceRegistry } from "./extensions/surface-registry";
 import { performExtensionViewHostAction } from "./extensions/extension-view-actions";
 import { extensionFrameDocument } from "./extensions/extension-frame-document";
@@ -908,6 +909,7 @@ app
     });
     extensionViewOwner = extensionViews;
     const surfaceRegistry = new SurfaceRegistry();
+    const extensionActions = new ExtensionActionRegistry();
     protocol.handle(DESKTOP_EXTENSION_SCHEME, (request) =>
       extensionViews.assetResponse(request.url),
     );
@@ -921,10 +923,12 @@ app
       desktopExtensions: {
         onChanged: (runtime) => {
           surfaceRegistry.replaceRuntime(runtime);
+          extensionActions.replaceRuntime(runtime);
           return extensionViews.replaceRuntime(runtime);
         },
         onInvalidated: ({ target, generation }) => {
           surfaceRegistry.invalidateRuntime(target, generation);
+          extensionActions.invalidateRuntime(target, generation);
           return extensionViews.invalidateRuntime(target, generation);
         },
       },
@@ -965,6 +969,12 @@ app
         notificationManager?.trackWindow(window);
         notificationPermissionService?.trackWindow(window);
       },
+    });
+    extensionActions.bind({
+      invoke: (target, generation, actionId, args) =>
+        store.invokeExtensionAction(target, generation, actionId, args),
+      complete: (target, generation, commandName, prefix) =>
+        store.completeExtensionCommandArgument(target, generation, commandName, prefix),
     });
     await store.initialize();
     themeManager.setMode(store.snapshot().themeMode);
@@ -1059,6 +1069,7 @@ app
         workbench: store,
         extensionViews,
         surfaceRegistry,
+        extensionActions,
         review: new ReviewOwner({
           checkpoints,
           userDataDir: app.getPath("userData"),

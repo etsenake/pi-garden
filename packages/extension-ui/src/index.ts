@@ -35,6 +35,29 @@ export interface DesktopViewRegistration {
 }
 
 export {
+  EXTENSION_ACTION_DESCRIPTION_MAX,
+  EXTENSION_ACTION_DISCOVER,
+  EXTENSION_ACTION_ID_PATTERN,
+  EXTENSION_ACTION_REGISTER,
+  EXTENSION_ACTION_TITLE_MAX,
+  EXTENSION_ACTION_UNREGISTER,
+  STALE_EXTENSION_ACTION_MESSAGE,
+  commandActionId,
+  isExtensionActionId,
+  normalizeShortcut,
+  registerAction,
+  shortcutActionId,
+} from "./actions.js";
+export type {
+  ExtensionActionContext,
+  ExtensionActionHandler,
+  ExtensionActionInput,
+  ExtensionActionKind,
+  ExtensionActionRecord,
+  ExtensionActionRegistration,
+  ExtensionActionRegistrationEvent,
+} from "./actions.js";
+export {
   SURFACE_CONTRIBUTION_DISCOVER,
   SURFACE_CONTRIBUTION_ID_PATTERN,
   SURFACE_CONTRIBUTION_REGISTER,

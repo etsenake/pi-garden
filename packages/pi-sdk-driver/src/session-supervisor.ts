@@ -112,8 +112,19 @@ import { createTranscriptIdentityExtension } from "./transcript-identity.js";
 import { createPlanLimitsExtension, readSessionUsage } from "./session-usage.js";
 import {
   createDesktopExtensionBridge,
+  type DesktopExtensionActionBridge,
   type PiDesktopExtensionObserver,
 } from "./desktop-extension-bridge.js";
+import {
+  STALE_EXTENSION_ACTION_MESSAGE,
+  type ExtensionActionContext,
+} from "@pi-garden/extension-ui";
+import {
+  completePiCommandArgument,
+  invokeProjectedPiAction,
+  projectPiExtensionActions,
+  type ExtensionCommandCompletion,
+} from "./extension-actions.js";
 import {
   createAgentSessionRuntimeWithNpmFallback,
   type PiCreateAgentSessionOptions,
@@ -287,6 +298,8 @@ export class SessionSupervisor {
   private readonly onTurnCaptureBoundary: PiSdkDriverOptions["onTurnCaptureBoundary"];
   private readonly turnCaptureTimeoutMs: number | undefined;
   private readonly records = new Map<string, ManagedSessionRecord>();
+  /** Action bridges keyed by session, replaced when a generation shuts down. */
+  private readonly actionBridges = new Map<string, DesktopExtensionActionBridge>();
   /** Latest plan limits a provider reported, shared by every session on that provider. */
   private readonly planLimitsByProvider = new Map<string, SessionPlanLimits>();
   private readonly ensureRecordInFlight = new Map<string, Promise<ManagedSessionRecord>>();
@@ -399,13 +412,95 @@ export class SessionSupervisor {
       ...(this.agentDir ? { agentDir: this.agentDir } : {}),
     };
     if (!this.desktopExtensions) return createOptions;
+    const bridge = createDesktopExtensionBridge({
+      workspace,
+      observer: {
+        onChanged: (runtime) => {
+          this.actionBridges.set(sessionKey(runtime.target), bridge);
+          return this.desktopExtensions?.onChanged?.(runtime);
+        },
+        onInvalidated: (runtime) => {
+          const key = sessionKey(runtime.target);
+          if (this.actionBridges.get(key) === bridge) this.actionBridges.delete(key);
+          return this.desktopExtensions?.onInvalidated?.(runtime);
+        },
+      },
+      projectActions: (target, explicit) => {
+        try {
+          const session = this.records.get(sessionKey(target))?.session;
+          return session ? [...explicit, ...projectPiExtensionActions(session)] : [...explicit];
+        } catch (error) {
+          console.error("Desktop extension action projection failed", error);
+          return [...explicit];
+        }
+      },
+    });
     return {
       ...createOptions,
-      resourceLoaderOptions: createDesktopExtensionBridge({
-        workspace,
-        observer: this.desktopExtensions,
-      }).mergeResourceLoaderOptions(createOptions.resourceLoaderOptions ?? {}),
+      resourceLoaderOptions: bridge.mergeResourceLoaderOptions(
+        createOptions.resourceLoaderOptions ?? {},
+      ),
     };
+  }
+
+  /**
+   * Invokes one action from the generation bound to this session.
+   * The caller supplies the session; this does not look up a focused window.
+   */
+  async invokeExtensionAction(
+    ref: SessionRef,
+    generation: string,
+    actionId: string,
+    args?: string,
+  ): Promise<void> {
+    const bridge = this.actionBridge(ref, generation);
+    const session = this.requireActionSession(ref);
+    const handled = await bridge.invokeExplicit(
+      ref,
+      generation,
+      actionId,
+      session.extensionRunner.createCommandContext() as ExtensionActionContext,
+    );
+    if (handled) return;
+    if (await invokeProjectedPiAction(session, actionId, args)) return;
+    throw new Error(STALE_EXTENSION_ACTION_MESSAGE);
+  }
+
+  /** Argument completions for one Pi command in the bound generation. Stale or failing providers return []. */
+  async completeExtensionCommandArgument(
+    ref: SessionRef,
+    generation: string,
+    commandName: string,
+    prefix: string,
+  ): Promise<readonly ExtensionCommandCompletion[]> {
+    try {
+      this.actionBridge(ref, generation);
+    } catch {
+      return [];
+    }
+    const session = this.records.get(sessionKey(ref))?.session;
+    if (!session) return [];
+    const items = await completePiCommandArgument(session, commandName, prefix);
+    try {
+      this.actionBridge(ref, generation);
+    } catch {
+      return [];
+    }
+    return items;
+  }
+
+  private actionBridge(ref: SessionRef, generation: string): DesktopExtensionActionBridge {
+    const bridge = this.actionBridges.get(sessionKey(ref));
+    if (!bridge || bridge.generationFor(ref) !== generation) {
+      throw new Error(STALE_EXTENSION_ACTION_MESSAGE);
+    }
+    return bridge;
+  }
+
+  private requireActionSession(ref: SessionRef): AgentSession {
+    const session = this.records.get(sessionKey(ref))?.session;
+    if (!session) throw new Error(STALE_EXTENSION_ACTION_MESSAGE);
+    return session;
   }
 
   listWorkspaces(): Promise<WorkspaceCatalogSnapshot> {

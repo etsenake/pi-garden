@@ -4,6 +4,7 @@ import type {
   RuntimeSkillRecord,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
+import type { ExtensionActionConflict } from "../../../contracts/extension-actions";
 import type {
   ExtensionCommandCompatibilityRecord,
   WorkspaceRecord,
@@ -30,6 +31,7 @@ interface CustomizePageProps {
   readonly onTryCommand: (command: string) => void;
   readonly onToggleExtension: (path: string, enabled: boolean) => void;
   readonly onOpenExtensionFolder: (path: string) => void;
+  readonly shortcutConflicts?: readonly ExtensionActionConflict[];
 }
 
 const NEW_SKILL_PROMPT =
@@ -50,6 +52,7 @@ export function CustomizePage({
   onTryCommand,
   onToggleExtension,
   onOpenExtensionFolder,
+  shortcutConflicts = [],
 }: CustomizePageProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -204,6 +207,7 @@ export function CustomizePage({
               onOpenExtensionFolder={onOpenExtensionFolder}
               onSelect={selectItem}
               onToggleExtension={onToggleExtension}
+              shortcutConflicts={shortcutConflicts}
             />
           )}
         </div>

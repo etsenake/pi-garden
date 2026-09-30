@@ -1,3 +1,4 @@
+import type { ExtensionActionConflict } from "../../../contracts/extension-actions";
 import type { RuntimeExtensionRecord } from "@pi-garden/session-driver/runtime-types";
 import type {
   ExtensionCommandCompatibilityRecord,
@@ -25,6 +26,7 @@ interface ExtensionsTabProps {
   readonly onSelect: (path: string | undefined) => void;
   readonly onToggleExtension: (path: string, enabled: boolean) => void;
   readonly onOpenExtensionFolder: (path: string) => void;
+  readonly shortcutConflicts?: readonly ExtensionActionConflict[];
 }
 
 export function ExtensionsTab({
@@ -36,6 +38,7 @@ export function ExtensionsTab({
   onSelect,
   onToggleExtension,
   onOpenExtensionFolder,
+  shortcutConflicts = [],
 }: ExtensionsTabProps) {
   // The list stays mounted under an open detail so expanded groups, scroll and focus survive.
   const list =
@@ -68,6 +71,7 @@ export function ExtensionsTab({
           onOpenExtensionFolder={onOpenExtensionFolder}
           onSelect={onSelect}
           onToggleExtension={onToggleExtension}
+          shortcutConflicts={shortcutConflicts}
         />
       ) : null}
       <div hidden={Boolean(selected)}>{list}</div>
@@ -82,6 +86,7 @@ function ExtensionDetail({
   onSelect,
   onToggleExtension,
   onOpenExtensionFolder,
+  shortcutConflicts = [],
 }: Omit<ExtensionsTabProps, "extensions" | "searching" | "selected"> & {
   readonly selected: RuntimeExtensionRecord;
 }) {
@@ -145,7 +150,14 @@ function ExtensionDetail({
       ) : null}
       <ExtensionContributionSection title="Flags" items={selected.flags} />
       <ExtensionContributionSection title="Shortcuts" items={selected.shortcuts} />
-      <ExtensionDiagnostics diagnostics={selected.diagnostics} />
+      <ExtensionDiagnostics
+        diagnostics={[
+          ...selected.diagnostics,
+          ...shortcutConflicts
+            .filter((conflict) => conflict.extensionPath === selected.path)
+            .map((conflict) => ({ type: "warning" as const, message: conflict.message })),
+        ]}
+      />
     </ResourceDetail>
   );
 }

@@ -1,4 +1,11 @@
 import type {
+  CompleteExtensionCommandInput,
+  ExtensionActionCatalog,
+  ExtensionActionCatalogChange,
+  ExtensionCommandCompletion,
+  InvokeExtensionActionInput,
+} from "../contracts/extension-actions";
+import type {
   SurfaceContributionCatalogChange,
   SurfaceContributionPresentation,
 } from "../contracts/surface-contributions";
@@ -134,6 +141,19 @@ contextBridge.exposeInMainWorld("piApp", {
     >,
   onSurfaceContributionsChanged: (listener: (event: SurfaceContributionCatalogChange) => void) =>
     subscribeIpc(desktopIpc.surfaceContributionsChanged, listener),
+  listExtensionActions: (target: SessionRef) =>
+    ipcRenderer.invoke(
+      desktopIpc.listExtensionActions,
+      target,
+    ) as Promise<ExtensionActionCatalog | null>,
+  onExtensionActionsChanged: (listener: (event: ExtensionActionCatalogChange) => void) =>
+    subscribeIpc(desktopIpc.extensionActionsChanged, listener),
+  invokeExtensionAction: (input: InvokeExtensionActionInput) =>
+    ipcRenderer.invoke(desktopIpc.invokeExtensionAction, input) as Promise<void>,
+  completeExtensionCommandArgument: (input: CompleteExtensionCommandInput) =>
+    ipcRenderer.invoke(desktopIpc.completeExtensionCommandArgument, input) as Promise<
+      readonly ExtensionCommandCompletion[]
+    >,
   onExtensionViewOpenFile: (listener: (event: ExtensionViewOpenFile) => void) =>
     subscribeIpc(desktopIpc.extensionViewOpenFile, listener),
   getTurnChanges: (input: TurnChangesInput) =>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
+import type { ExtensionActionConflict } from "../../contracts/extension-actions";
 import type { AppView, DesktopAppState, WorkspaceRecord } from "../../contracts/desktop-state";
 import { updateSnapshot } from "./desktop-app-state";
 import { getEffectiveModelRuntime } from "../features/settings/model-settings";
@@ -35,6 +36,7 @@ interface SecondarySurfacesProps {
   /** Settings and the Skills and extensions page are separate app views. */
   readonly onSelectView: (view: Extract<AppView, "settings" | "skills" | "extensions">) => void;
   readonly onTrySkill: (command: string) => void;
+  readonly shortcutConflicts?: readonly ExtensionActionConflict[];
 }
 
 export function SecondarySurfaces({
@@ -54,6 +56,7 @@ export function SecondarySurfaces({
   onBack,
   onSelectView,
   onTrySkill,
+  shortcutConflicts = [],
 }: SecondarySurfacesProps) {
   const [notificationPermissionStatus, setNotificationPermissionStatus] =
     useState<DesktopNotificationPermissionStatus>("unknown");
@@ -397,6 +400,7 @@ export function SecondarySurfaces({
           }}
           onSelectTab={onSelectView}
           onToggleExtension={handleToggleExtension}
+          shortcutConflicts={shortcutConflicts}
           onToggleSkill={handleToggleSkill}
           onTryCommand={onTrySkill}
         />

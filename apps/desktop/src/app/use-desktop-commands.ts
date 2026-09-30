@@ -31,6 +31,7 @@ import {
   type PiDesktopApi,
   type PiDesktopCommand,
 } from "../../contracts/ipc";
+import { keyIdFromKeyboardEvent } from "../../contracts/extension-actions";
 import { toolRefId, type BuiltinToolKind } from "../../contracts/workbench";
 import {
   buildPaletteActions,
@@ -80,6 +81,15 @@ interface DesktopCommandsInput {
   readonly sidePanelVisible: boolean;
   readonly selectedToolId: string | null;
   readonly extensionViews: readonly DesktopExtensionViewInfo[];
+  readonly extensionActions?: {
+    readonly actions: readonly {
+      readonly id: string;
+      readonly title: string;
+      readonly shortcut?: string;
+      readonly enabled: boolean;
+    }[];
+    readonly invoke: (actionId: string) => void;
+  };
   readonly openNewThread: (rootWorkspaceId?: string) => void;
   readonly openSettings: (workspaceId?: string, section?: SettingsSection) => void;
   readonly openSkills: (workspaceId?: string) => void;
@@ -335,6 +345,18 @@ export function useDesktopCommands(input: DesktopCommandsInput) {
     }
     if (command && handleCommandRef.current(command)) {
       event.preventDefault();
+      return;
+    }
+    if (command || event.repeat) return;
+    const keyId = keyIdFromKeyboardEvent(event);
+    const extensionAction = keyId
+      ? input.extensionActions?.actions.find(
+          (action) => action.enabled && action.shortcut === keyId,
+        )
+      : undefined;
+    if (extensionAction) {
+      event.preventDefault();
+      input.extensionActions?.invoke(extensionAction.id);
     }
   };
 
@@ -439,6 +461,14 @@ export function useDesktopCommands(input: DesktopCommandsInput) {
             }),
           findInThread: threadSearch.open,
           openPaletteMode: setPaletteMode,
+          extensionActions: (input.extensionActions?.actions ?? [])
+            .filter((action) => action.enabled)
+            .map((action) => ({
+              id: action.id,
+              title: action.title,
+              ...(action.shortcut ? { shortcut: action.shortcut } : {}),
+              run: () => input.extensionActions?.invoke(action.id),
+            })),
         })
       : [];
 

@@ -43,6 +43,15 @@ export function nextMenuIndex(current: number, delta: number, total: number): nu
   return (current + delta + total) % total;
 }
 
+function commandArgumentQuery(
+  text: string,
+): { readonly commandName: string; readonly prefix: string } | undefined {
+  const match = /^\/(\S+)\s(.*)$/.exec(text);
+  const commandName = match?.[1];
+  if (!commandName) return undefined;
+  return { commandName, prefix: match[2] ?? "" };
+}
+
 function extractActiveSlashQuery(text: string): ActiveSlashQuery | undefined {
   const match = /\/[^\s]*$/.exec(text);
   if (!match || match.index < 0) {
@@ -86,6 +95,14 @@ interface UseSlashMenuParams {
   readonly onSelectThinkingOption?: (level: string) => void;
   readonly onSelectLoginProvider?: (providerId: string) => void;
   readonly onSelectLogoutProvider?: (providerId: string) => void;
+  /** Pi command names that registered an argument-completion provider. */
+  readonly extensionArgumentCommands?: ReadonlySet<string>;
+  readonly completeExtensionArgument?: (
+    commandName: string,
+    prefix: string,
+  ) => Promise<
+    readonly { readonly value: string; readonly label: string; readonly description?: string }[]
+  >;
 }
 
 export interface SlashMenuState {
@@ -98,6 +115,7 @@ export interface SlashMenuState {
   readonly slashOptions: readonly ComposerSlashOption[];
   readonly slashOptionEmptyState: ComposerSlashOptionEmptyState | undefined;
   readonly activeSlashFlow: ActiveSlashFlow | undefined;
+  readonly argumentSlashCommand: ComposerSlashCommand | undefined;
   readonly activeSlashOptionCommand: ComposerSlashCommand | undefined;
   readonly resetSlashUi: () => void;
   readonly applySlashCommandSelection: (
@@ -133,12 +151,16 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
     onSelectThinkingOption,
     onSelectLoginProvider,
     onSelectLogoutProvider,
+    extensionArgumentCommands,
+    completeExtensionArgument,
   } = params;
 
   const [slashIndex, setSlashIndex] = useState(0);
   const [slashOptionIndex, setSlashOptionIndex] = useState(0);
   const [activeSlashFlow, setActiveSlashFlow] = useState<ActiveSlashFlow | undefined>();
   const [slashMenuSuppressedDraft, setSlashMenuSuppressedDraft] = useState("");
+  const [argumentOptions, setArgumentOptions] = useState<readonly ComposerSlashOption[]>([]);
+  const [argumentSuppressedDraft, setArgumentSuppressedDraft] = useState<string | null>(null);
 
   const activeSlashQuery = extractActiveSlashQuery(composerDraft);
   const slashQuery = activeSlashQuery?.query ?? "";
@@ -167,10 +189,30 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
   const selectedSlashCommand = showSlashMenu
     ? slashSuggestions[slashIndex % slashSuggestions.length]
     : undefined;
-  const slashOptions =
+  const builtinSlashOptions =
     activeSlashOptionCommand?.kind === "model"
       ? buildModelOptions(selectedModelRuntime)
       : slashOptionsForCommand(activeSlashOptionCommand, selectedRuntime);
+  const argumentQuery = commandArgumentQuery(composerDraft);
+  const argumentEligible =
+    argumentQuery !== undefined &&
+    !activeSlashOptionCommand &&
+    extensionArgumentCommands?.has(argumentQuery.commandName) === true &&
+    composerDraft !== argumentSuppressedDraft;
+  const showingArgumentOptions = argumentEligible && argumentOptions.length > 0;
+  const argumentSlashCommand: ComposerSlashCommand | undefined =
+    showingArgumentOptions && argumentQuery
+      ? {
+          id: `argument:${argumentQuery.commandName}`,
+          kind: "runtime",
+          command: `/${argumentQuery.commandName}`,
+          template: `/${argumentQuery.commandName}`,
+          title: `/${argumentQuery.commandName}`,
+          description: "",
+          section: "runtime",
+        }
+      : undefined;
+  const slashOptions = showingArgumentOptions ? argumentOptions : builtinSlashOptions;
   const activeSlashOptionEmptyState = slashOptionEmptyState(
     activeSlashOptionCommand,
     activeSlashOptionCommand?.kind === "model" ? undefined : selectedRuntime,
@@ -190,8 +232,10 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
       : undefined;
   const showSlashOptionMenu =
     !isRunning &&
-    Boolean(activeSlashOptionCommand) &&
-    (slashOptions.length > 0 || Boolean(modelSlashEmptyState ?? activeSlashOptionEmptyState));
+    (showingArgumentOptions ||
+      (Boolean(activeSlashOptionCommand) &&
+        (builtinSlashOptions.length > 0 ||
+          Boolean(modelSlashEmptyState ?? activeSlashOptionEmptyState))));
   const selectedSlashOption = showSlashOptionMenu
     ? slashOptions[slashOptionIndex % slashOptions.length]
     : undefined;
@@ -229,7 +273,52 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
     setActiveSlashFlow(undefined);
     setSlashOptionIndex(0);
     setSlashMenuSuppressedDraft("");
+    setArgumentOptions([]);
+    setArgumentSuppressedDraft(null);
   }, [selectedSessionKey]);
+
+  useEffect(() => {
+    if (argumentSuppressedDraft && composerDraft !== argumentSuppressedDraft) {
+      setArgumentSuppressedDraft(null);
+    }
+  }, [argumentSuppressedDraft, composerDraft]);
+
+  const argumentCommandName = argumentQuery?.commandName;
+  const argumentPrefix = argumentQuery?.prefix;
+  useEffect(() => {
+    if (
+      !argumentEligible ||
+      !argumentCommandName ||
+      argumentPrefix === undefined ||
+      !completeExtensionArgument
+    ) {
+      setArgumentOptions([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void completeExtensionArgument(argumentCommandName, argumentPrefix).then(
+        (items) => {
+          if (cancelled) return;
+          setArgumentOptions(
+            items.map((item) => ({
+              value: item.value,
+              label: item.label,
+              description: item.description ?? "",
+            })),
+          );
+          setSlashOptionIndex(0);
+        },
+        () => {
+          if (!cancelled) setArgumentOptions([]);
+        },
+      );
+    }, 50);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [argumentCommandName, argumentEligible, argumentPrefix, completeExtensionArgument]);
 
   const closeSlashOptionMenu = () => {
     setActiveSlashFlow(undefined);
@@ -325,6 +414,12 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
   };
 
   const applySlashOptionSelection = (option: ComposerSlashOption) => {
+    if (showingArgumentOptions && argumentQuery) {
+      setComposerDraft(`/${argumentQuery.commandName} ${option.value}`);
+      setSlashOptionIndex(0);
+      focusComposer();
+      return;
+    }
     if (!activeSlashOptionCommand) {
       return;
     }
@@ -439,6 +534,7 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
   const handleSlashKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if ((showSlashMenu || showSlashOptionMenu) && event.key === "Escape") {
       event.preventDefault();
+      if (showingArgumentOptions) setArgumentSuppressedDraft(composerDraft);
       resetSlashUi();
       return true;
     }
@@ -499,6 +595,7 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
     slashOptions,
     slashOptionEmptyState: modelSlashEmptyState ?? activeSlashOptionEmptyState,
     activeSlashFlow,
+    argumentSlashCommand,
     activeSlashOptionCommand,
     resetSlashUi,
     applySlashCommandSelection,

@@ -113,6 +113,7 @@ interface SidebarProps {
   readonly threadShortcutOrderRef: MutableRefObject<readonly ThreadListEntry[] | null>;
   readonly sidebarFooter?: readonly SurfaceContributionPresentation[];
   readonly sidebarSection?: readonly SurfaceContributionPresentation[];
+  readonly onInvokeExtensionAction?: (actionId: string) => void;
 }
 
 const SIDEBAR_WIDTH_RANGE = { min: 200, max: 520 } as const;
@@ -161,6 +162,7 @@ export function Sidebar(props: SidebarProps) {
     threadShortcutOrderRef,
     sidebarFooter = [],
     sidebarSection = [],
+    onInvokeExtensionAction,
   } = props;
 
   const [sidebarWidth, setSidebarWidth] = usePersistedPaneWidth(
@@ -645,8 +647,11 @@ export function Sidebar(props: SidebarProps) {
           </DndContext>
         )}
       </div>
-      <SidebarSectionContributions contributions={sidebarSection} />
-      <SidebarFooter contributions={sidebarFooter} />
+      <SidebarSectionContributions
+        contributions={sidebarSection}
+        onInvokeAction={onInvokeExtensionAction}
+      />
+      <SidebarFooter contributions={sidebarFooter} onInvokeAction={onInvokeExtensionAction} />
     </aside>
   );
 }

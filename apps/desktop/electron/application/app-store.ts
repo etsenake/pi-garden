@@ -1413,6 +1413,24 @@ export class DesktopAppStore {
 
   /* ── Runtime / model / provider settings ───────────────── */
 
+  invokeExtensionAction(
+    target: SessionRef,
+    generation: string,
+    actionId: string,
+    args?: string,
+  ): Promise<void> {
+    return this.driver.invokeExtensionAction(target, generation, actionId, args);
+  }
+
+  completeExtensionCommandArgument(
+    target: SessionRef,
+    generation: string,
+    commandName: string,
+    prefix: string,
+  ) {
+    return this.driver.completeExtensionCommandArgument(target, generation, commandName, prefix);
+  }
+
   async refreshRuntime(workspaceId?: string): Promise<DesktopAppState> {
     await this.initialize();
     const resolvedWorkspaceId = workspaceId || this.state.selectedWorkspaceId;

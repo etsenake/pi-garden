@@ -23,6 +23,7 @@ import type {
   Unsubscribe,
   WorkspaceRef,
 } from "@pi-garden/session-driver";
+import type { ExtensionCommandCompletion } from "./extension-actions.js";
 import {
   SessionSupervisor,
   type PiSdkDriverOptions,
@@ -123,6 +124,29 @@ export class PiSdkDriver implements SessionDriver {
     options?: NavigateSessionTreeOptions,
   ): Promise<NavigateSessionTreeResult> {
     return this.supervisor.navigateSessionTree(sessionRef, targetId, options);
+  }
+
+  invokeExtensionAction(
+    sessionRef: SessionRef,
+    generation: string,
+    actionId: string,
+    args?: string,
+  ): Promise<void> {
+    return this.supervisor.invokeExtensionAction(sessionRef, generation, actionId, args);
+  }
+
+  completeExtensionCommandArgument(
+    sessionRef: SessionRef,
+    generation: string,
+    commandName: string,
+    prefix: string,
+  ): Promise<readonly ExtensionCommandCompletion[]> {
+    return this.supervisor.completeExtensionCommandArgument(
+      sessionRef,
+      generation,
+      commandName,
+      prefix,
+    );
   }
 
   getSessionCommands(sessionRef: SessionRef) {

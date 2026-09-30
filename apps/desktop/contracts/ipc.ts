@@ -1,4 +1,11 @@
 import type {
+  CompleteExtensionCommandInput,
+  ExtensionActionCatalog,
+  ExtensionActionCatalogChange,
+  ExtensionCommandCompletion,
+  InvokeExtensionActionInput,
+} from "./extension-actions";
+import type {
   SurfaceContributionCatalogChange,
   SurfaceContributionPresentation,
 } from "./surface-contributions";
@@ -86,6 +93,10 @@ export const desktopIpc = {
   extensionViewCatalogChanged: "pi-garden:extension-view-catalog-changed",
   listSurfaceContributions: "pi-garden:list-surface-contributions",
   surfaceContributionsChanged: "pi-garden:surface-contributions-changed",
+  listExtensionActions: "pi-garden:list-extension-actions",
+  extensionActionsChanged: "pi-garden:extension-actions-changed",
+  invokeExtensionAction: "pi-garden:invoke-extension-action",
+  completeExtensionCommandArgument: "pi-garden:complete-extension-command-argument",
   stateRequest: "pi-garden:state-request",
   stateChanged: "pi-garden:state-changed",
   getTaskWorkbenchTemplate: "pi-garden:get-task-workbench-template",
@@ -832,6 +843,12 @@ export interface PiDesktopApi {
   onSurfaceContributionsChanged(
     listener: (event: SurfaceContributionCatalogChange) => void,
   ): () => void;
+  listExtensionActions(target: SessionRef): Promise<ExtensionActionCatalog | null>;
+  onExtensionActionsChanged(listener: (event: ExtensionActionCatalogChange) => void): () => void;
+  invokeExtensionAction(input: InvokeExtensionActionInput): Promise<void>;
+  completeExtensionCommandArgument(
+    input: CompleteExtensionCommandInput,
+  ): Promise<readonly ExtensionCommandCompletion[]>;
   openExtensionView(input: OpenExtensionViewInput): Promise<ExtensionViewConnection>;
   sendExtensionViewMessage(input: ExtensionViewMessage): Promise<void>;
   closeExtensionView(connectionId: string): Promise<void>;

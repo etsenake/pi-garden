@@ -31,6 +31,7 @@ import {
   type ExtensionViewTheme,
 } from "../features/extensions/extension-view-panel";
 import { useExtensionViews } from "../features/extensions/use-extension-views";
+import { useExtensionActions } from "../features/extensions/use-extension-actions";
 import { useSurfaceContributions } from "../features/extensions/use-surface-contributions";
 import { useExtensionHostActions } from "../features/extensions/use-extension-host-actions";
 import { useSidePanelTabHintsVisible } from "../features/workbench/side-panel-tab-hints";
@@ -239,6 +240,34 @@ export default function App() {
   );
   const statusChrome = surfaceContributions.filter(
     (contribution) => contribution.surface === "status-chrome",
+  );
+  const extensionActions = useExtensionActions({ api, target: workbenchTarget });
+  const invokeExtensionAction = useCallback(
+    (actionId: string) => {
+      const generation = extensionActions?.generation;
+      if (!api || !generation) return;
+      void api.invokeExtensionAction({ actionId, generation }).catch((error: unknown) => {
+        console.error("[renderer] invokeExtensionAction failed", error);
+      });
+    },
+    [api, extensionActions?.generation],
+  );
+  const extensionArgumentCommands = useMemo(() => {
+    const names = new Set<string>();
+    for (const action of extensionActions?.actions ?? []) {
+      if (action.kind === "command" && action.commandName && action.hasArgumentCompletions) {
+        names.add(action.commandName);
+      }
+    }
+    return names;
+  }, [extensionActions]);
+  const completeExtensionArgument = useCallback(
+    (commandName: string, prefix: string) => {
+      const generation = extensionActions?.generation;
+      if (!api || !generation) return Promise.resolve([]);
+      return api.completeExtensionCommandArgument({ generation, commandName, prefix });
+    },
+    [api, extensionActions?.generation],
   );
   const workbench = useWorkbench({ api, target: workbenchTarget });
   // Tracked while the panel is closed too, so a chord that opens it shows the hints.
@@ -515,6 +544,8 @@ export default function App() {
     updateSnapshot,
     allowTreeCommand: true,
     onRunTreeCommand: openTreeModal,
+    extensionArgumentCommands,
+    completeExtensionArgument,
   });
 
   const enableSelectedMentionExtension = useCallback(
@@ -686,6 +717,9 @@ export default function App() {
     sidePanelVisible,
     selectedToolId,
     extensionViews: extensionViews.views,
+    extensionActions: extensionActions
+      ? { actions: extensionActions.actions, invoke: invokeExtensionAction }
+      : undefined,
     openNewThread: newThread.openSurface,
     openSettings,
     openSkills,
@@ -906,6 +940,7 @@ export default function App() {
           onBack={() => setActiveView("threads")}
           onSelectView={setActiveView}
           onTrySkill={handleTrySkill}
+          shortcutConflicts={extensionActions?.conflicts ?? []}
         />
         {commandPalette}
       </>
@@ -953,6 +988,7 @@ export default function App() {
           onUnarchiveSession={threadMenu.restore}
           sidebarFooter={selectedSession ? sidebarFooter : []}
           sidebarSection={selectedSession ? sidebarSection : []}
+          onInvokeExtensionAction={invokeExtensionAction}
         />
       ) : null}
 
@@ -976,6 +1012,7 @@ export default function App() {
           headerBadges={
             snapshot.activeView === "threads" && selectedSession ? headerBadges : undefined
           }
+          onInvokeExtensionAction={invokeExtensionAction}
           statusContributions={
             snapshot.activeView === "threads" && selectedSession ? statusChrome : undefined
           }
@@ -1061,6 +1098,7 @@ export default function App() {
                 slashSections={newThread.slashMenu.slashSections}
                 slashOptions={newThread.slashMenu.slashOptions}
                 selectedSlashCommand={
+                  newThread.slashMenu.argumentSlashCommand ??
                   newThread.slashMenu.activeSlashOptionCommand ??
                   newThread.slashMenu.selectedSlashCommand
                 }
@@ -1203,10 +1241,13 @@ export default function App() {
                 onStop={stopCurrentRun}
                 composerBefore={composerBefore}
                 composerAfter={composerAfter}
+                onInvokeExtensionAction={invokeExtensionAction}
                 selectedSession={selectedSession}
                 lastError={snapshot.lastError}
                 selectedSlashCommand={
-                  slashMenu.activeSlashOptionCommand ?? slashMenu.selectedSlashCommand
+                  slashMenu.argumentSlashCommand ??
+                  slashMenu.activeSlashOptionCommand ??
+                  slashMenu.selectedSlashCommand
                 }
                 selectedSlashOption={slashMenu.selectedSlashOption}
                 slashOptionEmptyState={slashMenu.slashOptionEmptyState}

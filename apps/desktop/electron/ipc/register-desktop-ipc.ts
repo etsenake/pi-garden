@@ -23,8 +23,10 @@ import type { ThemeManager } from "../platform/theme-manager";
 import type { WindowOwner } from "../windows/window-owner";
 import { WorkbenchRequests, type WorkbenchOwner } from "./workbench-requests";
 import type { DesktopExtensionViewOwner } from "../extensions/extension-view-owner";
+import type { ExtensionActionRegistry } from "../extensions/extension-action-registry";
 import type { SurfaceRegistry } from "../extensions/surface-registry";
 import { registerExtensionViewRequests } from "./extension-view-requests";
+import { registerExtensionActionRequests } from "./extension-action-requests";
 import { registerSurfaceContributionRequests } from "./surface-contribution-requests";
 import { registerReviewRequests, type ReviewRequestsOwner } from "./review-requests";
 import { mainFrameHandler } from "./main-frame-ipc";
@@ -161,6 +163,7 @@ export interface DesktopIpcOwners {
   readonly review: ReviewRequestsOwner;
   readonly extensionViews: DesktopExtensionViewOwner;
   readonly surfaceRegistry: SurfaceRegistry;
+  readonly extensionActions: ExtensionActionRegistry;
   readonly workspace: WorkspaceOwner;
   readonly conversation: ConversationOwner;
   readonly orchestration: OrchestrationOwner;
@@ -228,6 +231,7 @@ export function registerDesktopIpc({
   registerReviewRequests(handleMainFrame, owners.review);
   registerExtensionViewRequests(handleMainFrame, windows, owners.extensionViews);
   registerSurfaceContributionRequests(handleMainFrame, owners.surfaceRegistry);
+  registerExtensionActionRequests(handleMainFrame, windows, owners.extensionActions);
   const workbench = new WorkbenchRequests(owners.workbench);
   const workbenchSenders = new WeakSet<Electron.WebContents>();
   const trackWorkbenchSender = (sender: Electron.WebContents) => {

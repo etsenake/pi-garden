@@ -7,7 +7,12 @@ import {
   SURFACE_CONTRIBUTION_DISCOVER,
   SURFACE_CONTRIBUTION_REGISTER,
   SURFACE_CONTRIBUTION_UNREGISTER,
+  EXTENSION_ACTION_DISCOVER,
+  EXTENSION_ACTION_REGISTER,
+  EXTENSION_ACTION_UNREGISTER,
+  normalizeShortcut,
   normalizeSurfaceContribution,
+  registerAction,
   registerComposerAfter,
   registerComposerBefore,
   registerDesktopView,
@@ -329,9 +334,88 @@ await test("the desktop boundary normalizes omitted fields and rejects unknown c
     { id: "garden", surface: "conversation-header", text: "Garden", tone: "purple" },
     { id: "garden", surface: "conversation-header", text: "Garden", order: 1.5 },
     { id: "garden", surface: "conversation-header", text: "Garden", color: "#ff0000" },
+    { id: "garden", surface: "conversation-header", text: "Garden", actionId: "Nope" },
     { id: "garden", text: "Garden" },
     null,
   ]) {
     assert.equal(normalizeSurfaceContribution(value), undefined);
   }
+  assert.deepEqual(
+    normalizeSurfaceContribution({
+      id: "garden",
+      surface: "composer-before",
+      text: "Mark",
+      actionId: "mark-plot",
+    }),
+    {
+      id: "garden",
+      surface: "composer-before",
+      text: "Mark",
+      tone: "default",
+      order: 0,
+      actionId: "mark-plot",
+    },
+  );
+});
+
+await test("registerAction replays one handler and drops it on shutdown", () => {
+  const listeners = new Map<string, Set<(value: unknown) => void>>();
+  const shutdown: (() => void)[] = [];
+  const pi: DesktopExtensionAPI = {
+    events: {
+      emit(channel, value) {
+        for (const listener of listeners.get(channel) ?? []) listener(value);
+      },
+      on(channel, listener) {
+        const handlers = listeners.get(channel) ?? new Set();
+        handlers.add(listener);
+        listeners.set(channel, handlers);
+        return () => {
+          handlers.delete(listener);
+        };
+      },
+    },
+    on(_event, listener) {
+      shutdown.push(listener);
+    },
+  };
+  let calls = 0;
+  const registration = registerAction(pi, {
+    id: "mark-plot",
+    title: "Mark garden plot",
+    description: "Mark the current plot",
+    source: "file:///extension/index.ts",
+    shortcut: "Ctrl+Shift+M",
+    handler: () => {
+      calls += 1;
+    },
+  });
+  const registered: Array<{ id: string; shortcut?: string }> = [];
+  pi.events.on(EXTENSION_ACTION_REGISTER, (value) => {
+    const event = value as {
+      action: { id: string; shortcut?: string };
+      accept?: () => void;
+    };
+    registered.push({ id: event.action.id, shortcut: event.action.shortcut });
+    event.accept?.();
+  });
+  const removed: string[] = [];
+  pi.events.on(EXTENSION_ACTION_UNREGISTER, (value) => {
+    removed.push((value as { id: string }).id);
+  });
+  assert.equal(normalizeShortcut("Ctrl+Shift+M"), "ctrl+shift+m");
+  assert.equal(registration.available, false);
+  pi.events.emit(EXTENSION_ACTION_DISCOVER, undefined);
+  pi.events.emit(EXTENSION_ACTION_DISCOVER, undefined);
+  assert.equal(registration.available, true);
+  assert.deepEqual(registered, [
+    { id: "mark-plot", shortcut: "ctrl+shift+m" },
+    { id: "mark-plot", shortcut: "ctrl+shift+m" },
+  ]);
+  shutdown.forEach((listener) => listener());
+  pi.events.emit(EXTENSION_ACTION_DISCOVER, undefined);
+  assert.equal(registration.available, false);
+  assert.deepEqual(removed, ["mark-plot"]);
+  assert.equal(calls, 0);
+  assert.equal(registered.length, 2);
 });

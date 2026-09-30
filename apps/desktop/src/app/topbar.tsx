@@ -11,6 +11,7 @@ interface TopbarProps {
   readonly sessionTitle?: string;
   readonly headerBadges?: readonly SurfaceContributionPresentation[];
   readonly statusContributions?: readonly SurfaceContributionPresentation[];
+  readonly onInvokeExtensionAction?: (actionId: string) => void;
   readonly children?: ReactNode;
   readonly rootWorkspace: WorkspaceRecord | undefined;
   readonly selectedWorkspace: WorkspaceRecord | undefined;
@@ -26,6 +27,7 @@ export function Topbar({
   sessionTitle,
   headerBadges = [],
   statusContributions = [],
+  onInvokeExtensionAction,
   children,
   rootWorkspace,
   selectedWorkspace,
@@ -62,7 +64,7 @@ export function Topbar({
             <h1 className="chat-header__title" title={sessionTitle}>
               {sessionTitle}
             </h1>
-            <HeaderBadges badges={headerBadges} />
+            <HeaderBadges badges={headerBadges} onInvokeAction={onInvokeExtensionAction} />
           </>
         ) : activeView === "threads" && checkoutLabel ? (
           <>
@@ -77,7 +79,10 @@ export function Topbar({
         ) : null}
       </div>
       <div className="topbar__actions">
-        <StatusChromeContributions contributions={statusContributions} />
+        <StatusChromeContributions
+          contributions={statusContributions}
+          onInvokeAction={onInvokeExtensionAction}
+        />
         {children}
         {!panelVisible ? (
           <div className="shortcut-tooltip-wrap topbar__tooltip-wrap">

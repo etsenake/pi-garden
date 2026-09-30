@@ -91,6 +91,7 @@ interface ComposerPanelProps {
   readonly annotations: TranscriptAnnotations;
   readonly composerBefore?: readonly SurfaceContributionPresentation[];
   readonly composerAfter?: readonly SurfaceContributionPresentation[];
+  readonly onInvokeExtensionAction?: (actionId: string) => void;
 }
 
 export function ComposerPanel({
@@ -144,6 +145,7 @@ export function ComposerPanel({
   annotations,
   composerBefore = [],
   composerAfter = [],
+  onInvokeExtensionAction,
 }: ComposerPanelProps) {
   const hasComposerInput =
     composerDraft.trim().length > 0 || attachments.length > 0 || annotations.list.length > 0;
@@ -151,7 +153,10 @@ export function ComposerPanel({
 
   return (
     <footer className="composer" aria-busy={preparingTaskDraft}>
-      <ComposerBeforeContributions contributions={composerBefore} />
+      <ComposerBeforeContributions
+        contributions={composerBefore}
+        onInvokeAction={onInvokeExtensionAction}
+      />
       <div className="conversation conversation--composer" inert={preparingTaskDraft}>
         <ComposerSurface
           lastError={lastError}
@@ -244,7 +249,10 @@ export function ComposerPanel({
           }
         />
       </div>
-      <ComposerAfterContributions contributions={composerAfter} />
+      <ComposerAfterContributions
+        contributions={composerAfter}
+        onInvokeAction={onInvokeExtensionAction}
+      />
       {preparingTaskDraft ? (
         <div className="composer__footer-row">
           <p className="composer__hint" role="status" data-testid="composer-prepare-task-status">

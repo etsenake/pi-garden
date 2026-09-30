@@ -1,9 +1,12 @@
 import type { SurfaceContributionPresentation } from "../../../contracts/surface-contributions";
+import { HostContributionItem } from "./host-contributions";
 
 export function SidebarFooter({
   contributions,
+  onInvokeAction,
 }: {
   readonly contributions: readonly SurfaceContributionPresentation[];
+  readonly onInvokeAction?: (actionId: string) => void;
 }) {
   if (contributions.length === 0) return null;
 
@@ -11,16 +14,13 @@ export function SidebarFooter({
     <div aria-label="Extension sidebar" className="sidebar__footer" data-testid="sidebar-footer">
       <div className="sidebar-footer-contributions">
         {contributions.map((contribution) => (
-          <span
+          <HostContributionItem
             className="sidebar-footer-contribution"
-            data-contribution-id={contribution.id}
-            data-order={contribution.order}
-            data-tone={contribution.tone}
+            contribution={contribution}
+            idAttribute="data-contribution-id"
             key={contribution.id}
-            title={contribution.text}
-          >
-            {contribution.text}
-          </span>
+            onInvokeAction={onInvokeAction}
+          />
         ))}
       </div>
     </div>

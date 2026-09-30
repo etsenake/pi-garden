@@ -40,10 +40,20 @@ use the id. The same id on different surfaces is independent. A later
 registration with the same id on the same surface replaces text, tone, and
 order.
 
+A contribution may set `actionId` to an id from `registerAction`. The host
+renders a button and invokes that action. The extension does not supply a
+callback, HTML, CSS, or React.
+
 The extension supplies no HTML, CSS, class names, or colors. Pi Garden renders
 the contribution and maps the tone onto the active theme. Discovery replays the
 registration. Session shutdown removes it. Terminal Pi reports
 `available === false`.
+
+`registerAction` takes a stable `id`, `title`, `source` (`import.meta.url`),
+an optional `description`, an optional shortcut such as `ctrl+shift+m`, and a
+handler. The handler stays in the extension process. The same id is what a
+button, the command palette, and the shortcut invoke. Pi `registerCommand` and
+`registerShortcut` stay the command and shortcut APIs; Pi Garden discovers them.
 
 `registerDesktopView` returns an object with `available` and `dispose()`. Terminal
 Pi reports `available === false`. Availability acknowledges discovery; the desktop

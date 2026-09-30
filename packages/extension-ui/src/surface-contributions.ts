@@ -1,4 +1,5 @@
 import type { DesktopExtensionAPI } from "./index.js";
+import { isExtensionActionId } from "./actions.js";
 
 /**
  * Host-rendered surface contributions.
@@ -46,6 +47,11 @@ export interface HostContributionInput {
   readonly tone?: SurfaceContributionTone;
   /** Omitted order is presented as `0`. Lower values render first. */
   readonly order?: number;
+  /**
+   * When set, the host renders a button that invokes this action.
+   * The extension does not supply a renderer callback.
+   */
+  readonly actionId?: string;
 }
 
 /** Canonical contribution. Tone and order are always present after normalization. */
@@ -55,6 +61,8 @@ export interface SurfaceContribution {
   readonly text: string;
   readonly tone: SurfaceContributionTone;
   readonly order: number;
+  /** Present when the host should render a button for this action. */
+  readonly actionId?: string;
 }
 
 export interface SurfaceContributionRegistrationEvent {
@@ -124,7 +132,14 @@ export function compareSurfaceContributions(
 export function normalizeSurfaceContribution(value: unknown): SurfaceContribution | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   for (const key of Object.keys(value)) {
-    if (key !== "id" && key !== "surface" && key !== "text" && key !== "tone" && key !== "order") {
+    if (
+      key !== "id" &&
+      key !== "surface" &&
+      key !== "text" &&
+      key !== "tone" &&
+      key !== "order" &&
+      key !== "actionId"
+    ) {
       return undefined;
     }
   }
@@ -135,6 +150,7 @@ export function normalizeSurfaceContribution(value: unknown): SurfaceContributio
     readonly text: unknown;
     readonly tone?: unknown;
     readonly order?: unknown;
+    readonly actionId?: unknown;
   };
   if (typeof record.id !== "string" || !SURFACE_CONTRIBUTION_ID_PATTERN.test(record.id)) {
     return undefined;
@@ -143,12 +159,14 @@ export function normalizeSurfaceContribution(value: unknown): SurfaceContributio
   if (typeof record.text !== "string" || !isContributionText(record.text)) return undefined;
   if ("tone" in value && !isSurfaceContributionTone(record.tone)) return undefined;
   if ("order" in value && !isContributionOrder(record.order)) return undefined;
+  if ("actionId" in value && !isExtensionActionId(record.actionId)) return undefined;
   return {
     id: record.id,
     surface: record.surface,
     text: record.text,
     tone: isSurfaceContributionTone(record.tone) ? record.tone : "default",
     order: isContributionOrder(record.order) ? normalizeOrder(record.order) : 0,
+    ...(isExtensionActionId(record.actionId) ? { actionId: record.actionId } : {}),
   };
 }
 
@@ -165,13 +183,15 @@ export function canonicalSurfaceContribution(value: unknown): SurfaceContributio
     readonly text?: unknown;
     readonly tone?: unknown;
     readonly order?: unknown;
+    readonly actionId?: unknown;
   };
   if (
     record.id !== normalized.id ||
     record.surface !== normalized.surface ||
     record.text !== normalized.text ||
     record.tone !== normalized.tone ||
-    record.order !== normalized.order
+    record.order !== normalized.order ||
+    record.actionId !== normalized.actionId
   ) {
     return undefined;
   }
@@ -242,8 +262,8 @@ function registerSurfaceContribution(
 ): SurfaceContributionRegistration {
   const label = SURFACE_LABEL[surface];
   for (const key of Object.keys(input)) {
-    if (key !== "id" && key !== "text" && key !== "tone" && key !== "order") {
-      throw new TypeError(`${label} only accepts id, text, and optional tone and order`);
+    if (key !== "id" && key !== "text" && key !== "tone" && key !== "order" && key !== "actionId") {
+      throw new TypeError(`${label} only accepts id, text, and optional tone, order, and actionId`);
     }
   }
   const text = input.text.trim();
@@ -261,12 +281,16 @@ function registerSurfaceContribution(
   if (input.order !== undefined && !isContributionOrder(input.order)) {
     throw new TypeError(`${label} order must be a safe integer`);
   }
+  if (input.actionId !== undefined && !isExtensionActionId(input.actionId)) {
+    throw new TypeError(`${label} actionId must be a registered action id`);
+  }
   const contribution: SurfaceContribution = {
     id: input.id,
     surface,
     text,
     tone: input.tone ?? "default",
     order: normalizeOrder(input.order),
+    ...(input.actionId !== undefined ? { actionId: input.actionId } : {}),
   };
   let available = false;
   let disposed = false;

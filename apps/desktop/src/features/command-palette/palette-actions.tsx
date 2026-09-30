@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { formatKeyId } from "../../../contracts/extension-actions";
 import { formatShortcut } from "../../../contracts/ipc";
 import type { BuiltinToolKind } from "../../../contracts/workbench";
 import type { ThreadAction } from "../threads/thread-actions";
@@ -68,6 +69,13 @@ export interface PaletteActionContext {
   }[];
   readonly findInThread: () => void;
   readonly openPaletteMode: (mode: PaletteMode) => void;
+  /** Extension actions and Pi commands, already resolved for this window. */
+  readonly extensionActions: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly shortcut?: string;
+    readonly run: () => void;
+  }[];
 }
 
 export function buildPaletteActions(context: PaletteActionContext): readonly PaletteAction[] {
@@ -174,6 +182,15 @@ export function buildPaletteActions(context: PaletteActionContext): readonly Pal
     hint: formatShortcut(platform, ","),
     run: () => context.openSettings("general"),
   });
+  for (const action of context.extensionActions) {
+    actions.push({
+      id: `extension:${action.id}`,
+      title: action.title,
+      icon: <ExtensionIcon />,
+      ...(action.shortcut ? { hint: formatKeyId(platform, action.shortcut) } : {}),
+      run: action.run,
+    });
+  }
   for (const section of SETTINGS_SECTIONS) {
     actions.push({
       id: `settings-${section}`,
