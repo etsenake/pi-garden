@@ -45,7 +45,7 @@ export function filterModels(
     return models;
   }
   return models.filter((model) =>
-    [model.providerId, model.providerName, model.modelId, model.label].some((value) =>
+    [model.providerId, model.providerName, model.modelId, model.label, model.kind].some((value) =>
       value.toLowerCase().includes(normalized),
     ),
   );

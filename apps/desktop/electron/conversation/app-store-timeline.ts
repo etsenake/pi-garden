@@ -455,6 +455,10 @@ function toolLabel(toolName: string, input: unknown): string {
   if (toolName === sendMessageToThreadToolName) {
     return detail ? `Sent message to thread: ${detail}` : "Sent message to thread";
   }
+  // MCP titles match Pi: server/tool, with args on the title when present.
+  if (displayName !== toolName) {
+    return detail ? `${displayName}: ${detail}` : displayName;
+  }
   if (looksLikeSearch(toolName, input)) {
     return detail ? `Searched ${detail}` : `Searched with ${displayName}`;
   }

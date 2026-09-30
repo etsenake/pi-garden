@@ -43,7 +43,9 @@ export function sameRowContent(a: DisplayTimelineItem, b: DisplayTimelineItem): 
       a.status === b.status &&
       a.detail === b.detail &&
       a.label === b.label &&
-      a.metadata === b.metadata
+      a.metadata === b.metadata &&
+      a.parentToolCallId === b.parentToolCallId &&
+      a.nestingDepth === b.nestingDepth
     );
   if (a.kind === "summary" && b.kind === "summary")
     return a.label === b.label && a.presentation === b.presentation;

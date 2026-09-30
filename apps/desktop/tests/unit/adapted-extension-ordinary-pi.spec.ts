@@ -6,7 +6,7 @@ import { createJiti } from "jiti";
 import { writeCompatibilityFixture } from "../helpers/compatibility-fixtures";
 
 /**
- * An adapted extension must still load under ordinary Pi 0.87.1 with no desktop
+ * An adapted extension must still load under ordinary Pi 0.99.1 with no desktop
  * host: the vendored `@pi-garden/extension-ui` resolves from the extension's own
  * node_modules, its registrations stay inert, and the terminal commands survive.
  * This also proves the bundled Adapt skill is discoverable through Pi's ordinary

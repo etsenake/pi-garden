@@ -116,6 +116,23 @@ export function ContextMeter({ usage }: ContextMeterProps) {
               label="Cost"
               value={usage.subscription ? "Subscription" : `$${usage.totals.cost.toFixed(2)}`}
             />
+            {usage.routedModel ? (
+              <Row
+                label="Routed model"
+                value={`${usage.routedModel.provider}/${usage.routedModel.model}`}
+              />
+            ) : null}
+            {usage.costByModel && usage.costByModel.length > 0
+              ? usage.costByModel.map((entry) => (
+                  <Row
+                    key={`${entry.provider}/${entry.model}`}
+                    label={`${entry.provider}/${entry.model}`}
+                    value={
+                      usage.subscription ? "Subscription" : `$${entry.cost.toFixed(2)}`
+                    }
+                  />
+                ))
+              : null}
           </section>
         </div>
       ) : null}

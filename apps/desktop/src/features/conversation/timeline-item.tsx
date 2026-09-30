@@ -476,10 +476,15 @@ function BuiltinToolCall({
 
   return (
     <article
-      className={`timeline-tool timeline-tool--${item.status}`}
+      className={`timeline-tool timeline-tool--${item.status}${
+        item.nestingDepth ? " timeline-tool--nested" : ""
+      }`}
       data-testid="timeline-tool"
       data-tool-name={item.toolName}
       data-tool-renderer={rendererState}
+      data-parent-tool-call-id={item.parentToolCallId}
+      data-nesting-depth={item.nestingDepth ?? 0}
+      style={toolNestingStyle(item.nestingDepth)}
     >
       <div className="timeline-tool__header-row">
         <span className="timeline-tool__glyph" aria-hidden="true">
@@ -509,7 +514,7 @@ function BuiltinToolCall({
           ) : null}
           <span className="timeline-tool__meta-inline">
             <span className="timeline-tool__status-pip" aria-hidden="true" />
-            {`${item.toolName} \u00b7 ${statusLabel(item.status)}`}
+            {`${formatToolDisplayName(item.toolName)} \u00b7 ${statusLabel(item.status)}`}
           </span>
         </button>
         {filePath && onViewFileInDiff ? (
@@ -576,6 +581,23 @@ function BuiltinToolCall({
 
 function isWriteTool(toolName: string): boolean {
   return /write|edit|patch|apply/i.test(toolName);
+}
+
+function toolNestingStyle(depth: number | undefined): { paddingInlineStart: string } | undefined {
+  if (!depth || depth <= 0) return undefined;
+  return { paddingInlineStart: `${depth * 1.25}rem` };
+}
+
+/** MCP tools arrive as `mcp__server__tool`; Pi titles them `server/tool`. */
+function formatToolDisplayName(toolName: string): string {
+  if (!toolName.startsWith("mcp__")) return toolName;
+  const rest = toolName.slice("mcp__".length);
+  const separator = rest.indexOf("__");
+  if (separator <= 0 || separator >= rest.length - 1) return toolName;
+  const server = rest.slice(0, separator);
+  const tool = rest.slice(separator + 2);
+  if (!server || !tool || tool.includes("__")) return toolName;
+  return `${server}/${tool}`;
 }
 
 function toolGlyph(toolName: string) {

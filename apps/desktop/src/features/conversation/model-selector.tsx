@@ -12,6 +12,8 @@ interface ModelSelectorProps {
   readonly provider: string | undefined;
   readonly modelId: string | undefined;
   readonly thinkingLevel: string | undefined;
+  /** Physical model under a virtual selection, when Pi reports one. */
+  readonly routedModel?: { readonly provider: string; readonly model: string };
   readonly disabled?: boolean;
   readonly dropdownPlacement?: "above" | "below";
   readonly showEmptyModelControl?: boolean;
@@ -29,6 +31,7 @@ export function ModelSelector({
   provider,
   modelId,
   thinkingLevel,
+  routedModel,
   disabled,
   dropdownPlacement = "above",
   showEmptyModelControl = false,
@@ -42,7 +45,17 @@ export function ModelSelector({
   const [modelFilter, setModelFilter] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const modelOptions = useMemo(() => buildModelOptions(runtime), [runtime]);
+  const modelOptions = useMemo(() => {
+    const options = buildModelOptions(runtime);
+    const kindByKey = new Map(
+      (runtime?.models ?? []).map((model) => [`${model.providerId}:${model.modelId}`, model.kind]),
+    );
+    // Thread picker stays chat/virtual; image + classifier belong in Settings.
+    return options.filter((option) => {
+      const kind = kindByKey.get(`${option.providerId}:${option.modelId}`) ?? "chat";
+      return kind === "chat" || kind === "virtual";
+    });
+  }, [runtime]);
   const filteredModels = useMemo(() => {
     if (!modelFilter) return modelOptions;
     const q = modelFilter.toLowerCase();
@@ -58,12 +71,18 @@ export function ModelSelector({
   const hasAvailableModelOptions = modelOptions.length > 0;
   const hasModelControl = Boolean(provider && modelId) || hasAvailableModelOptions;
   const shouldRenderModelControl = hasModelControl || showEmptyModelControl;
-  const modelBadgeLabel =
-    provider && modelId
-      ? `${provider}:${modelId}`
-      : hasAvailableModelOptions
-        ? unselectedModelLabel
-        : emptyModelLabel;
+  const selectionLabel = provider && modelId ? `${provider}:${modelId}` : undefined;
+  const routedLabel =
+    routedModel && selectionLabel && `${routedModel.provider}:${routedModel.model}` !== selectionLabel
+      ? `${routedModel.provider}:${routedModel.model}`
+      : undefined;
+  const modelBadgeLabel = selectionLabel
+    ? routedLabel
+      ? `${selectionLabel} → ${routedLabel}`
+      : selectionLabel
+    : hasAvailableModelOptions
+      ? unselectedModelLabel
+      : emptyModelLabel;
   const noMatchingModels =
     hasAvailableModelOptions && modelFilter.trim().length > 0 && groupedModels.length === 0;
 

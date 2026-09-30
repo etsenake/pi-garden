@@ -2237,8 +2237,8 @@ button.host-contribution {
   padding: 8px 10px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-  color: var(--text-primary);
+  background: var(--surface);
+  color: var(--text-strong);
   font: inherit;
   font-size: 13px;
   resize: vertical;

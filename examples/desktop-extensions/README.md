@@ -99,9 +99,9 @@ pnpm add \
   "$extension_tarballs/pi-garden-extension-ui-0.0.0.tgz" \
   "$extension_tarballs/pi-garden-example-pr-review-0.0.0.tgz" \
   "$extension_tarballs/pi-garden-example-test-runs-0.0.0.tgz" \
-  @earendil-works/chord@0.87.0 \
-  @earendil-works/pi-ai@0.87.0 \
-  @earendil-works/pi-coding-agent@0.87.0
+  @earendil-works/chord@0.99.1 \
+  @earendil-works/pi-ai@0.99.1 \
+  @earendil-works/pi-coding-agent@0.99.1
 ```
 
 Then add the installed **package directories** to the existing Pi `extensions`
@@ -124,7 +124,7 @@ reloading the installed copy. Installing a tarball creates a separate copy; late
 source edits do not update it automatically.
 
 This path was verified with the actual packed files installed in a separate
-temporary project, using Pi/Pi AI/Chord 0.87.0 and an offline cached dependency
+temporary project, using Pi/Pi AI/Chord 0.99.1 and an offline cached dependency
 set. The normal `pnpm add` command above can obtain those released dependencies
 from the registry. The proof confirmed that every package resolved inside the
 external project's `node_modules`, both real TypeScript entry points loaded with
@@ -184,7 +184,7 @@ GitHub metadata is a fixture executable and the model has an unauthenticated
 fixture provider: it makes no GitHub or provider requests. It proves the real
 admission failure path, not review quality.
 
-Pi 0.87's public `sendUserMessage` returns `void`. A successful service response
+Pi 0.99.1's public `sendUserMessage` returns `void`. A successful service response
 therefore means **Requested**, not that model execution began. Only the matching
 `before_agent_start` makes this review **Running**. Authentication or other
 preflight failures appear in Pi's extension runtime diagnostics and can leave

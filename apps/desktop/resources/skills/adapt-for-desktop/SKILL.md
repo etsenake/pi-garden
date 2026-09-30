@@ -8,7 +8,7 @@ description: Adapt one existing Pi extension so its terminal-only presentation a
 You are adapting exactly one Pi extension so that the presentation it builds
 for the terminal also appears in pi-garden, the desktop app for Pi. The
 adaptation is additive: the extension must keep working unchanged in ordinary
-terminal Pi 0.87.1, which has no desktop host.
+terminal Pi 0.99.1, which has no desktop host.
 
 The request that invoked this skill names the target. Work only on that
 target. If no target path is given, ask for the exact entry file before
@@ -162,7 +162,7 @@ registration for a capability already listed there.
    the browser.
 
 6. **Validate.** Run the extension's own typecheck/lint/build if it has them.
-   Then prove terminal Pi still loads it with the bundled Pi 0.87.1 from
+   Then prove terminal Pi still loads it with the bundled Pi 0.99.1 from
    pi-garden's checkout or an installed Pi:
 
    ```sh
