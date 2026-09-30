@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/brand/banner.png" alt="Pi Garden" width="720">
+</p>
+
 # pi-gui
 
 The desktop app for the [pi](https://github.com/earendil-works/pi) coding agent.
