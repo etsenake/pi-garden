@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 import { listWorkspaceFiles } from "../../electron/platform/files/app-store-files";
 
 async function makeFolder(name: string): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-workspace-files-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-workspace-files-"));
   const workspacePath = join(root, name);
   await mkdir(workspacePath, { recursive: true });
   return workspacePath;
@@ -147,7 +147,7 @@ test("lists a folder its enclosing repository ignores from disk", async () => {
 });
 
 test("returns an empty list for a missing folder", async () => {
-  const files = await listWorkspaceFiles(join(tmpdir(), "pi-gui-missing-workspace-files"), {
+  const files = await listWorkspaceFiles(join(tmpdir(), "pi-garden-missing-workspace-files"), {
     force: true,
   });
   expect(files).toEqual([]);

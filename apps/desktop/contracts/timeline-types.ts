@@ -1,4 +1,4 @@
-import type { SessionTranscriptMessage, SessionTranscriptRole } from "@pi-gui/session-driver";
+import type { SessionTranscriptMessage, SessionTranscriptRole } from "@pi-garden/session-driver";
 import type { TurnChangeSummary } from "./review";
 
 export type SessionRole = SessionTranscriptRole;

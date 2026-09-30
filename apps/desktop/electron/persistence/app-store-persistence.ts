@@ -12,7 +12,7 @@ import type {
   ThreadGrouping,
 } from "../../contracts/desktop-state";
 import { isThemeMode, isThemePresetId, isThreadGrouping } from "../../contracts/desktop-state";
-import type { ModelSettingsSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type { ModelSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import { readJsonWithBackup, writeFileAtomicQueued } from "./atomic-file-write";
 import { decodeAttachments } from "./attachment-store";
 import { randomUUID } from "node:crypto";
@@ -33,7 +33,7 @@ export interface PersistedUiState {
     readonly ExtensionCommandCompatibilityRecord[]
   >;
   readonly notificationPreferences?: Partial<NotificationPreferences>;
-  /** Names of pi-gui built-in extensions the user switched off. */
+  /** Names of pi-garden built-in extensions the user switched off. */
   readonly disabledBuiltinExtensions?: readonly string[];
   readonly integratedTerminalShell?: string;
   readonly lastViewedAtBySession?: Record<string, string>;

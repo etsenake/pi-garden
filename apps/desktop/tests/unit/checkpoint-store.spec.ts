@@ -15,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import type { TurnCaptureBoundary } from "@pi-gui/session-driver";
+import type { TurnCaptureBoundary } from "@pi-garden/session-driver";
 import {
   TurnCheckpointStore,
   type CheckpointCapture,
@@ -565,7 +565,7 @@ async function snapshotRefs(store: TurnCheckpointStore): Promise<string[]> {
   const output = await git(store.repositoryPath, [
     "for-each-ref",
     "--format=%(objectname)",
-    "refs/pi-gui/",
+    "refs/pi-garden/",
   ]);
   return output.toString().split("\n").filter(Boolean);
 }

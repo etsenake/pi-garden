@@ -1,9 +1,9 @@
 ---
-name: verify-pi-gui
-description: "Verify pi-gui's core conversation flows through visible Electron UI with a real provider: sending, streaming, thread switching, tools, stop, drafts and restart. Use for desktop user-flow verification; includes a separate settings smoke and a prioritized feature map."
+name: verify-pi-garden
+description: "Verify pi-garden's core conversation flows through visible Electron UI with a real provider: sending, streaming, thread switching, tools, stop, drafts and restart. Use for desktop user-flow verification; includes a separate settings smoke and a prioritized feature map."
 ---
 
-# Verify pi-gui
+# Verify pi-garden
 
 Read [features/README.md](features/README.md) before choosing coverage. Conversation behavior is the primary proof. A passing settings/navigation smoke does not establish that the app can send or stream a message. Use the existing `apps/desktop/tests/helpers/electron-app.ts` launcher; the skill supplies UI recipes and evidence capture, not a second app implementation.
 
@@ -14,9 +14,9 @@ Run from the repository root with dependencies installed (Node >=22.19.0 <26, pn
 ```sh
 PI_APP_REAL_AUTH=1 \
 PI_APP_REAL_AUTH_SOURCE_DIR="$HOME/.pi/agent" \
-PI_GUI_PROVIDER=openai-codex \
-PI_GUI_MODEL=gpt-5.6-luna \
-.agents/skills/verify-pi-gui/scripts/prove.sh
+PI_GARDEN_PROVIDER=openai-codex \
+PI_GARDEN_MODEL=gpt-5.6-luna \
+.agents/skills/verify-pi-garden/scripts/prove.sh
 ```
 
 Use a provider/model actually configured for this user; those example values are not a guarantee of usable authentication. The explicit environment opts into real requests and usage. Missing configuration exits 2 before build; invalid credentials fail the run. Never silently skip core proof or substitute fake auth. Custom endpoints that require `models.json` are not supported by this initial recipe; use a configured built-in provider or extend the credential/config setup deliberately.
@@ -26,9 +26,9 @@ For the remaining mapped surfaces after the default conversation proof, use the 
 ```sh
 PI_APP_REAL_AUTH=1 \
 PI_APP_REAL_AUTH_SOURCE_DIR="$HOME/.pi/agent" \
-PI_GUI_PROVIDER=openai-codex \
-PI_GUI_MODEL=gpt-5.6-luna \
-.agents/skills/verify-pi-gui/scripts/prove.sh --maintenance
+PI_GARDEN_PROVIDER=openai-codex \
+PI_GARDEN_MODEL=gpt-5.6-luna \
+.agents/skills/verify-pi-garden/scripts/prove.sh --maintenance
 ```
 
 That command starts threads from New thread, then checks Skills Try, pin while a run is going, Show more Today, a permanent worktree against `git worktree list`, and queued follow-up plus steer. Time grouping hides the folder row after those threads exist, so the worktree step switches Grouping to Workspace before it opens workspace actions. It is not a substitute for the default send/stream proof.
@@ -38,10 +38,10 @@ In a Claude cloud session, the repository's SessionStart hook (`scripts/cloud/se
 For the secondary no-provider settings/navigation proof:
 
 ```sh
-.agents/skills/verify-pi-gui/scripts/prove.sh --smoke
+.agents/skills/verify-pi-garden/scripts/prove.sh --smoke
 ```
 
-These commands build first, show and focus Electron with `PI_APP_TEST_MODE` removed, and retain a unique `.artifacts/verify-pi-gui/run-XXXXXX/`. Build failure blocks launch; do not reuse stale output. On this host the full Xcode selection can block `git`/`swiftc` on its license. An already working Command Line Tools installation can be selected per invocation with `DEVELOPER_DIR=/Library/Developer/CommandLineTools`; verify `xcrun --find swiftc` under that environment first. Do not accept licenses or change global developer settings for the user.
+These commands build first, show and focus Electron with `PI_APP_TEST_MODE` removed, and retain a unique `.artifacts/verify-pi-garden/run-XXXXXX/`. Build failure blocks launch; do not reuse stale output. On this host the full Xcode selection can block `git`/`swiftc` on its license. An already working Command Line Tools installation can be selected per invocation with `DEVELOPER_DIR=/Library/Developer/CommandLineTools`; verify `xcrun --find swiftc` under that environment first. Do not accept licenses or change global developer settings for the user.
 
 Each run uses a scratch workspace and isolated profile. The conversation proof copies only the selected provider credentials into a mode-0700 private temporary directory outside the evidence tree, with a mode-0600 auth file. It creates a minimal model configuration there once and reuses it across restart. It does not modify the source profile. Do not publish the private directory or credentials. Separate profiles prevent history collision, but build output and foreground input are shared: serialize runs and do not drive the user's installed app.
 

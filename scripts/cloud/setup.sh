@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude cloud environment setup script for pi-gui.
+# Claude cloud environment setup script for pi-garden.
 # Paste this file's contents into the environment's "Setup script" field.
 # It runs as root on Ubuntu 24.04 before Claude Code starts, and its result is
 # cached as a filesystem snapshot for about seven days. Never write credentials
@@ -26,7 +26,7 @@ apt-get install -y -q --no-install-recommends \
   libxdamage1 libxrandr2 libxtst6 libpango-1.0-0 libcairo2 libsecret-1-0 \
   libnotify4 ffmpeg
 
-# pi-gui requires Node >=22.19. The image has several Node installs and its
+# pi-garden requires Node >=22.19. The image has several Node installs and its
 # /usr/local/bin/node points at Node 20, so pin one satisfying install at
 # /opt/pi-node. session-start.sh puts /opt/pi-node/bin first on PATH.
 node_ok() {

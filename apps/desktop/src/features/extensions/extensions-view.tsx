@@ -1,4 +1,4 @@
-import type { RuntimeExtensionRecord } from "@pi-gui/session-driver/runtime-types";
+import type { RuntimeExtensionRecord } from "@pi-garden/session-driver/runtime-types";
 import type {
   ExtensionCommandCompatibilityRecord,
   WorkspaceRecord,
@@ -7,13 +7,13 @@ import { ExtensionIcon } from "../../ui/icons";
 import { SettingsGroup, SettingsRow } from "../settings/settings-utils";
 import {
   extensionGroupLabel,
-  isPiGuiBuiltinExtension,
-  PI_GUI_TOOLS_LABEL,
+  isPiGardenBuiltinExtension,
+  PI_GARDEN_TOOLS_LABEL,
 } from "./extension-display";
 import { displayPath, ResourceDetail } from "./resource-detail";
 import { ResourceEmptyState, ResourceList, type ResourceListGroup } from "./resource-list";
 
-const GROUP_ORDER = ["Workspace", "User", "This session", PI_GUI_TOOLS_LABEL];
+const GROUP_ORDER = ["Workspace", "User", "This session", PI_GARDEN_TOOLS_LABEL];
 
 interface ExtensionsTabProps {
   readonly workspace: WorkspaceRecord;
@@ -128,7 +128,7 @@ function ExtensionDetail({
         >
           <span className="settings-row__value">{extensionGroupLabel(selected)}</span>
         </SettingsRow>
-        {isPiGuiBuiltinExtension(selected) ? null : (
+        {isPiGardenBuiltinExtension(selected) ? null : (
           <SettingsRow title="Location">
             <code className="resource-detail__code" title={selected.path}>
               {displayPath(selected.path, workspace.path)}
@@ -190,7 +190,7 @@ function isFolderExtension(extension: RuntimeExtensionRecord): boolean {
 }
 
 function isToggleableExtension(extension: RuntimeExtensionRecord): boolean {
-  return isFolderExtension(extension) || isPiGuiBuiltinExtension(extension);
+  return isFolderExtension(extension) || isPiGardenBuiltinExtension(extension);
 }
 
 function ExtensionContributionSection({

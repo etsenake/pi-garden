@@ -17,14 +17,15 @@ async function main() {
     readme,
     /Download the latest `\.dmg` \(macOS\), `\.AppImage` or `\.deb` \(Linux\), or `\.exe` \(Windows\) from the\s+\[Releases page\]/,
   );
-  assert.match(readme, /brew install --cask pi-gui/);
-  assert.match(readme, /brew upgrade --cask pi-gui/);
+  assert.match(readme, /brew install --cask pi-garden/);
+  assert.match(readme, /brew upgrade --cask pi-garden/);
   assert.doesNotMatch(readme, /Homebrew installation will be published/);
 
   assert.match(
     siteMetadata,
     /Install it from GitHub Releases on macOS, Linux and Windows, or Homebrew on macOS/,
   );
+  // apps/website is the upstream marketing site and is intentionally left unchanged.
   assert.match(siteMetadata, /brew install --cask minghinmatthewlam\/tap\/pi-gui/);
   assert.doesNotMatch(siteMetadata, /source-install today/);
 

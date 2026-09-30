@@ -1,7 +1,7 @@
 import { webContents } from "electron";
 import { stat } from "node:fs/promises";
 import path from "node:path";
-import type { DesktopHostAction } from "@pi-gui/extension-ui/browser";
+import type { DesktopHostAction } from "@pi-garden/extension-ui/browser";
 import { desktopIpc } from "../../contracts/ipc";
 import type { DesktopAppStore } from "../application/app-store";
 import { resolveExistingWorkspacePath } from "../platform/files/workspace-paths";

@@ -1,7 +1,7 @@
 import { sessionThreadKey, type ThreadListEntry } from "./thread-groups";
 
 // Renderer-local view state, shared by every window through localStorage.
-const STORAGE_KEY = "pi-gui:thread-switcher-order:v1";
+const STORAGE_KEY = "pi-garden:thread-switcher-order:v1";
 export const THREAD_SWITCHER_ORDER_LIMIT = 100;
 
 /** Moves `threadKey` to the front: opening a thread (and sending in it) counts as use. */

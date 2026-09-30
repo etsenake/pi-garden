@@ -157,7 +157,7 @@ export function Sidebar(props: SidebarProps) {
   } = props;
 
   const [sidebarWidth, setSidebarWidth] = usePersistedPaneWidth(
-    "pi-gui.sidebar-width",
+    "pi-garden.sidebar-width",
     SIDEBAR_WIDTH_RANGE,
   );
   const sidebarWidthStyle: (CSSProperties & { "--sidebar-width": string }) | undefined =

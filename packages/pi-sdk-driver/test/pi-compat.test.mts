@@ -37,7 +37,7 @@ await test("forced Pi persistence does not rewrite a file Pi already writes", ()
 });
 
 await test("forced Pi persistence keeps turns another Pi process appended", () => {
-  const directory = mkdtempSync(path.join(tmpdir(), "pi-gui-compat-"));
+  const directory = mkdtempSync(path.join(tmpdir(), "pi-garden-compat-"));
   try {
     const desktop = SessionManager.create(directory, directory);
     desktop.appendMessage({ role: "user", content: "hi", timestamp: Date.now() });
@@ -107,7 +107,7 @@ await test("project settings compatibility fails clearly when upstream hooks cha
 });
 
 await test("compatibility hooks match the bundled Pi runtime", async () => {
-  const sessionManager = SessionManager.inMemory("/tmp/pi-gui-compat-fixture");
+  const sessionManager = SessionManager.inMemory("/tmp/pi-garden-compat-fixture");
   sessionManager.appendSessionInfo("Compatibility fixture");
   forcePersistPiSession(sessionManager);
   const compatibleSessionManager = sessionManager as unknown as { flushed: boolean };

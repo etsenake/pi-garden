@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const require = createRequire(import.meta.url);
 
 test("format check rejects bad formatting and autofix is stable", () => {
-  const fixture = path.join(mkdtempSync(path.join(os.tmpdir(), "pi-gui-format-")), "fixture.ts");
+  const fixture = path.join(mkdtempSync(path.join(os.tmpdir(), "pi-garden-format-")), "fixture.ts");
   writeFileSync(fixture, "export const config={timeout:5,label:'hello'}\n");
   const run = (mode) => {
     const result = spawnSync(
@@ -37,7 +37,7 @@ test("format check rejects bad formatting and autofix is stable", () => {
 });
 
 test("source release/build directories remain format checked while outputs are ignored", () => {
-  const fixture = mkdtempSync(path.join(os.tmpdir(), "pi-gui-format-scope-"));
+  const fixture = mkdtempSync(path.join(os.tmpdir(), "pi-garden-format-scope-"));
   copyFileSync(path.join(root, ".prettierignore"), path.join(fixture, ".prettierignore"));
   const source = ["apps/desktop/src/release-data/index.ts", "packages/catalogs/src/build/index.ts"];
   const generated = ["apps/desktop/release-candidate/index.ts", "packages/catalogs/dist/index.ts"];

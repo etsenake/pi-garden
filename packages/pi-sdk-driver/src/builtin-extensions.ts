@@ -1,6 +1,6 @@
 import type { ExtensionFactory, InlineExtension } from "@earendil-works/pi-coding-agent";
 
-/** A pi-gui-owned pi extension that users can switch off in Settings. */
+/** A pi-garden-owned pi extension that users can switch off in Settings. */
 export interface BuiltinExtension {
   /** Stable id; pi reports the loaded extension at `<inline:name>`. */
   readonly name: string;

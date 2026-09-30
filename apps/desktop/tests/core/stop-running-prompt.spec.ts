@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resolve } from "node:path";
-import type { PiSdkDriver } from "@pi-gui/pi-sdk-driver";
-import type { SessionDriverEvent, SessionRef } from "@pi-gui/session-driver";
+import type { PiSdkDriver } from "@pi-garden/pi-sdk-driver";
+import type { SessionDriverEvent, SessionRef } from "@pi-garden/session-driver";
 import { desktopIpc } from "../../contracts/ipc";
 import {
   clickSession,
@@ -58,7 +58,7 @@ for (const { finish, prompt } of pendingPrompts) {
           });
           const { createRequire } = process.getBuiltinModule("module");
           const load = createRequire(input.entry);
-          const { PiSdkDriver: Driver } = load("@pi-gui/pi-sdk-driver") as {
+          const { PiSdkDriver: Driver } = load("@pi-garden/pi-sdk-driver") as {
             PiSdkDriver: typeof PiSdkDriver;
           };
           const hooks = (

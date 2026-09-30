@@ -14,18 +14,18 @@ async function captureOpenedExternalUrls(
   harness: DesktopHarness,
 ): Promise<() => Promise<readonly string[]>> {
   await harness.electronApp.evaluate(({ shell }) => {
-    const globals = globalThis as typeof globalThis & { __piGuiOpenedExternalUrls?: string[] };
-    globals.__piGuiOpenedExternalUrls = [];
+    const globals = globalThis as typeof globalThis & { __piGardenOpenedExternalUrls?: string[] };
+    globals.__piGardenOpenedExternalUrls = [];
     shell.openExternal = async (url: string) => {
-      globals.__piGuiOpenedExternalUrls?.push(url);
+      globals.__piGardenOpenedExternalUrls?.push(url);
     };
   });
 
   return () =>
     harness.electronApp.evaluate(
       () =>
-        (globalThis as typeof globalThis & { __piGuiOpenedExternalUrls?: string[] })
-          .__piGuiOpenedExternalUrls ?? [],
+        (globalThis as typeof globalThis & { __piGardenOpenedExternalUrls?: string[] })
+          .__piGardenOpenedExternalUrls ?? [],
     );
 }
 
@@ -34,7 +34,7 @@ test("opens markdown web links externally without leaving the current session", 
   const userDataDir = await makeUserDataDir();
   const agentDir = join(userDataDir, "agent");
   const workspacePath = await makeWorkspace("external-links-workspace");
-  const targetUrl = "https://github.com/minghinmatthewlam/pi-gui/issues/20";
+  const targetUrl = "https://github.com/etsenake/pi-garden/issues/20";
   await seedAgentDir(agentDir);
   await seedExternalLinkSessionFixture(agentDir, workspacePath);
 

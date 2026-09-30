@@ -26,7 +26,7 @@ const markdownResponse = [
   'const rendered: string = "markdown";',
   "```",
   "",
-  "Open the [issue](https://github.com/minghinmatthewlam/pi-gui/issues/19).",
+  "Open the [issue](https://github.com/etsenake/pi-garden/issues/19).",
 ].join("\n");
 
 const tableResponse = [
@@ -38,7 +38,7 @@ const tableResponse = [
   "",
   "| Package | Platform | Architecture | Artifact | Checksum | Distribution channel |",
   "| --- | --- | --- | --- | --- | --- |",
-  `| desktop | macOS | arm64 | ${"pi-gui-release-artifact-".repeat(4)}.dmg | ${"abcdef0123456789".repeat(4)} | GitHub prerelease with automatic updates |`,
+  `| desktop | macOS | arm64 | ${"pi-garden-release-artifact-".repeat(4)}.dmg | ${"abcdef0123456789".repeat(4)} | GitHub prerelease with automatic updates |`,
 ].join("\n");
 
 test("renders markdown formatting in assistant responses", async () => {
@@ -102,7 +102,7 @@ test("renders markdown formatting in assistant responses", async () => {
     const issueLink = messageRow.getByRole("link", { name: "issue" });
     await expect(issueLink).toHaveAttribute(
       "href",
-      "https://github.com/minghinmatthewlam/pi-gui/issues/19",
+      "https://github.com/etsenake/pi-garden/issues/19",
     );
     await expect(messageRow).not.toContainText("## Markdown rendering proof");
     await expect(messageRow).not.toContainText("```ts");

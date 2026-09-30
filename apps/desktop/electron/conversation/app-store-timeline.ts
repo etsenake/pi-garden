@@ -1,6 +1,10 @@
-import { sessionKey } from "@pi-gui/session-driver";
-import type { SessionTranscriptItem } from "@pi-gui/session-driver";
-import type { SessionDriverEvent, SessionQueuedMessage, SessionRef } from "@pi-gui/session-driver";
+import { sessionKey } from "@pi-garden/session-driver";
+import type { SessionTranscriptItem } from "@pi-garden/session-driver";
+import type {
+  SessionDriverEvent,
+  SessionQueuedMessage,
+  SessionRef,
+} from "@pi-garden/session-driver";
 import type { TranscriptMessage } from "../../contracts/desktop-state";
 import {
   formatElapsedDuration,

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import type { HostUiResponse } from "@pi-gui/session-driver";
+import type { HostUiResponse } from "@pi-garden/session-driver";
 import { trapDialogFocus } from "../../ui/dialog-focus";
 import { ChevronDownIcon, ChevronRightIcon } from "../../ui/icons";
 import type {

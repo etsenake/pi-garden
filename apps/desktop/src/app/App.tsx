@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import {
   getSelectedSession,
   getSelectedWorkspace,
@@ -1131,7 +1131,7 @@ export default function App() {
                     >
                       <span className="schema-skew-notice__text">
                         This session was written by a newer version of pi — some content may not
-                        display. Update pi-gui (or open it with the pi CLI) to see everything.
+                        display. Update pi-garden (or open it with the pi CLI) to see everything.
                       </span>
                       <button
                         type="button"

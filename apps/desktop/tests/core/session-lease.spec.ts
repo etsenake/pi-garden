@@ -24,13 +24,13 @@ async function leaseHolderPid(leasePath: string): Promise<number | undefined> {
 }
 
 /**
- * Two pi-gui processes (separate user-data dirs, so the single-instance lock
+ * Two pi-garden processes (separate user-data dirs, so the single-instance lock
  * does not stop the second) share one pi agent dir. The first holds a thread
  * open; the second must refuse to open it until the first quits.
  */
-test("a second pi-gui process cannot open a thread the first one holds", async () => {
+test("a second pi-garden process cannot open a thread the first one holds", async () => {
   test.setTimeout(120_000);
-  const agentDir = await makeUserDataDir("pi-gui-shared-agent-");
+  const agentDir = await makeUserDataDir("pi-garden-shared-agent-");
   const workspacePath = await makeWorkspace("lease-workspace");
   const title = "Shared lease thread";
 

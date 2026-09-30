@@ -163,14 +163,14 @@ test("passes exact paths as isolated argv values for diff and stage", async () =
 });
 
 test("stages both exact paths for a filesystem rename", async () => {
-  const workspacePath = await mkdtemp(join(tmpdir(), "pi-gui-stage-rename-"));
+  const workspacePath = await mkdtemp(join(tmpdir(), "pi-garden-stage-rename-"));
   const sourcePath = "source name.txt";
   const destinationPath = "destination name.txt";
 
   try {
     await runGit(workspacePath, ["init", "-b", "main"]);
     await runGit(workspacePath, ["config", "user.name", "Pi App Tests"]);
-    await runGit(workspacePath, ["config", "user.email", "pi-gui-tests@example.com"]);
+    await runGit(workspacePath, ["config", "user.email", "pi-garden-tests@example.com"]);
     await writeFile(join(workspacePath, sourcePath), "rename contents\n", "utf8");
     await runGit(workspacePath, ["add", "--", sourcePath]);
     await runGit(workspacePath, ["commit", "-m", "base"]);
@@ -199,7 +199,7 @@ test("round-trips pathological paths through a real Git repository", async () =>
     "Win32 filenames cannot represent tabs, quotes, or newlines.",
   );
 
-  const workspacePath = await mkdtemp(join(tmpdir(), "pi-gui-changed-files-"));
+  const workspacePath = await mkdtemp(join(tmpdir(), "pi-garden-changed-files-"));
   const modifiedPath = pathologicalPath("modified");
   const stagedPath = pathologicalPath("staged");
   const addedPath = pathologicalPath("added");
@@ -214,7 +214,7 @@ test("round-trips pathological paths through a real Git repository", async () =>
   try {
     await runGit(workspacePath, ["init", "-b", "main"]);
     await runGit(workspacePath, ["config", "user.name", "Pi App Tests"]);
-    await runGit(workspacePath, ["config", "user.email", "pi-gui-tests@example.com"]);
+    await runGit(workspacePath, ["config", "user.email", "pi-garden-tests@example.com"]);
 
     await writeFile(join(workspacePath, modifiedPath), "modified base\n", "utf8");
     await writeFile(join(workspacePath, stagedPath), "staged base\n", "utf8");

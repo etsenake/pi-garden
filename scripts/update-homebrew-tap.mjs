@@ -6,7 +6,7 @@ async function main() {
     args: process.argv.slice(2),
     options: {
       "asset-url": { type: "string" },
-      "cask-token": { type: "string", default: "pi-gui" },
+      "cask-token": { type: "string", default: "pi-garden" },
       "dry-run": { type: "boolean", default: false },
       sha256: { type: "string" },
       "tap-dir": { type: "string" },

@@ -13,7 +13,7 @@ const require = createRequire(import.meta.url);
 test("root e2e delegates to the built, isolated desktop core lane", async () => {
   const manifest = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   const desktop = JSON.parse(await readFile(path.join(root, "apps/desktop/package.json"), "utf8"));
-  assert.equal(manifest.scripts.e2e, "pnpm --filter @pi-gui/desktop run test:e2e:core");
+  assert.equal(manifest.scripts.e2e, "pnpm --filter @pi-garden/desktop run test:e2e:core");
   assert.match(desktop.scripts["test:e2e:core"], /^pnpm build && /);
   assert.match(desktop.scripts["test:e2e:core"], /PI_APP_TEST_MODE=background/);
   assert.match(
@@ -23,7 +23,7 @@ test("root e2e delegates to the built, isolated desktop core lane", async () => 
 });
 
 test("root Playwright entrypoint preserves desktop safeguards and rejects focused tests", async () => {
-  const fixtureDir = await mkdtemp(path.join(tmpdir(), "pi-gui-entrypoint-guard-"));
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "pi-garden-entrypoint-guard-"));
   const configPath = path.join(fixtureDir, "playwright.config.ts");
   const specPath = path.join(fixtureDir, "guard.spec.ts");
   const rootConfig = path.join(root, "playwright.config.ts");

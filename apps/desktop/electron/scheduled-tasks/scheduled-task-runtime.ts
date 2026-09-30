@@ -19,11 +19,11 @@ import {
 } from "../../contracts/scheduled-tasks";
 
 export const createScheduledTaskToolName = "create_scheduled_task";
-export const createScheduledTaskAction = "pi_gui_create_scheduled_task";
+export const createScheduledTaskAction = "pi_garden_create_scheduled_task";
 export const listScheduledTasksToolName = "list_scheduled_tasks";
-export const listScheduledTasksAction = "pi_gui_list_scheduled_tasks";
+export const listScheduledTasksAction = "pi_garden_list_scheduled_tasks";
 export const updateScheduledTaskToolName = "update_scheduled_task";
-export const updateScheduledTaskAction = "pi_gui_update_scheduled_task";
+export const updateScheduledTaskAction = "pi_garden_update_scheduled_task";
 
 export interface CreateScheduledTaskToolDetails {
   readonly action: typeof createScheduledTaskAction;
@@ -276,12 +276,12 @@ function createCreateScheduledTaskTool(
     name: createScheduledTaskToolName,
     label: "Create scheduled task",
     description:
-      "Create a local pi-gui scheduled task that runs on this device while the app is open.",
+      "Create a local pi-garden scheduled task that runs on this device while the app is open.",
     promptSnippet:
-      "create_scheduled_task: save a local recurring or one-shot pi-gui task after interviewing the user.",
+      "create_scheduled_task: save a local recurring or one-shot pi-garden task after interviewing the user.",
     promptGuidelines: [
       "Interview the user first. Call create_scheduled_task only when you know the title, instruction, and timing.",
-      "Scheduled tasks run on this device while pi-gui is open. There is no cloud scheduler.",
+      "Scheduled tasks run on this device while pi-garden is open. There is no cloud scheduler.",
       "Use repeat once, daily, weekly, or interval. Weekly needs days like ['mon','wed','fri'] and time '21:00'. Interval uses every_minutes.",
       "Omit session_id to start a new thread on each run. Pass session_id to keep using the current thread.",
     ],
@@ -341,8 +341,8 @@ function createListScheduledTasksTool(
   return {
     name: listScheduledTasksToolName,
     label: "List scheduled tasks",
-    description: "List local pi-gui scheduled tasks on this device.",
-    promptSnippet: "list_scheduled_tasks: list saved local pi-gui schedules.",
+    description: "List local pi-garden scheduled tasks on this device.",
+    promptSnippet: "list_scheduled_tasks: list saved local pi-garden schedules.",
     promptGuidelines: ["Use list_scheduled_tasks before updating a task if you need the task id."],
     parameters: { type: "object", properties: {} },
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
@@ -357,7 +357,7 @@ function createUpdateScheduledTaskTool(
   return {
     name: updateScheduledTaskToolName,
     label: "Update scheduled task",
-    description: "Update, pause, resume, or complete a local pi-gui scheduled task.",
+    description: "Update, pause, resume, or complete a local pi-garden scheduled task.",
     promptSnippet: "update_scheduled_task: change a saved local schedule by task id.",
     promptGuidelines: [
       "Use a task_id returned by list_scheduled_tasks or create_scheduled_task.",

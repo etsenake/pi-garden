@@ -13,7 +13,7 @@ const requiredPackages = [
   // can omit hoisted pnpm dependencies even when local development resolves them.
   "@anthropic-ai/sdk",
   "@earendil-works/chord",
-  "@pi-gui/extension-ui",
+  "@pi-garden/extension-ui",
   "@aws-crypto/sha256-browser",
   "@aws-crypto/sha256-js",
   "@aws-sdk/client-bedrock-runtime",
@@ -97,10 +97,10 @@ const notificationHelperPath =
     ? path.join(
         releaseDir,
         "mac-arm64",
-        "pi-gui.app",
+        "pi-garden.app",
         "Contents",
         "MacOS",
-        "pi-gui-notification-status-helper",
+        "pi-garden-notification-status-helper",
       )
     : undefined;
 const pnpmBinary = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
@@ -141,8 +141,8 @@ const modelChecks = [
   },
 ];
 const packagedRuntimeImportChecks = [
-  ["@pi-gui", "extension-ui", "dist", "transport.js"],
-  ["@pi-gui", "extension-ui", "dist", "frame-bridge.js"],
+  ["@pi-garden", "extension-ui", "dist", "transport.js"],
+  ["@pi-garden", "extension-ui", "dist", "frame-bridge.js"],
   // Import implementations: provider descriptors can defer loading their SDKs.
   ["@earendil-works", "pi-ai", "dist", "api", "google-generative-ai.js"],
   ["@earendil-works", "pi-ai", "dist", "api", "anthropic-messages.js"],
@@ -159,7 +159,7 @@ if (notificationHelperPath && !existsSync(notificationHelperPath)) {
   throw new Error(`Packaged app is missing notification helper: ${notificationHelperPath}`);
 }
 
-const extractedDir = mkdtempSync(path.join(tmpdir(), "pi-gui-packaged-runtime-"));
+const extractedDir = mkdtempSync(path.join(tmpdir(), "pi-garden-packaged-runtime-"));
 let cleanupError;
 try {
   execFileSync(pnpmBinary, ["exec", "asar", "extract", asarPath, extractedDir], {
@@ -197,7 +197,7 @@ console.log(`Verified packaged runtime dependencies in ${asarPath}`);
 
 function resolveAsarPath(releaseDir, packagePlatform) {
   if (packagePlatform === "darwin") {
-    return path.join(releaseDir, "mac-arm64", "pi-gui.app", "Contents", "Resources", "app.asar");
+    return path.join(releaseDir, "mac-arm64", "pi-garden.app", "Contents", "Resources", "app.asar");
   }
 
   if (packagePlatform === "linux") {
@@ -301,7 +301,7 @@ async function verifyPackagedPiRuntime(extractedDir) {
     "index.js",
   );
   const { ModelRuntime } = await import(pathToFileURL(runtimeEntry).href);
-  const authDir = mkdtempSync(path.join(tmpdir(), "pi-gui-packaged-runtime-models-"));
+  const authDir = mkdtempSync(path.join(tmpdir(), "pi-garden-packaged-runtime-models-"));
   const runtime = await ModelRuntime.create({
     authPath: path.join(authDir, "auth.json"),
     modelsPath: null,

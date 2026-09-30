@@ -31,7 +31,7 @@ function foreignSnapshot(overrides: Partial<LeaseInfo> = {}, mtimeMs = 1_000): L
       pid: 9999,
       hostname: "other-host",
       startedAt: "2026-07-03T00:00:00.000Z",
-      surface: "pi-gui",
+      surface: "pi-garden",
       ...overrides,
     },
     mtimeMs,
@@ -128,7 +128,7 @@ await test("stale takeover: a dead foreign lease can be overwritten by our own",
       pid: 9999,
       hostname: "self-host",
       startedAt: "2026-01-01T00:00:00.000Z",
-      surface: "pi-gui",
+      surface: "pi-garden",
     });
 
     const stale = await readLeaseSnapshot(leasePath);
@@ -190,7 +190,7 @@ await test("acquireLeaseFile takes over dead and corrupt leases", async () => {
       pid: 9999,
       hostname: "self-host",
       startedAt: "2026-01-01T00:00:00.000Z",
-      surface: "pi-gui",
+      surface: "pi-garden",
     });
     const result = await acquireLeaseFile(
       leasePath,
@@ -314,7 +314,7 @@ await test("processes racing to take over a dead lease: exactly one acquires", a
         pid: 2 ** 22 + 7,
         hostname: hostname(),
         startedAt: "2026-01-01T00:00:00.000Z",
-        surface: "pi-gui",
+        surface: "pi-garden",
         token: "crashed",
       });
       const statuses = await raceForLease(leasePath, 6);

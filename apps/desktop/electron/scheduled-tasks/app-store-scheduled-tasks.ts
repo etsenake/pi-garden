@@ -5,8 +5,8 @@ import type {
   SessionRef,
   SessionSnapshot,
   WorkspaceRef,
-} from "@pi-gui/session-driver";
-import type { PiSdkDriver } from "@pi-gui/pi-sdk-driver";
+} from "@pi-garden/session-driver";
+import type { PiSdkDriver } from "@pi-garden/pi-sdk-driver";
 import {
   MAX_SCHEDULED_TASK_RUNS,
   SCHEDULED_TASK_INTERVIEW_PROMPT,
@@ -726,7 +726,7 @@ async function createScheduledTaskToolResult(
         },
       ],
       details: {
-        action: "pi_gui_create_scheduled_task",
+        action: "pi_garden_create_scheduled_task",
         error: state.lastError ?? "create_scheduled_task failed.",
       },
     };
@@ -739,7 +739,7 @@ async function createScheduledTaskToolResult(
       },
     ],
     details: {
-      action: "pi_gui_create_scheduled_task",
+      action: "pi_garden_create_scheduled_task",
       taskId: created.id,
       title: created.title,
       nextRunAt: created.nextRunAt,
@@ -777,7 +777,7 @@ async function listScheduledTasksToolResult(
       },
     ],
     details: {
-      action: "pi_gui_list_scheduled_tasks",
+      action: "pi_garden_list_scheduled_tasks",
       tasks,
     },
   };
@@ -799,7 +799,7 @@ async function updateScheduledTaskToolResult(
         return {
           content: [{ type: "text", text: message }],
           details: {
-            action: "pi_gui_update_scheduled_task",
+            action: "pi_garden_update_scheduled_task",
             taskId: input.taskId,
             error: message,
           },
@@ -813,7 +813,7 @@ async function updateScheduledTaskToolResult(
     return {
       content: [{ type: "text", text: state.lastError ?? "update_scheduled_task failed." }],
       details: {
-        action: "pi_gui_update_scheduled_task",
+        action: "pi_garden_update_scheduled_task",
         taskId: input.taskId,
         error: state.lastError ?? "update_scheduled_task failed.",
       },
@@ -827,7 +827,7 @@ async function updateScheduledTaskToolResult(
       },
     ],
     details: {
-      action: "pi_gui_update_scheduled_task",
+      action: "pi_garden_update_scheduled_task",
       taskId: task.id,
       status: task.status,
       nextRunAt: task.nextRunAt,

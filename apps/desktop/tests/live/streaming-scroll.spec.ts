@@ -17,8 +17,8 @@ test("real stream stays pinned, then a wheel unsticks without snap-back", async 
   const realAuth = getRealAuthConfig();
   test.skip(!realAuth.enabled, realAuth.skipReason);
 
-  const provider = process.env.PI_GUI_PROVIDER?.trim() || "openai-codex";
-  const model = process.env.PI_GUI_MODEL?.trim() || "gpt-5.6-luna";
+  const provider = process.env.PI_GARDEN_PROVIDER?.trim() || "openai-codex";
+  const model = process.env.PI_GARDEN_MODEL?.trim() || "gpt-5.6-luna";
   const userDataDir = await makeUserDataDir();
   const workspacePath = await makeWorkspace("live-streaming-scroll");
   const harness = await launchDesktop(userDataDir, {

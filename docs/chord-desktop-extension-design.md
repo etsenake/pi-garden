@@ -4,7 +4,7 @@ Status: **implemented and verified within the documented macOS scope**, Septembe
 
 ## Decision
 
-An existing Pi extension can register an optional desktop frontend, with Chord connecting its backend services and state to that frontend. Pi-gui owns tab placement, browser loading and the permitted desktop actions. The author owns the workflow and interface.
+An existing Pi extension can register an optional desktop frontend, with Chord connecting its backend services and state to that frontend. Pi-garden owns tab placement, browser loading and the permitted desktop actions. The author owns the workflow and interface.
 
 For example, PR Review remains a Pi extension. Its backend performs the review and saves findings; its desktop frontend draws the findings and review controls. Clicking Review calls the backend. Updated findings flow through Chord. Closing the tab disposes its frontend subscription, not the findings or backend work.
 
@@ -25,16 +25,16 @@ The installed public packages were used, rather than the cached Pico branch:
 
 These pre-implementation probes used a JSON-copying loopback adapter within the browser and an inline Pi extension. They establish Chord feasibility, not proof of the subsequently implemented Electron transport, asset containment or frontend isolation. Keep their evidence separate from the final product gates below.
 
-Evidence scripts and result JSON are retained in `/private/tmp/pi-gui-chord-087-probe-4r9zmy/`: `run-node.mjs`, `run-browser.mjs`, `run-bootstrap.mjs`, `browser-result.json` and `bootstrap-result.json`. Public source: [Chord 0.87.0](https://github.com/earendil-works/pi/tree/v0.87.0/packages/chord), [Coding Agent package exports](https://github.com/earendil-works/pi/blob/v0.87.0/packages/coding-agent/package.json).
+Evidence scripts and result JSON are retained in `/private/tmp/pi-garden-chord-087-probe-4r9zmy/`: `run-node.mjs`, `run-browser.mjs`, `run-bootstrap.mjs`, `browser-result.json` and `bootstrap-result.json`. Public source: [Chord 0.87.0](https://github.com/earendil-works/pi/tree/v0.87.0/packages/chord), [Coding Agent package exports](https://github.com/earendil-works/pi/blob/v0.87.0/packages/coding-agent/package.json).
 
 ## Author contract
 
 The implemented contract has two entries in the existing extension package:
 
-1. The normal Pi extension entry registers its commands/tools and optionally calls a Pi-gui helper with a view ID, title, browser asset location and a backend facet factory. The factory closes over that same extension instance. Do not load a second backend from a parallel plugin scanner.
+1. The normal Pi extension entry registers its commands/tools and optionally calls a Pi-garden helper with a view ID, title, browser asset location and a backend facet factory. The factory closes over that same extension instance. Do not load a second backend from a parallel plugin scanner.
 2. A prebuilt browser ES module mounts the custom interface into a supplied root and returns a disposer. It can use a frontend Chord facet to consume the backend's typed services and state. Its framework dependencies are bundled; it cannot assume access to the app's React instance or Node modules.
 
-This is Pi-gui's local helper API, not an upstream Pi API or published npm package:
+This is Pi-garden's local helper API, not an upstream Pi API or published npm package:
 
 ```ts
 export default function extension(pi: ExtensionAPI) {
@@ -54,7 +54,7 @@ export function mount(root: HTMLElement, host: DesktopViewContext): () => void {
 }
 ```
 
-[`@pi-gui/extension-ui`](../packages/extension-ui/README.md) is a private workspace package. `registerDesktopView` reports availability and returns a disposer; terminal Pi can report no desktop host while the extension's commands/tools continue to work. Availability acknowledges discovery, not successful source validation or backend activation. `DesktopViewContext` supplies a scoped Chord service source, theme values, an abort signal and `openFile` / `prepareTaskDraft` actions. Service tokens and domain schemas live with the extension and are shared by its entries. Backend state uses `env.replicatedState` so it belongs to the host's Chord instance. Browser dependencies are bundled separately; the author cannot assume the app's React or Node modules are available.
+[`@pi-garden/extension-ui`](../packages/extension-ui/README.md) is a private workspace package. `registerDesktopView` reports availability and returns a disposer; terminal Pi can report no desktop host while the extension's commands/tools continue to work. Availability acknowledges discovery, not successful source validation or backend activation. `DesktopViewContext` supplies a scoped Chord service source, theme values, an abort signal and `openFile` / `prepareTaskDraft` actions. Service tokens and domain schemas live with the extension and are shared by its entries. Backend state uses `env.replicatedState` so it belongs to the host's Chord instance. Browser dependencies are bundled separately; the author cannot assume the app's React or Node modules are available.
 
 ## Owners and flow
 

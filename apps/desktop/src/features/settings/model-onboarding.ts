@@ -1,4 +1,4 @@
-import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import { buildModelOptions } from "../conversation/composer-commands";
 
 export type ModelOnboardingSettingsSection = "models" | "providers";

@@ -1,5 +1,5 @@
 import { BrowserWindow, type WebContents } from "electron";
-import type { SessionRef } from "@pi-gui/session-driver";
+import type { SessionRef } from "@pi-garden/session-driver";
 import type {
   AppView,
   DesktopAppState,
@@ -156,7 +156,7 @@ export class WindowOwner {
   windowForSender(sender: WebContents): BrowserWindow {
     const window = BrowserWindow.fromWebContents(sender);
     if (!window || !this.windows.has(window) || !canPublishToWindow(window)) {
-      throw new Error("IPC sender is not an active pi-gui window");
+      throw new Error("IPC sender is not an active pi-garden window");
     }
     return window;
   }

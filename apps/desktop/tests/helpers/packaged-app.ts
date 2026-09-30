@@ -15,17 +15,17 @@ export async function resolvePackagedAppBundle(releaseDir = packagedReleaseDir):
   } catch (error) {
     if (isMissingPathError(error)) {
       throw new Error(
-        `Packaged release directory not found: ${releaseDir}. Run pnpm --filter @pi-gui/desktop run package:dir first.`,
+        `Packaged release directory not found: ${releaseDir}. Run pnpm --filter @pi-garden/desktop run package:dir first.`,
       );
     }
     throw error;
   }
 
   const appBundle =
-    appBundles.find((candidate) => basename(candidate) === "pi-gui.app") ?? appBundles[0];
+    appBundles.find((candidate) => basename(candidate) === "pi-garden.app") ?? appBundles[0];
   if (!appBundle) {
     throw new Error(
-      `No .app bundle found under ${releaseDir}. Run pnpm --filter @pi-gui/desktop run package:dir first.`,
+      `No .app bundle found under ${releaseDir}. Run pnpm --filter @pi-garden/desktop run package:dir first.`,
     );
   }
 
@@ -62,7 +62,7 @@ export async function resolvePackagedReleaseZip(releaseDir = packagedReleaseDir)
 
   if (!zipEntry) {
     throw new Error(
-      `No packaged macOS release zip found under ${releaseDir}. Run pnpm --filter @pi-gui/desktop run package first.`,
+      `No packaged macOS release zip found under ${releaseDir}. Run pnpm --filter @pi-garden/desktop run package first.`,
     );
   }
 
@@ -71,7 +71,7 @@ export async function resolvePackagedReleaseZip(releaseDir = packagedReleaseDir)
 
 export async function extractPackagedReleaseZipAppBundle(
   releaseDir = packagedReleaseDir,
-  appName = "pi-gui 2.app",
+  appName = "pi-garden 2.app",
 ): Promise<string> {
   const zipPath = await resolvePackagedReleaseZip(releaseDir);
   return extractAppBundleFromReleaseZip(zipPath, appName);
@@ -79,9 +79,9 @@ export async function extractPackagedReleaseZipAppBundle(
 
 export async function extractAppBundleFromReleaseZip(
   zipPath: string,
-  appName = "pi-gui 2.app",
+  appName = "pi-garden 2.app",
 ): Promise<string> {
-  const extractionDir = await mkdtemp(join(tmpdir(), "pi-gui-release-zip-"));
+  const extractionDir = await mkdtemp(join(tmpdir(), "pi-garden-release-zip-"));
   await execFileAsync("ditto", ["-x", "-k", zipPath, extractionDir]);
 
   const extractedAppBundle = await resolvePackagedAppBundle(extractionDir);

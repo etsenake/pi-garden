@@ -8,7 +8,7 @@ import {
   type ExtensionAPI,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { registerDesktopView } from "@pi-gui/extension-ui";
+import { registerDesktopView } from "@pi-garden/extension-ui";
 import { isActive, outcomeLabel, TestRuns, type Suite } from "./contract.ts";
 import { TestRunOwner } from "./run-owner.ts";
 
@@ -125,7 +125,7 @@ export default function testRunsExtension(pi: ExtensionAPI): void {
     frontend: new URL("./dist/desktop.js", import.meta.url),
     backend: () =>
       defineFacet({
-        id: "pi-gui.example.test-runs.backend",
+        id: "pi-garden.example.test-runs.backend",
         setup(env) {
           const state = env.replicatedState(owner.snapshot());
           env.own(owner.subscribe((next) => state.replace(BACKGROUND_CONTEXT, next)));

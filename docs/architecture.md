@@ -1,6 +1,6 @@
 # Architecture and ownership
 
-pi-gui keeps the desktop app, portable contracts, catalogs, and Pi adapter separate. Code is grouped by the component that owns behavior and mutable state. Folder placement alone is not an ownership boundary; types and repository guards enforce the important dependency rules.
+pi-garden keeps the desktop app, portable contracts, catalogs, and Pi adapter separate. Code is grouped by the component that owns behavior and mutable state. Folder placement alone is not an ownership boundary; types and repository guards enforce the important dependency rules.
 
 The review/capture and custom extension-view additions are **implemented and verified within the documented macOS scope** as of September 22, 2026. The [final verification report](workspace-redesign-verification.md) separates baseline checks, Core Electron, real-provider workflows, external local-package loading and local packaged-app proof from the older [workspace foundation evidence](workspace-redesign-plan.md). It does not claim Windows/Linux validation or a notarized/published release.
 
@@ -128,7 +128,7 @@ The root commands make that ownership explicit: `marketing:media` records the RE
 
 ## Proof
 
-Use [baseline checks](ci-baseline.md), [desktop lane commands](../apps/desktop/README.md), and the [verification skill](../.agents/skills/verify-pi-gui/SKILL.md). `check:architecture` enforces renderer, contract-authority, and host dependency rules. `test:guards` includes rejected fixtures for those boundaries and state-owner access.
+Use [baseline checks](ci-baseline.md), [desktop lane commands](../apps/desktop/README.md), and the [verification skill](../.agents/skills/verify-pi-garden/SKILL.md). `check:architecture` enforces renderer, contract-authority, and host dependency rules. `test:guards` includes rejected fixtures for those boundaries and state-owner access.
 
 Report evidence at its actual level: static/type checks, unit tests, fixture-backed Electron, deterministic runtime integration, real-provider conversation, native OS behavior, or packaged artifact. Desktop user flows are complete only after the affected surface runs in Electron. A settings smoke, skipped provider test, or passing package build does not prove conversation behavior.
 

@@ -2,7 +2,7 @@ import { defineFacet } from "@earendil-works/chord";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { registerDesktopView } from "@pi-gui/extension-ui";
+import { registerDesktopView } from "@pi-garden/extension-ui";
 import { PRReview, type ReviewRecord, type ReviewState } from "./contract";
 import { ReviewRepository } from "./repository";
 import {
@@ -221,7 +221,7 @@ export default function prReview(pi: ExtensionAPI) {
     frontend: new URL("./dist/desktop.js", import.meta.url),
     backend: () =>
       defineFacet({
-        id: "pi-gui.examples.pr-review.backend",
+        id: "pi-garden.examples.pr-review.backend",
         setup(env) {
           const state = env.replicatedState(snapshot);
           const listener = (next: ReviewState) => state.replace(BACKGROUND_CONTEXT, next);

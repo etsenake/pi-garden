@@ -100,7 +100,7 @@ async function createAgentSessionServicesWithNpmFallback(
     }
 
     console.warn(
-      `[pi-gui] Falling back to session resource loading without npm package sources for ${cwd}: ${
+      `[pi-garden] Falling back to session resource loading without npm package sources for ${cwd}: ${
         error instanceof Error ? error.message : String(error)
       }`,
     );

@@ -34,7 +34,7 @@ function defineService(id, options) {
 
 // examples/desktop-extensions/test-runs/contract.ts
 var OUTPUT_LIMIT = 32 * 1024;
-var TestRuns = defineService("pi-gui.example.test-runs.v1");
+var TestRuns = defineService("pi-garden.example.test-runs.v1");
 function isActive(run) {
   return run.outcome.kind === "running" || run.outcome.kind === "cancelling";
 }

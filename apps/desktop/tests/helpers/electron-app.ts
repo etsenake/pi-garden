@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { expect, type Page } from "@playwright/test";
 import { _electron as electron, type ElectronApplication } from "playwright";
-import type { SessionDriverEvent, SessionRef } from "@pi-gui/session-driver";
+import type { SessionDriverEvent, SessionRef } from "@pi-garden/session-driver";
 import type { PiDesktopApi } from "../../contracts/ipc";
 import type {
   DesktopAppState,
@@ -519,7 +519,7 @@ function isMissingPathError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
-export async function makeUserDataDir(prefix = "pi-gui-user-data-"): Promise<string> {
+export async function makeUserDataDir(prefix = "pi-garden-user-data-"): Promise<string> {
   return mkdtemp(join(tmpdir(), prefix));
 }
 
@@ -750,7 +750,7 @@ export async function seedExternalLinkSessionFixture(
     sessionManager.appendMessage({
       role: "assistant",
       content:
-        "Track this in [GitHub issue](https://github.com/minghinmatthewlam/pi-gui/issues/20). Ignore [email fallback](mailto:test@example.com).",
+        "Track this in [GitHub issue](https://github.com/etsenake/pi-garden/issues/20). Ignore [email fallback](mailto:test@example.com).",
       timestamp: nextTimestamp(),
     });
     sessionManager.appendSessionInfo("External link fixture session");
@@ -989,7 +989,7 @@ async function withAgentDirEnv<T>(agentDir: string, action: () => Promise<T>): P
 }
 
 export async function makeWorkspace(name: string): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-workspace-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-workspace-"));
   const workspacePath = join(root, name);
   await mkdir(workspacePath, { recursive: true });
   await writeFile(join(workspacePath, "README.md"), `# ${name}\n`, "utf8");
@@ -1018,7 +1018,7 @@ export async function writeProjectExtension(
 export async function initGitRepo(workspacePath: string): Promise<void> {
   await execFileAsync("git", ["init", "-b", "main"], { cwd: workspacePath });
   await execFileAsync("git", ["config", "user.name", "Pi App Tests"], { cwd: workspacePath });
-  await execFileAsync("git", ["config", "user.email", "pi-gui-tests@example.com"], {
+  await execFileAsync("git", ["config", "user.email", "pi-garden-tests@example.com"], {
     cwd: workspacePath,
   });
 }

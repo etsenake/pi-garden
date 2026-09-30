@@ -1,6 +1,6 @@
-import type { HostUiResponse } from "@pi-gui/session-driver";
-import type { NavigateSessionTreeOptions } from "@pi-gui/session-driver/types";
-import type { RuntimeSettingsSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type { HostUiResponse } from "@pi-garden/session-driver";
+import type { NavigateSessionTreeOptions } from "@pi-garden/session-driver/types";
+import type { RuntimeSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import {
   isThemeMode,
   isThemePresetId,

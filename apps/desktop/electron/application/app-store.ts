@@ -1,6 +1,6 @@
-import { JsonCatalogStore } from "@pi-gui/catalogs/node";
-import { sessionKey } from "@pi-gui/session-driver";
-import type { SessionSchemaInfo } from "@pi-gui/session-driver";
+import { JsonCatalogStore } from "@pi-garden/catalogs/node";
+import { sessionKey } from "@pi-garden/session-driver";
+import type { SessionSchemaInfo } from "@pi-garden/session-driver";
 import type { BrowserWindow } from "electron";
 import { readFile, stat } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
@@ -12,13 +12,13 @@ import {
   PiSdkDriver,
   type PiSdkDriverConfig,
   SessionLeasedError,
-} from "@pi-gui/pi-sdk-driver";
-import type { SessionCatalogEntry } from "@pi-gui/catalogs";
+} from "@pi-garden/pi-sdk-driver";
+import type { SessionCatalogEntry } from "@pi-garden/catalogs";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
   SessionTreeSnapshot,
-} from "@pi-gui/session-driver/types";
+} from "@pi-garden/session-driver/types";
 import type {
   CreateSessionOptions,
   HostUiResponse,
@@ -29,14 +29,14 @@ import type {
   SessionRef,
   SessionSnapshot,
   WorkspaceRef,
-} from "@pi-gui/session-driver";
+} from "@pi-garden/session-driver";
 import type {
   ModelSettingsSnapshot,
   RuntimeCommandRecord,
   RuntimeLoginCallbacks,
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
-} from "@pi-gui/session-driver/runtime-types";
+} from "@pi-garden/session-driver/runtime-types";
 import {
   type AppView,
   type ComposerAttachment,
@@ -259,7 +259,7 @@ export class DesktopAppStore {
   private readonly workspaceOwner: WorkspaceOwner;
   private readonly orchestrationOwner: OrchestrationOwner;
   private readonly scheduledTaskOwner: ScheduledTaskOwner;
-  /** App-wide: built-in pi-gui extensions the user switched off in Settings. */
+  /** App-wide: built-in pi-garden extensions the user switched off in Settings. */
   private readonly disabledBuiltinExtensions = new Set<string>();
 
   constructor(options: DesktopAppStoreOptions) {
@@ -1683,7 +1683,7 @@ export class DesktopAppStore {
     );
   }
 
-  /** pi-gui owns built-in extensions, so their switch is app-wide rather than in pi's settings. */
+  /** pi-garden owns built-in extensions, so their switch is app-wide rather than in pi's settings. */
   private async setBuiltinExtensionEnabled(
     workspaceId: string,
     name: string,
@@ -1721,13 +1721,13 @@ export class DesktopAppStore {
       await this.refreshSessionCommandsForAllWorkspaces();
       const failed = reloads.filter((result) => result.status === "rejected");
       for (const result of failed) {
-        console.error("[app-store] reload after pi-gui tool switch failed", result.reason);
+        console.error("[app-store] reload after pi-garden tool switch failed", result.reason);
       }
       const state = await this.refreshState({ clearLastError: true });
       return failed.length === 0
         ? state
         : this.withError(
-            "Some open threads could not reload; they pick up the pi-gui tools change when reopened.",
+            "Some open threads could not reload; they pick up the pi-garden tools change when reopened.",
           );
     });
   }
@@ -1794,7 +1794,7 @@ export class DesktopAppStore {
         return;
       }
       console.warn(
-        `[pi-gui] Failed to refresh runtime for ${workspace?.path ?? "unknown workspace"} after custom provider update: ${
+        `[pi-garden] Failed to refresh runtime for ${workspace?.path ?? "unknown workspace"} after custom provider update: ${
           result.reason instanceof Error ? result.reason.message : String(result.reason)
         }`,
       );
@@ -1813,7 +1813,7 @@ export class DesktopAppStore {
       }
       const workspace = this.state.workspaces[index];
       console.warn(
-        `[pi-gui] Failed to refresh session commands for ${workspace?.path ?? "unknown workspace"} after custom provider update: ${
+        `[pi-garden] Failed to refresh session commands for ${workspace?.path ?? "unknown workspace"} after custom provider update: ${
           result.reason instanceof Error ? result.reason.message : String(result.reason)
         }`,
       );
@@ -2230,7 +2230,7 @@ export class DesktopAppStore {
         }
         const failedWorkspace = secondaryWorkspacesToLoad[index];
         console.warn(
-          `[pi-gui] Failed to preload runtime for ${failedWorkspace?.path ?? "unknown workspace"}: ${
+          `[pi-garden] Failed to preload runtime for ${failedWorkspace?.path ?? "unknown workspace"}: ${
             result.reason instanceof Error ? result.reason.message : String(result.reason)
           }`,
         );
@@ -2915,7 +2915,7 @@ export class DesktopAppStore {
           commandName: pending.command.name,
           extensionPath: pending.command.sourceInfo.path,
           status: "supported",
-          message: "Observed working in pi-gui.",
+          message: "Observed working in pi-garden.",
           capability: "gui-safe",
           updatedAt: timestamp,
         },
@@ -2960,7 +2960,7 @@ export class DesktopAppStore {
     const key = sessionKey(sessionRef);
     const pending = this.pendingRuntimeCommandsBySession.get(key);
     if (pending) {
-      const message = `/${pending.command.name} requires terminal-only ${formatCapabilityLabel(issue.capability)} and is not supported in pi-gui yet. Use pi in the terminal for this command.`;
+      const message = `/${pending.command.name} requires terminal-only ${formatCapabilityLabel(issue.capability)} and is not supported in pi-garden yet. Use pi in the terminal for this command.`;
       pending.blockedMessage = message;
       recordLearnedCommandCompatibility(
         this.extensionCommandCompatibilityByWorkspace,

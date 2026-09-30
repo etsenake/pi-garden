@@ -1,4 +1,4 @@
-# pi-gui verification map
+# pi-garden verification map
 
 Choose proof by product importance and affected behavior. Core conversation coverage comes first; opening peripheral screens is not sufficient proof of this app.
 
@@ -82,4 +82,4 @@ were not part of this proof.
 - `run-Y5MlNp`: anthropic configuration reached Send but displayed No API key for provider; no response proof.
 - `run-zH4Jq1`: earlier secondary visible settings/navigation smoke passed.
 
-Evidence directories are under `.artifacts/verify-pi-gui/`. These are point-in-time observations of the checkout used; re-run after moving the skill to another branch.
+Evidence directories are under `.artifacts/verify-pi-garden/`. These are point-in-time observations of the checkout used; re-run after moving the skill to another branch.

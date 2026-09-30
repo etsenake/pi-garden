@@ -90,7 +90,7 @@ test("fails fast for unsupported handoff-like commands and learns terminal-only 
     await composer.press("Enter");
 
     await expect(composerError).toContainText(
-      "/handoff-gui-test requires terminal-only custom UI and is not supported in pi-gui yet.",
+      "/handoff-gui-test requires terminal-only custom UI and is not supported in pi-garden yet.",
     );
     await expect(window.getByTestId("extension-dialog")).toHaveCount(0);
     await expect(window.locator(".timeline")).not.toContainText(
@@ -112,7 +112,7 @@ test("fails fast for unsupported handoff-like commands and learns terminal-only 
     await composer.fill("/handoff-gui-test local block");
     await composer.press("Enter");
     await expect(composerError).toContainText(
-      "/handoff-gui-test requires terminal-only custom UI and is not supported in pi-gui yet.",
+      "/handoff-gui-test requires terminal-only custom UI and is not supported in pi-garden yet.",
     );
     await expect
       .poll(async () => (await getSelectedTranscript(window))?.transcript.length ?? 0)
@@ -176,7 +176,7 @@ test("persists learned terminal-only command compatibility across relaunch", asy
     await composer.fill("/handoff-gui-test persist this");
     await composer.press("Enter");
     await expect(firstWindow.getByTestId("composer-error-banner")).toContainText(
-      "/handoff-gui-test requires terminal-only custom UI and is not supported in pi-gui yet.",
+      "/handoff-gui-test requires terminal-only custom UI and is not supported in pi-garden yet.",
     );
   } finally {
     await firstHarness.close();

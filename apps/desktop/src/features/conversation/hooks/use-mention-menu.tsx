@@ -7,7 +7,10 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
-import type { RuntimeExtensionRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type {
+  RuntimeExtensionRecord,
+  RuntimeSnapshot,
+} from "@pi-garden/session-driver/runtime-types";
 import { extensionSourceSummary } from "../../extensions/extension-display";
 import type { PiDesktopApi } from "../../../../contracts/ipc";
 import { nextMenuIndex } from "./use-slash-menu";

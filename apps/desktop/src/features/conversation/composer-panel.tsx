@@ -6,8 +6,8 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import type { SessionUsageSnapshot } from "@pi-gui/session-driver";
-import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type { SessionUsageSnapshot } from "@pi-garden/session-driver";
+import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type {
   ComposerAttachment,
   QueuedComposerMessage,

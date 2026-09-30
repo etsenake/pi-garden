@@ -23,7 +23,7 @@ import type {
   WorktreeCatalogSnapshot,
   WorktreeId,
 } from "../index.js";
-import { sessionKey } from "@pi-gui/session-driver";
+import { sessionKey } from "@pi-garden/session-driver";
 
 interface CatalogFileCoordinator {
   mutationQueue: Promise<void>;
@@ -315,7 +315,7 @@ function coordinatorForPath(filePath: string): CatalogFileCoordinator {
 }
 
 function defaultCatalogFilePath(): string {
-  return join(homedir(), ".pi-gui", "catalogs.json");
+  return join(homedir(), ".pi-garden", "catalogs.json");
 }
 
 function compareWorkspaceEntries(

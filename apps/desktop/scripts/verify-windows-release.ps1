@@ -61,8 +61,8 @@ function Invoke-SevenZip([string]$SevenZip, [string[]]$Arguments) {
   }
 }
 
-$setup = Join-Path $ReleaseDir "pi-gui-$Version-x64-setup.exe"
-$portable = Join-Path $ReleaseDir "pi-gui-$Version-x64-portable.exe"
+$setup = Join-Path $ReleaseDir "pi-garden-$Version-x64-setup.exe"
+$portable = Join-Path $ReleaseDir "pi-garden-$Version-x64-portable.exe"
 Assert-ArtifactFile $setup
 Assert-ArtifactFile $portable
 
@@ -73,7 +73,7 @@ if ($PackagedApp) {
 
 if ($SmokePackages) {
   $sevenZip = Get-SevenZip
-  $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "pi-gui-release-$([guid]::NewGuid())"
+  $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "pi-garden-release-$([guid]::NewGuid())"
   $installRoot = Join-Path $temporaryRoot "installed"
   $portableRoot = Join-Path $temporaryRoot "portable"
   New-Item -ItemType Directory -Path $installRoot, $portableRoot | Out-Null
@@ -91,14 +91,14 @@ if ($SmokePackages) {
       throw "NSIS silent install failed with exit code $($installer.ExitCode)"
     }
 
-    $installedApp = Join-Path $installRoot "pi-gui.exe"
+    $installedApp = Join-Path $installRoot "pi-garden.exe"
     Assert-ArtifactFile $installedApp
     Assert-X64Pe $installedApp
 
     Invoke-SevenZip $sevenZip @("x", "-y", "-o$portableRoot", $portable)
     $portableAppFile = Get-ChildItem `
       -LiteralPath $portableRoot `
-      -Filter "pi-gui.exe" `
+      -Filter "pi-garden.exe" `
       -File `
       -Recurse | Select-Object -First 1
     if (-not $portableAppFile) {
@@ -108,19 +108,19 @@ if ($SmokePackages) {
         -File `
         -Recurse | Select-Object -First 1
       if (-not $embeddedArchive) {
-        throw "Portable package did not contain pi-gui.exe or an embedded application archive"
+        throw "Portable package did not contain pi-garden.exe or an embedded application archive"
       }
       $embeddedRoot = Join-Path $portableRoot "embedded"
       New-Item -ItemType Directory -Path $embeddedRoot | Out-Null
       Invoke-SevenZip $sevenZip @("x", "-y", "-o$embeddedRoot", $embeddedArchive.FullName)
       $portableAppFile = Get-ChildItem `
         -LiteralPath $embeddedRoot `
-        -Filter "pi-gui.exe" `
+        -Filter "pi-garden.exe" `
         -File `
         -Recurse | Select-Object -First 1
     }
     if (-not $portableAppFile) {
-      throw "Portable application archive did not contain pi-gui.exe"
+      throw "Portable application archive did not contain pi-garden.exe"
     }
     $portableApp = $portableAppFile.FullName
     Assert-ArtifactFile $portableApp

@@ -26,8 +26,8 @@ async function git(cwd: string, args: readonly string[]): Promise<string> {
 }
 
 async function fixture() {
-  const checkoutPath = await mkdtemp(join(tmpdir(), "pi-gui-review-owner-repo-"));
-  const userDataDir = await mkdtemp(join(tmpdir(), "pi-gui-review-owner-data-"));
+  const checkoutPath = await mkdtemp(join(tmpdir(), "pi-garden-review-owner-repo-"));
+  const userDataDir = await mkdtemp(join(tmpdir(), "pi-garden-review-owner-data-"));
   await git(checkoutPath, ["init", "-b", "trunk"]);
   await git(checkoutPath, ["config", "user.name", "Review Test"]);
   await git(checkoutPath, ["config", "user.email", "review@example.invalid"]);
@@ -176,7 +176,7 @@ test("expired, removed-task and remapped-checkout comparisons never target the c
     owner.getReviewFile({ reviewId: review.reviewId, fileId: file.id }),
   ).resolves.toMatchObject({ state: "unavailable", code: "task-unavailable" });
   valid = true;
-  path = await mkdtemp(join(tmpdir(), "pi-gui-review-other-checkout-"));
+  path = await mkdtemp(join(tmpdir(), "pi-garden-review-other-checkout-"));
   await expect(
     owner.changeReviewFileStage({ reviewId: review.reviewId, fileId: file.id, action: "stage" }),
   ).resolves.toMatchObject({ state: "stale", code: "checkout-changed" });
@@ -272,7 +272,7 @@ test("missing captured history is unavailable and a supplied checkpoint stays ex
 });
 
 test("review metadata serializes concurrent acknowledgements and preserves invalid bytes", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "pi-gui-reviewed-store-"));
+  const dir = await mkdtemp(join(tmpdir(), "pi-garden-reviewed-store-"));
   const store = new ReviewedStore(dir);
   const first = "a".repeat(64);
   const second = "b".repeat(64);
@@ -281,7 +281,7 @@ test("review metadata serializes concurrent acknowledgements and preserves inval
   await store.set(first, false);
   expect(await new ReviewedStore(dir).snapshot()).toEqual(new Set([second]));
 
-  const invalidDir = await mkdtemp(join(tmpdir(), "pi-gui-reviewed-invalid-"));
+  const invalidDir = await mkdtemp(join(tmpdir(), "pi-garden-reviewed-invalid-"));
   const path = join(invalidDir, "reviewed-files.json");
   const original = '{"version":99,"marks":[],"future":"retain"}\n';
   await writeFile(path, original);
@@ -298,7 +298,7 @@ test("review metadata serializes concurrent acknowledgements and preserves inval
 });
 
 test("reviewed marks are bounded and forget the oldest acknowledgements first", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "pi-gui-reviewed-bounded-"));
+  const dir = await mkdtemp(join(tmpdir(), "pi-garden-reviewed-bounded-"));
   const store = new ReviewedStore(dir, { maxMarks: 3 });
   const marks = ["a", "b", "c", "d"].map((letter) => letter.repeat(64));
   for (const mark of marks) await store.set(mark, true);

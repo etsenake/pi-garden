@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
-import { writeJsonFileAtomic } from "@pi-gui/catalogs/node/atomic-write";
+import { writeJsonFileAtomic } from "@pi-garden/catalogs/node/atomic-write";
 import {
   BUILT_IN_PROVIDER_IDS,
   CUSTOM_PROVIDER_ID_PATTERN,
   CUSTOM_PROVIDER_PLACEHOLDER_API_KEY,
   isValidHttpBaseUrl,
   OPENAI_COMPLETIONS_API,
-  PI_GUI_CUSTOM_PROVIDER_MARKER,
+  PI_GARDEN_CUSTOM_PROVIDER_MARKER,
   type CustomProviderEntry,
   type CustomProviderInput,
   type CustomProviderModelInput,
@@ -23,7 +23,7 @@ export {
   CUSTOM_PROVIDER_PLACEHOLDER_API_KEY,
   isValidHttpBaseUrl,
   OPENAI_COMPLETIONS_API,
-  PI_GUI_CUSTOM_PROVIDER_MARKER,
+  PI_GARDEN_CUSTOM_PROVIDER_MARKER,
 } from "./custom-provider-types.js";
 
 interface ModelsJson extends Record<string, unknown> {
@@ -50,10 +50,10 @@ export class CustomProviderStore {
       const existing = providers[input.providerId];
       if (
         Object.hasOwn(providers, input.providerId) &&
-        (!isRecord(existing) || !isPiGuiCustomProviderConfig(input.providerId, existing))
+        (!isRecord(existing) || !isPiGardenCustomProviderConfig(input.providerId, existing))
       ) {
         throw new Error(
-          `Provider ID "${input.providerId}" already exists in models.json and is not managed by pi-gui.`,
+          `Provider ID "${input.providerId}" already exists in models.json and is not managed by pi-garden.`,
         );
       }
       providers[input.providerId] = toProviderConfig(input);
@@ -69,7 +69,7 @@ export class CustomProviderStore {
         return false;
       }
       const existing = providers[providerId];
-      if (!isRecord(existing) || !isPiGuiCustomProviderConfig(providerId, existing)) {
+      if (!isRecord(existing) || !isPiGardenCustomProviderConfig(providerId, existing)) {
         return false;
       }
       delete providers[providerId];
@@ -115,7 +115,7 @@ function toProviderConfig(input: CustomProviderInput): Record<string, unknown> {
     baseUrl: input.baseUrl,
     api: OPENAI_COMPLETIONS_API,
     apiKey: trimmedKey ? trimmedKey : CUSTOM_PROVIDER_PLACEHOLDER_API_KEY,
-    [PI_GUI_CUSTOM_PROVIDER_MARKER]: true,
+    [PI_GARDEN_CUSTOM_PROVIDER_MARKER]: true,
     models: input.models.map((model) => {
       const entry: Record<string, unknown> = { id: model.id };
       if (model.contextWindow !== undefined) {
@@ -137,7 +137,7 @@ function readCustomProviders(data: ModelsJson): readonly CustomProviderEntry[] {
       continue;
     }
     const config = rawConfig;
-    if (!isPiGuiCustomProviderConfig(providerId, config)) {
+    if (!isPiGardenCustomProviderConfig(providerId, config)) {
       continue;
     }
     const baseUrl = typeof config.baseUrl === "string" ? config.baseUrl : undefined;
@@ -175,8 +175,11 @@ function readCustomProviders(data: ModelsJson): readonly CustomProviderEntry[] {
   return entries;
 }
 
-function isPiGuiCustomProviderConfig(providerId: string, config: Record<string, unknown>): boolean {
-  if (config[PI_GUI_CUSTOM_PROVIDER_MARKER] === true) {
+function isPiGardenCustomProviderConfig(
+  providerId: string,
+  config: Record<string, unknown>,
+): boolean {
+  if (config[PI_GARDEN_CUSTOM_PROVIDER_MARKER] === true) {
     return true;
   }
   if (BUILT_IN_PROVIDER_IDS.has(providerId)) {

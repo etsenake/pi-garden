@@ -252,7 +252,7 @@ export function DiffPanel({
   useEffect(() => {
     if (!loading && busyFiles.size === 0 && quietPending.current) refreshQuietly();
   }, [busyFiles, loading, refreshQuietly]);
-  // The repository may have changed in another editor or terminal while pi-gui was in the
+  // The repository may have changed in another editor or terminal while pi-garden was in the
   // background. The integrated terminal shares this side panel, so returning to Review reloads it.
   const refreshOnFocus = isWorkingReviewScope(requestedScope) || requestedScope.kind === "branch";
   useEffect(() => {
@@ -753,7 +753,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const TREE_VISIBLE_KEY = "pi-gui.review-tree-visible";
+const TREE_VISIBLE_KEY = "pi-garden.review-tree-visible";
 
 /** Whether the changed-file tree shows beside the diff; a window preference like pane widths. */
 function useReviewTreeVisible() {

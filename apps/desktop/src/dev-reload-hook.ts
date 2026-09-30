@@ -1,6 +1,6 @@
-import { CATALOGS_DEV_RELOAD_MARKER } from "@pi-gui/catalogs/dev-reload-probe";
-import { PI_SDK_DRIVER_DEV_RELOAD_MARKER } from "@pi-gui/pi-sdk-driver/dev-reload-probe";
-import { SESSION_DRIVER_DEV_RELOAD_MARKER } from "@pi-gui/session-driver/dev-reload-probe";
+import { CATALOGS_DEV_RELOAD_MARKER } from "@pi-garden/catalogs/dev-reload-probe";
+import { PI_SDK_DRIVER_DEV_RELOAD_MARKER } from "@pi-garden/pi-sdk-driver/dev-reload-probe";
+import { SESSION_DRIVER_DEV_RELOAD_MARKER } from "@pi-garden/session-driver/dev-reload-probe";
 import { RENDERER_DEV_RELOAD_MARKER } from "./dev-reload-probe";
 
 declare global {

@@ -2,7 +2,7 @@ import type {
   ModelSettingsSnapshot,
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
-} from "@pi-gui/session-driver/runtime-types";
+} from "@pi-garden/session-driver/runtime-types";
 import type { DesktopAppState, WorkspaceRecord } from "../../../contracts/desktop-state";
 import { resolveRepoWorkspaceId } from "../../../contracts/workspace-roots";
 

@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, test } from "@playwright/test";
-import type { CatalogStorage, WorktreeCatalogEntry } from "@pi-gui/catalogs";
-import type { WorkspaceRef } from "@pi-gui/session-driver";
+import type { CatalogStorage, WorktreeCatalogEntry } from "@pi-garden/catalogs";
+import type { WorkspaceRef } from "@pi-garden/session-driver";
 import { appWorktreeRootMatcher } from "../../electron/platform/worktrees/app-worktree-roots";
 import { GitWorktreeManager } from "../../electron/platform/worktrees/worktree-manager";
 
@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
  * Direct unit coverage for the destructive worktree lifecycle logic — the
  * transactional-create rollback, the branch cleanup on removal, and the startup
  * GC prune. Runs in Node (no Electron surface); every git command targets a
- * throwaway repo, never pi-gui itself.
+ * throwaway repo, never pi-garden itself.
  */
 
 class FakeCatalog {
@@ -289,7 +289,7 @@ test("folders list only the app worktrees they own and never remove the user's o
     const unopened = join(root, "elsewhere", "unopened");
     await git(repo, "worktree", "add", "-b", "feature/unopened", unopened, "HEAD");
     await expect(manager.removeWorktree(main, unopened)).rejects.toThrow(
-      "Only worktrees created by pi-gui can be removed here.",
+      "Only worktrees created by pi-garden can be removed here.",
     );
     expect(await pathExists(unopened)).toBe(true);
     await manager.removeWorktree(mine, created.worktreeId);
@@ -310,7 +310,7 @@ test("a user's checkout inside the app worktree folder still cannot be removed",
     await git(repo, "worktree", "add", "-b", "feature/manual", manual, "HEAD");
 
     await expect(manager.removeWorktree(main, manual)).rejects.toThrow(
-      "Only worktrees created by pi-gui can be removed here.",
+      "Only worktrees created by pi-garden can be removed here.",
     );
     expect(await pathExists(manual)).toBe(true);
   } finally {

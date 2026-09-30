@@ -22,20 +22,20 @@ function updateManifestName(platform) {
 
 function primaryUpdateAsset(platform) {
   if (platform === "macos") {
-    return `pi-gui-${VERSION}-arm64.zip`;
+    return `pi-garden-${VERSION}-arm64.zip`;
   }
   if (platform === "linux") {
-    return `pi-gui-${VERSION}-x86_64.AppImage`;
+    return `pi-garden-${VERSION}-x86_64.AppImage`;
   }
-  return `pi-gui-${VERSION}-x64-setup.exe`;
+  return `pi-garden-${VERSION}-x64-setup.exe`;
 }
 
 function updateAssets(platform) {
   if (platform === "macos") {
-    return [`pi-gui-${VERSION}-arm64.zip`, `pi-gui-${VERSION}-arm64.dmg`];
+    return [`pi-garden-${VERSION}-arm64.zip`, `pi-garden-${VERSION}-arm64.dmg`];
   }
   if (platform === "linux") {
-    return [`pi-gui-${VERSION}-x86_64.AppImage`, `pi-gui_${VERSION}_amd64.deb`];
+    return [`pi-garden-${VERSION}-x86_64.AppImage`, `pi-garden_${VERSION}_amd64.deb`];
   }
   return [primaryUpdateAsset(platform)];
 }
@@ -85,7 +85,7 @@ async function stageFixture(root, platform, override) {
 }
 
 test("stages immutable platform manifests and verifies the combined candidate", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-artifacts-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-artifacts-"));
   const combined = path.join(root, "combined");
   await mkdir(combined);
 
@@ -107,10 +107,10 @@ test("stages immutable platform manifests and verifies the combined candidate", 
 });
 
 test("rejects bytes changed after the platform manifest was written", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-tamper-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-tamper-"));
   const staged = await stageFixture(root, "windows");
   await writeFile(
-    path.join(staged, `pi-gui-${VERSION}-x64-setup.exe`),
+    path.join(staged, `pi-garden-${VERSION}-x64-setup.exe`),
     "changed after staging\n",
     "utf8",
   );
@@ -127,9 +127,9 @@ test("rejects bytes changed after the platform manifest was written", async () =
 });
 
 test("requires the Debian package when staging Linux artifacts", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-linux-missing-deb-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-linux-missing-deb-"));
   const source = await createFixture(root, "linux");
-  await unlink(path.join(source, `pi-gui_${VERSION}_amd64.deb`));
+  await unlink(path.join(source, `pi-garden_${VERSION}_amd64.deb`));
 
   await assert.rejects(
     stageArtifacts({
@@ -144,7 +144,7 @@ test("requires the Debian package when staging Linux artifacts", async () => {
 });
 
 test("requires latest-linux.yml to checksum the Debian package", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-linux-manifest-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-linux-manifest-"));
   const source = await createFixture(root, "linux");
   const manifestPath = path.join(source, "latest-linux.yml");
   const manifest = parse(await readFile(manifestPath, "utf8"));
@@ -164,10 +164,10 @@ test("requires latest-linux.yml to checksum the Debian package", async () => {
 });
 
 test("rejects Debian package bytes changed after Linux staging", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-linux-tamper-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-linux-tamper-"));
   const staged = await stageFixture(root, "linux");
   await writeFile(
-    path.join(staged, `pi-gui_${VERSION}_amd64.deb`),
+    path.join(staged, `pi-garden_${VERSION}_amd64.deb`),
     "changed after staging\n",
     "utf8",
   );
@@ -184,8 +184,8 @@ test("rejects Debian package bytes changed after Linux staging", async () => {
 });
 
 test("rejects latest.yml when it selects the portable executable", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-portable-"));
-  const portable = `pi-gui-${VERSION}-x64-portable.exe`;
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-portable-"));
+  const portable = `pi-garden-${VERSION}-x64-portable.exe`;
   const source = await createFixture(root, "windows");
   const manifestPath = path.join(source, "latest.yml");
   const parsed = parse(await readFile(manifestPath, "utf8"));
@@ -208,7 +208,7 @@ test("rejects latest.yml when it selects the portable executable", async () => {
 });
 
 test("rejects undeclared files in the combined release candidate", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-extra-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-extra-"));
   const combined = path.join(root, "combined");
   await mkdir(combined);
   for (const platform of ["macos", "linux", "windows"]) {
@@ -228,7 +228,7 @@ test("rejects undeclared files in the combined release candidate", async () => {
 });
 
 test("refreshes macOS metadata and blockmap from final DMG bytes", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "pi-gui-release-final-dmg-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "pi-garden-release-final-dmg-"));
   const source = await createFixture(root, "macos");
   const manifestPath = path.join(source, "latest-mac.yml");
   const manifest = parse(await readFile(manifestPath, "utf8"));

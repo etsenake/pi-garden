@@ -1,4 +1,4 @@
-import { parseDesktopHostAction } from "@pi-gui/extension-ui/browser";
+import { parseDesktopHostAction } from "@pi-garden/extension-ui/browser";
 import { desktopIpc } from "../../contracts/ipc";
 import type { DesktopExtensionViewOwner } from "../extensions/extension-view-owner";
 import type { WindowOwner } from "../windows/window-owner";

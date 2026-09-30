@@ -1,8 +1,8 @@
 import type { Facet } from "@earendil-works/chord";
 
-export const DESKTOP_VIEW_REGISTER = "pi-gui:desktop-view:register";
-export const DESKTOP_VIEW_DISCOVER = "pi-gui:desktop-view:discover";
-export const DESKTOP_VIEW_UNREGISTER = "pi-gui:desktop-view:unregister";
+export const DESKTOP_VIEW_REGISTER = "pi-garden:desktop-view:register";
+export const DESKTOP_VIEW_DISCOVER = "pi-garden:desktop-view:discover";
+export const DESKTOP_VIEW_UNREGISTER = "pi-garden:desktop-view:unregister";
 
 /** Trusted, in-process declaration. Never serialize a backend factory to a browser. */
 export interface DesktopViewDeclaration {

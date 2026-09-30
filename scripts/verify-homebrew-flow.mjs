@@ -54,7 +54,7 @@ async function packageDmg(version, outputDir) {
     },
   );
 
-  return path.join(outputDir, `pi-gui-${version}-arm64.dmg`);
+  return path.join(outputDir, `pi-garden-${version}-arm64.dmg`);
 }
 
 async function plistVersion(appPath) {
@@ -138,16 +138,16 @@ async function main() {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
-      "cask-token": { type: "string", default: `pi-gui-homebrew-proof-${process.pid}` },
+      "cask-token": { type: "string", default: `pi-garden-homebrew-proof-${process.pid}` },
       "keep-temp": { type: "boolean", default: false },
-      "tap-name": { type: "string", default: `codex/pi-gui-proof-${process.pid}` },
+      "tap-name": { type: "string", default: `codex/pi-garden-proof-${process.pid}` },
       "version-a": { type: "string", default: "0.1.0-beta.9000" },
       "version-b": { type: "string", default: "0.1.0-beta.9001" },
     },
     strict: true,
   });
 
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "pi-gui-homebrew-proof-"));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "pi-garden-homebrew-proof-"));
   const appDir = path.join(tempRoot, "Applications");
   const cacheDir = path.join(tempRoot, "cache");
   const releaseDirA = path.join(tempRoot, "release-a");
@@ -161,15 +161,15 @@ async function main() {
   };
   const qualifiedToken = `${values["tap-name"]}/${values["cask-token"]}`;
   const caskPath = resolveCaskPath(tapDir, values["cask-token"]);
-  const appBundlePath = path.join(appDir, "pi-gui.app");
-  const executablePath = path.join(appBundlePath, "Contents", "MacOS", "pi-gui");
+  const appBundlePath = path.join(appDir, "pi-garden.app");
+  const executablePath = path.join(appBundlePath, "Contents", "MacOS", "pi-garden");
 
   await mkdir(appDir, { recursive: true });
   await mkdir(cacheDir, { recursive: true });
   await mkdir(path.join(tapDir, "Casks"), { recursive: true });
 
   try {
-    await run("pnpm", ["--filter", "@pi-gui/desktop", "run", "build"]);
+    await run("pnpm", ["--filter", "@pi-garden/desktop", "run", "build"]);
 
     const dmgA = await packageDmg(values["version-a"], releaseDirA);
     const dmgB = await packageDmg(values["version-b"], releaseDirB);

@@ -1,11 +1,11 @@
-import type { HostUiRequest, SessionConfig, SessionUsageSnapshot } from "@pi-gui/session-driver";
+import type { HostUiRequest, SessionConfig, SessionUsageSnapshot } from "@pi-garden/session-driver";
 import type {
   ModelSettingsSnapshot,
   RuntimeCommandRecord,
   RuntimeSnapshot,
-} from "@pi-gui/session-driver/runtime-types";
-import type { SessionSchemaInfo } from "@pi-gui/session-driver";
-export type { SessionSchemaInfo } from "@pi-gui/session-driver";
+} from "@pi-garden/session-driver/runtime-types";
+import type { SessionSchemaInfo } from "@pi-garden/session-driver";
+export type { SessionSchemaInfo } from "@pi-garden/session-driver";
 export type SessionStatus = "idle" | "running" | "failed";
 export type { SessionRole, TimelineToolCall, TranscriptMessage } from "./timeline-types";
 import type { TranscriptMessage } from "./timeline-types";

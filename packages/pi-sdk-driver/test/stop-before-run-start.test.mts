@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { createAssistantMessageEventStream, type AssistantMessage } from "@earendil-works/pi-ai";
 import type { AgentSessionRuntime } from "@earendil-works/pi-coding-agent";
-import type { SessionDriverEvent } from "@pi-gui/session-driver";
+import type { SessionDriverEvent } from "@pi-garden/session-driver";
 import { PiSdkDriver } from "../dist/pi-sdk-driver.js";
 import { createAgentSessionRuntimeWithNpmFallback } from "../dist/npm-package-fallback.js";
 
@@ -45,7 +45,7 @@ const streamFunction: StreamFunction = (model, _context, options) => {
 };
 
 await test("Stop pressed while Pi is still starting a run cancels that run", async (t) => {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-stop-start-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-stop-start-"));
   const agentDir = join(root, "agent");
   const cwd = join(root, "workspace");
   await mkdir(agentDir);

@@ -8,7 +8,7 @@ import {
 } from "./github-download-retry.mjs";
 
 const windowsWinCodeSign504 = [
-  "  • updating asar integrity executable resource  executablePath=release\\win-unpacked\\pi-gui.exe",
+  "  • updating asar integrity executable resource  executablePath=release\\win-unpacked\\pi-garden.exe",
   "  ⨯ cannot resolve https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z: status code 504",
   "  ⨯ app-builder.exe process failed ERR_ELECTRON_BUILDER_CANNOT_EXECUTE",
 ].join("\n");

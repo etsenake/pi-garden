@@ -47,7 +47,7 @@ await test(
     t.after(() => assert.equal(network.mock.callCount(), 0));
     const extensionPath = join(extensionDirectory, "index.ts");
     const factoryLog = join(root, "factory.log");
-    const helperPath = fileURLToPath(import.meta.resolve("@pi-gui/extension-ui"));
+    const helperPath = fileURLToPath(import.meta.resolve("@pi-garden/extension-ui"));
     await writeFile(
       extensionPath,
       `

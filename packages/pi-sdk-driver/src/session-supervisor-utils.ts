@@ -15,11 +15,11 @@ import type {
   SessionTranscriptItem,
   SessionUsageSnapshot,
   WorkspaceRef,
-} from "@pi-gui/session-driver";
-import type { SessionQueuedMessage } from "@pi-gui/session-driver/types";
+} from "@pi-garden/session-driver";
+import type { SessionQueuedMessage } from "@pi-garden/session-driver/types";
 
-const FILE_ATTACHMENT_BLOCK_START = "<pi-gui-file-attachments>";
-const FILE_ATTACHMENT_BLOCK_END = "</pi-gui-file-attachments>";
+const FILE_ATTACHMENT_BLOCK_START = "<pi-garden-file-attachments>";
+const FILE_ATTACHMENT_BLOCK_END = "</pi-garden-file-attachments>";
 
 export interface SnapshotSource {
   readonly ref: SessionRef;

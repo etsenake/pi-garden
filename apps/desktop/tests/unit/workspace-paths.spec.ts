@@ -8,7 +8,7 @@ import {
 } from "../../electron/platform/files/workspace-paths";
 
 test("rejects relative paths that escape the workspace before reveal", async () => {
-  const workspacePath = join(await mkdtemp(join(tmpdir(), "pi-gui-path-")), "safe");
+  const workspacePath = join(await mkdtemp(join(tmpdir(), "pi-garden-path-")), "safe");
   await mkdir(workspacePath, { recursive: true });
   await writeFile(join(workspacePath, "keep.txt"), "ok\n", "utf8");
 
@@ -21,7 +21,7 @@ test("rejects relative paths that escape the workspace before reveal", async () 
 });
 
 test("resolves an existing file inside the workspace", async () => {
-  const workspacePath = join(await mkdtemp(join(tmpdir(), "pi-gui-path-")), "safe");
+  const workspacePath = join(await mkdtemp(join(tmpdir(), "pi-garden-path-")), "safe");
   await mkdir(workspacePath, { recursive: true });
   await writeFile(join(workspacePath, "keep.txt"), "ok\n", "utf8");
   const resolved = await resolveExistingWorkspacePath(workspacePath, "keep.txt");

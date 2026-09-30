@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import type { SessionTranscriptMessage } from "@pi-gui/session-driver";
+import type { SessionTranscriptMessage } from "@pi-garden/session-driver";
 import type {
   DisplayTimelineItem,
   TimelineActivity,

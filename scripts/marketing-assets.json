@@ -178,5 +178,5 @@
       "consumers": []
     }
   ],
-  "retention": "Keep existing media and captured evidence. Producers may replace only the outputs listed here. Product media and showcase captures retain their temporary profiles and frames under .artifacts. Use PI_GUI_MARKETING_STAGE_DIR for proof runs that must not replace tracked media."
+  "retention": "Keep existing media and captured evidence. Producers may replace only the outputs listed here. Product media and showcase captures retain their temporary profiles and frames under .artifacts. Use PI_GARDEN_MARKETING_STAGE_DIR for proof runs that must not replace tracked media."
 }

@@ -24,7 +24,7 @@ export interface ActiveTheme {
 
 const STYLE_ELEMENT_ID = "pi-theme";
 // Remembers the last theme so the next launch paints it before state loads.
-const LAST_THEME_KEY = "pi-gui.last-theme";
+const LAST_THEME_KEY = "pi-garden.last-theme";
 
 let active: ActiveTheme = createActiveTheme("default", "light");
 const listeners = new Set<() => void>();

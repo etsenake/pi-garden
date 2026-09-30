@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { SessionRef } from "@pi-gui/session-driver";
+import type { SessionRef } from "@pi-garden/session-driver";
 import { createConversationOwner } from "../../electron/conversation/app-store-composer";
 
 const sessionRef: SessionRef = { workspaceId: "ws", sessionId: "sess" };

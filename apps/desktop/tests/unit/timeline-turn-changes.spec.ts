@@ -69,7 +69,7 @@ test("each turn's card follows that turn's last rows and precedes the next promp
 });
 
 test("tree summaries report per-file line counts, renames and binary files", async () => {
-  const repo = await mkdtemp(join(tmpdir(), "pi-gui-turn-summary-"));
+  const repo = await mkdtemp(join(tmpdir(), "pi-garden-turn-summary-"));
   const git = (...args: string[]) =>
     run("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: repo });
   await git("init", "-q");

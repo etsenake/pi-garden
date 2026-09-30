@@ -83,7 +83,7 @@ await test("malformed existing target configs are never overwritten", async () =
     await withStore(async (store, path) => {
       const original = JSON.stringify({ providers: { [endpoint.providerId]: config } });
       await writeFile(path, original);
-      await assert.rejects(() => store.set(endpoint), /not managed by pi-gui/);
+      await assert.rejects(() => store.set(endpoint), /not managed by pi-garden/);
       assert.equal(await store.delete(endpoint.providerId), false);
       assert.equal(await readFile(path, "utf8"), original);
     });

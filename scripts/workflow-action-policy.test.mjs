@@ -156,7 +156,7 @@ jobs:
  * @param {string} workflow
  */
 async function writeFixture(workflow) {
-  const root = await mkdtemp(path.join(tmpdir(), "pi-gui-action-policy-"));
+  const root = await mkdtemp(path.join(tmpdir(), "pi-garden-action-policy-"));
   await mkdir(path.join(root, ".github", "workflows"), { recursive: true });
   await writeFile(path.join(root, ".github", "workflows", "ci.yml"), workflow);
   return root;

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { SessionRef, SessionSnapshot, WorkspaceRef } from "@pi-gui/session-driver";
+import type { SessionRef, SessionSnapshot, WorkspaceRef } from "@pi-garden/session-driver";
 import type {
   DesktopAppState,
   SessionRecord,

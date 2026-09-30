@@ -48,7 +48,7 @@ test("the real lint config rejects shortcuts across source and script scopes", a
 });
 
 test("CI rejects a focused Playwright test but discovers an ordinary test", async () => {
-  const fixtureDir = await mkdtemp(path.join(tmpdir(), "pi-gui-ci-guard-"));
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "pi-garden-ci-guard-"));
   const configPath = path.join(fixtureDir, "playwright.config.ts");
   const specPath = path.join(fixtureDir, "guard.spec.ts");
   const desktopConfig = path.join(root, "apps/desktop/playwright.config.ts");

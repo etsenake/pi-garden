@@ -1,6 +1,6 @@
 import { defineService, type Context, type ReplicatedState } from "@earendil-works/chord";
 
-export const ENTRY_TYPE = "pi-gui.example.test-runs.v1";
+export const ENTRY_TYPE = "pi-garden.example.test-runs.v1";
 export const OUTPUT_LIMIT = 32 * 1024;
 
 export interface Suite {
@@ -51,7 +51,7 @@ export interface TestRunsService {
   cancel(request: { runId: string }, context: Context): Promise<void>;
 }
 
-export const TestRuns = defineService<TestRunsService>("pi-gui.example.test-runs.v1");
+export const TestRuns = defineService<TestRunsService>("pi-garden.example.test-runs.v1");
 
 export function isActive(run: RunRecord): boolean {
   return run.outcome.kind === "running" || run.outcome.kind === "cancelling";

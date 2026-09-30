@@ -12,8 +12,8 @@ const runtimePackages = new Set([
 // Host-side Chord transport and host-action parsing belong to Electron main and
 // the extension frame; the renderer may only import their types.
 const hostOnlyEntrypoints = new Set([
-  "@pi-gui/extension-ui/transport",
-  "@pi-gui/extension-ui/browser",
+  "@pi-garden/extension-ui/transport",
+  "@pi-garden/extension-ui/browser",
 ]);
 const isHostOnlyEntrypointFile = (root, file) =>
   /^packages\/extension-ui\/(?:src|dist)\/(?:transport|browser)\.[cm]?[jt]sx?$/.test(

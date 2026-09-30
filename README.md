@@ -2,21 +2,23 @@
   <img src="./assets/brand/banner.png" alt="Pi Garden" width="720">
 </p>
 
-# pi-gui
+# pi-garden
 
 The desktop app for the [pi](https://github.com/earendil-works/pi) coding agent.
 
+pi-garden is a fork of [pi-gui](https://github.com/minghinmatthewlam/pi-gui) by Matthew Lam, under the same MIT license.
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/minghinmatthewlam/pi-gui?include_prereleases&label=release)](https://github.com/minghinmatthewlam/pi-gui/releases)
+[![Latest release](https://img.shields.io/github/v/release/etsenake/pi-garden?include_prereleases&label=release)](https://github.com/etsenake/pi-garden/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](#install)
 
 Run agents in parallel threads, each in its own git worktree if you want one. Review every
-change, run the tests in a real terminal, and ship without leaving the window. pi-gui is a
+change, run the tests in a real terminal, and ship without leaving the window. pi-garden is a
 desktop shell around [`@earendil-works/pi-coding-agent`](https://www.npmjs.com/package/@earendil-works/pi-coding-agent),
 not a separate agent: sessions, models, auth and tools all run through pi itself, so anything
 you set up with the pi CLI carries over.
 
-[![An agent in pi-gui fixing a bug, running the tests, then the change open in the review tab](./apps/website/public/media/hero.gif)](./apps/website/public/media/hero.mp4)
+[![An agent in pi-garden fixing a bug, running the tests, then the change open in the review tab](./apps/website/public/media/hero.gif)](./apps/website/public/media/hero.mp4)
 
 <sub>A real run: the agent fixes a bug, adds a test and runs it, then the change opens for review. ([Watch in full quality](./apps/website/public/media/hero.mp4))</sub>
 
@@ -28,7 +30,7 @@ Every task gets its own thread. Start it in your checkout or in a fresh git work
 start the next one while it works. The sidebar shows what is running, what finished and what
 needs you. Pin threads, group them by time or workspace, and archive the ones you are done with.
 
-<img src="./apps/website/public/media/threads.webp" alt="pi-gui running an agent thread while two other threads work in the sidebar" width="720">
+<img src="./apps/website/public/media/threads.webp" alt="pi-garden running an agent thread while two other threads work in the sidebar" width="720">
 
 ### Review every change before it lands
 
@@ -88,12 +90,12 @@ the review tab, your worktrees, and tabs from desktop extensions. Each task keep
 
 ## Install
 
-pi-gui runs on macOS (Apple Silicon), Linux (x64) and Windows (x64).
+pi-garden runs on macOS (Apple Silicon), Linux (x64) and Windows (x64).
 
 Download the latest `.dmg` (macOS), `.AppImage` or `.deb` (Linux), or `.exe` (Windows) from the
-[Releases page](https://github.com/minghinmatthewlam/pi-gui/releases).
+[Releases page](https://github.com/etsenake/pi-garden/releases).
 
-- **macOS:** drag `pi-gui.app` into Applications. Releases are signed and notarized.
+- **macOS:** drag `pi-garden.app` into Applications. Releases are signed and notarized.
 - **Linux:** make the AppImage executable and run it, or install the `.deb`.
 - **Windows:** run the setup `.exe`, or use the portable `.exe`. Builds are not code-signed
   yet, so SmartScreen may ask you to confirm.
@@ -101,11 +103,11 @@ Download the latest `.dmg` (macOS), `.AppImage` or `.deb` (Linux), or `.exe` (Wi
 On macOS you can also use Homebrew:
 
 ```bash
-brew tap minghinmatthewlam/tap
-brew install --cask pi-gui
+brew tap etsenake/tap
+brew install --cask pi-garden
 ```
 
-Update with `brew upgrade --cask pi-gui`. A Homebrew upgrade may ask you to
+Update with `brew upgrade --cask pi-garden`. A Homebrew upgrade may ask you to
 re-confirm macOS permissions or Dock placement. Other installs tell you when a new release is
 out and update from the Releases page.
 
@@ -113,17 +115,17 @@ Building from source is for contributors; see [Development](#development).
 
 ## Quickstart
 
-1. Install pi-gui and open it.
+1. Install pi-garden and open it.
 2. Open **Settings → Providers** and connect a model provider (OAuth or API key).
 3. Add a workspace: a local project folder.
 4. Click **New thread**, choose **Local** or **Worktree**, and send your first prompt.
 
-pi-gui reads and writes pi's own session files and settings, so threads, credentials and
+pi-garden reads and writes pi's own session files and settings, so threads, credentials and
 skills are shared with the pi CLI.
 
 ## Architecture
 
-pi-gui is an Electron app with a tight main, preload and renderer boundary, on top of the pi
+pi-garden is an Electron app with a tight main, preload and renderer boundary, on top of the pi
 runtime:
 
 - **Renderer** (`apps/desktop/src`): the React UI, including the timeline, composer,
@@ -135,7 +137,7 @@ runtime:
 - **`packages/pi-sdk-driver`**: a thin adapter over `@earendil-works/pi-coding-agent`. It stays
   close to upstream pi and does not fork or reimplement runtime behavior.
 - **Session files are the source of truth.** pi stores each session as a JSONL transcript on
-  disk, and pi-gui reads those files rather than keeping its own copy.
+  disk, and pi-garden reads those files rather than keeping its own copy.
 
 See [docs/architecture.md](docs/architecture.md) for ownership and boundaries.
 
@@ -169,7 +171,7 @@ Desktop end-to-end tests drive the real Electron app with Playwright, in lanes. 
 runs the `core` lane; to run everything:
 
 ```bash
-pnpm --filter @pi-gui/desktop run test:e2e:all   # core + live + native
+pnpm --filter @pi-garden/desktop run test:e2e:all   # core + live + native
 ```
 
 See [`apps/desktop/README.md`](./apps/desktop/README.md) for the lanes, packaging on each
@@ -196,7 +198,7 @@ Electron app, not only by unit tests.
 
 ## Computer use
 
-Native computer use is not built into pi-gui. Desktop and browser control is available
+Native computer use is not built into pi-garden. Desktop and browser control is available
 separately through the standalone
 [`computer-use-mcp`](https://github.com/minghinmatthewlam/computer-use-mcp) server, which any
 MCP-capable agent can use.
@@ -208,4 +210,4 @@ and the [pi](https://github.com/earendil-works/pi) runtime and ecosystem.
 
 ## License
 
-[MIT](./LICENSE) © Matthew Lam
+[MIT](./LICENSE) © Matthew Lam (pi-gui), Josh Etsenake (pi-garden)

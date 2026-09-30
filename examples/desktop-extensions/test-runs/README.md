@@ -3,13 +3,13 @@
 This is a normal file-based Pi extension with an optional custom browser view.
 The command, agent tool and desktop buttons share one backend run owner. It uses
 the released Pi 0.87 `createLocalBashOperations` API for live process output,
-timeout and cancellation. The optional desktop declaration uses Pi-gui's local
-private `@pi-gui/extension-ui` package. This helper is implemented in this repository;
+timeout and cancellation. The optional desktop declaration uses Pi-garden's local
+private `@pi-garden/extension-ui` package. This helper is implemented in this repository;
 it is not published to npm or provided by upstream Pi.
 
 The supplied suites execute real `node:test` files: a passing suite, an intentional
 failure, a slow suite, and that same slow suite with a short timeout. They do not
-run the pi-gui repository's checks. Node must be on the shell PATH. To adapt this
+run the pi-garden repository's checks. Node must be on the shell PATH. To adapt this
 example, edit the fixed suite definitions in `index.ts`; the browser never sends
 shell text or filesystem paths.
 
@@ -61,7 +61,7 @@ notice. Earlier output is not retained. No report parser or hidden full-output
 file is implied. Cancellation, timeout, execution error and interrupted results
 remain separate from completed exit codes.
 
-Pi-gui flushes new session files before binding them. Released terminal Pi can
+Pi-garden flushes new session files before binding them. Released terminal Pi can
 defer its first file write until the first assistant message, so a fresh terminal
 session does not promise immediate crash durability from `appendEntry` alone.
 

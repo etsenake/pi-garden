@@ -2,13 +2,13 @@ import type {
   SessionCatalogSnapshot,
   WorkspaceCatalogSnapshot,
   WorkspaceId,
-} from "@pi-gui/catalogs";
+} from "@pi-garden/catalogs";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
   SessionQueuedMessage,
   SessionTreeSnapshot,
-} from "@pi-gui/session-driver/types";
+} from "@pi-garden/session-driver/types";
 import type {
   CreateSessionOptions,
   ForkSessionOptions,
@@ -22,7 +22,7 @@ import type {
   SessionMessageInput,
   Unsubscribe,
   WorkspaceRef,
-} from "@pi-gui/session-driver";
+} from "@pi-garden/session-driver";
 import {
   SessionSupervisor,
   type PiSdkDriverOptions,

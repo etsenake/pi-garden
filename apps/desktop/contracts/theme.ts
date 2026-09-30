@@ -60,7 +60,7 @@ export const themePresets: readonly ThemePreset[] = [
   {
     id: "default",
     name: "Default",
-    description: "The pi-gui palette.",
+    description: "The pi-garden palette.",
     variants: {
       light: {
         seed: seed("#ffffff", "#282825", "#526795", "#2ea043", "#c45666", "#d97706"),

@@ -1,6 +1,6 @@
-# Contributing to pi-gui
+# Contributing to pi-garden
 
-Thanks for your interest in improving pi-gui. This guide covers local setup, the
+Thanks for your interest in improving pi-garden. This guide covers local setup, the
 test lanes, and what "done" means for a change.
 
 ## Prerequisites
@@ -37,7 +37,7 @@ Electron harness, split into lanes:
 
 ```bash
 pnpm test                                        # each workspace's tests (desktop: core lane)
-pnpm --filter @pi-gui/desktop run test:e2e:all   # core + live + native
+pnpm --filter @pi-garden/desktop run test:e2e:all   # core + live + native
 ```
 
 macOS is the source of truth for desktop UI verification. Linux is supported for

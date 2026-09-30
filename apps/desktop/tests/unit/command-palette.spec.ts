@@ -85,7 +85,7 @@ test("command palette shows recents and actions until a query", () => {
   const chats = ["One", "Two", "Three", "Four", "Five", "Six"].map((title) =>
     candidate(`chat:${title}`, title),
   );
-  const workspaces = [candidate("workspace:pi", "pi-gui")];
+  const workspaces = [candidate("workspace:pi", "pi-garden")];
   const actions = [candidate("action:settings", "Settings"), candidate("action:new", "New thread")];
 
   expect(
@@ -96,12 +96,12 @@ test("command palette shows recents and actions until a query", () => {
   ]);
   expect(
     titles(buildCommandSections({ query: "", filter: "workspaces", chats, workspaces, actions })),
-  ).toEqual([["Workspaces", ["pi-gui"]]]);
+  ).toEqual([["Workspaces", ["pi-garden"]]]);
 });
 
 test("a query puts the strongest kind first and drops empty kinds", () => {
   const chats = [candidate("chat:a", "Renew the thread pool")];
-  const workspaces = [candidate("workspace:pi", "pi-gui")];
+  const workspaces = [candidate("workspace:pi", "pi-garden")];
   const actions = [candidate("action:new", "New thread")];
   const sections = buildCommandSections({
     query: "new thread",

@@ -359,7 +359,7 @@ test("closing the Terminal view preserves its live shell", async () => {
     const terminal = window.getByTestId("integrated-terminal");
     await terminal.locator(".xterm").click();
     await window.keyboard.type(
-      "export PI_GUI_WORKBENCH_CANARY=retained; printf 'SHELL_'\"READY\\n\"",
+      "export PI_GARDEN_WORKBENCH_CANARY=retained; printf 'SHELL_'\"READY\\n\"",
     );
     await window.keyboard.press("Enter");
     await expect(terminal.locator(".xterm-rows")).toContainText("SHELL_READY");
@@ -368,7 +368,7 @@ test("closing the Terminal view preserves its live shell", async () => {
     await expectActiveTool(window, "Review");
     await addTool(window, "Terminal");
     await terminal.locator(".xterm").click();
-    await window.keyboard.type("printf 'SHELL_%s\\n' \"$PI_GUI_WORKBENCH_CANARY\"");
+    await window.keyboard.type("printf 'SHELL_%s\\n' \"$PI_GARDEN_WORKBENCH_CANARY\"");
     await window.keyboard.press("Enter");
     await expect(terminal.locator(".xterm-rows")).toContainText("SHELL_retained");
     await expect(window.getByTestId("terminal-tab")).toHaveCount(1);
@@ -489,7 +489,7 @@ test("keeps one resizable width across tools, chooser, tasks, and restart", asyn
     await window.screenshot({ path: testInfo.outputPath("narrow-workspace-chooser.png") });
     // Wait for the debounced preference write before exercising a fresh process.
     await expect
-      .poll(() => window.evaluate(() => localStorage.getItem("pi-gui.workbench-width")))
+      .poll(() => window.evaluate(() => localStorage.getItem("pi-garden.workbench-width")))
       .toBe("340");
     await harness.close();
     harness = await launchDesktop(fixture.userDataDir, options);

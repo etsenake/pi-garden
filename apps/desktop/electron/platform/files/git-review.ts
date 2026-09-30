@@ -960,7 +960,7 @@ async function readPatch(
     };
   if (before.mode === "missing" && after.mode === "missing")
     return { patch: "", coverage: COMPLETE };
-  const scratch = await mkdtemp(join(tmpdir(), "pi-gui-review-"));
+  const scratch = await mkdtemp(join(tmpdir(), "pi-garden-review-"));
   try {
     const materialize = async (side: string, name: string, file: WorkingFile) => {
       if (file.mode === "missing") return devNull;

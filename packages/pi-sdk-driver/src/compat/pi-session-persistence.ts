@@ -25,6 +25,6 @@ export function forcePersistPiSession(sessionManager: object): void {
 
   rewriteFile.call(sessionManager);
   // Pi switches from create to append after its first write. Keep that
-  // private state aligned when pi-gui forces the write early.
+  // private state aligned when pi-garden forces the write early.
   compatibleManager.flushed = true;
 }

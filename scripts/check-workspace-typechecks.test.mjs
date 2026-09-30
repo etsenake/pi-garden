@@ -6,7 +6,7 @@ import test from "node:test";
 import { checkWorkspaceTypechecks } from "./check-workspace-typechecks.mjs";
 
 test("pnpm discovery catches a new workspace without a typecheck command", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "pi-gui-workspaces-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "pi-garden-workspaces-"));
   writeFileSync(
     path.join(root, "package.json"),
     JSON.stringify({ name: "fixture", private: true }),

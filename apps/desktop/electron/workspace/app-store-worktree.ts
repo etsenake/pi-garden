@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import type { WorktreeCatalogEntry } from "@pi-gui/catalogs";
-import type { WorkspaceRef } from "@pi-gui/session-driver";
+import type { WorktreeCatalogEntry } from "@pi-garden/catalogs";
+import type { WorkspaceRef } from "@pi-garden/session-driver";
 import type {
   CreateWorktreeInput,
   DesktopAppState,
@@ -406,7 +406,7 @@ export async function reconcileWorktrees(store: WorkspaceOwnerHost): Promise<voi
     });
   } catch (error) {
     console.warn(
-      `pi-gui: worktree reconcile skipped: ${error instanceof Error ? error.message : String(error)}`,
+      `pi-garden: worktree reconcile skipped: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

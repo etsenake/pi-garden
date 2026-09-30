@@ -1,14 +1,14 @@
-import { sessionKey } from "@pi-gui/session-driver";
-import type { PiSdkDriver } from "@pi-gui/pi-sdk-driver";
-import type { JsonCatalogStore } from "@pi-gui/catalogs/node";
+import { sessionKey } from "@pi-garden/session-driver";
+import type { PiSdkDriver } from "@pi-garden/pi-sdk-driver";
+import type { JsonCatalogStore } from "@pi-garden/catalogs/node";
 import type {
   CreateSessionOptions,
   SessionConfig,
   SessionRef,
   SessionSnapshot,
   WorkspaceRef,
-} from "@pi-gui/session-driver";
-import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+} from "@pi-garden/session-driver";
+import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type {
   CreateSessionInput,
   CreateWorktreeInput,

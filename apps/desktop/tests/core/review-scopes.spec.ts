@@ -262,7 +262,7 @@ test("choosing another review checkout preserves the task and terminal checkout"
   await writeFile(join(workspacePath, "root-only.txt"), "root changes\n");
   await writeFile(join(workspacePath, "shared.txt"), "root version\n");
   let linked: WorkspaceRecord | undefined;
-  // Only worktrees pi-gui created are offered as other checkouts of this folder.
+  // Only worktrees pi-garden created are offered as other checkouts of this folder.
   const { harness, window, panel, workspace } = await openReview(
     workspacePath,
     async (window, root) => {
@@ -282,7 +282,7 @@ test("choosing another review checkout preserves the task and terminal checkout"
     },
   );
   try {
-    assertExists(linked, "Expected a pi-gui worktree");
+    assertExists(linked, "Expected a pi-garden worktree");
     await window.getByTestId("composer").fill("Draft belongs to the original task");
     await expect(fileRow(panel, "root-only.txt")).toBeVisible();
     await expect(fileRow(panel, "linked-only.txt")).toHaveCount(0);

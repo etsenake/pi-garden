@@ -3,7 +3,7 @@ import { usePersistedPaneWidth } from "../../ui/use-persisted-pane-width";
 
 /** A window layout preference shared by all tools and tasks, independent of their contents. */
 export function useWorkbenchWidth() {
-  const [width, setWidth] = usePersistedPaneWidth("pi-gui.workbench-width", {
+  const [width, setWidth] = usePersistedPaneWidth("pi-garden.workbench-width", {
     min: 320,
     max: 1200,
   });

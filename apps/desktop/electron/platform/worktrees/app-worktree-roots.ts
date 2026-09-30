@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 /**
- * Worktrees pi-gui creates live under the active profile's `<userData>/worktrees`
+ * Worktrees pi-garden creates live under the active profile's `<userData>/worktrees`
  * or the legacy shared `~/.pi/worktrees`. Only those nest under the folder that
  * created them; any other checkout the user opens is its own sidebar folder.
  */

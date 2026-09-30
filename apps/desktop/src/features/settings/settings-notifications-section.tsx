@@ -30,7 +30,7 @@ export function SettingsNotificationsSection({
     <>
       <SettingsGroup
         title="System"
-        description="macOS decides whether pi-gui can show desktop notifications at all."
+        description="macOS decides whether pi-garden can show desktop notifications at all."
       >
         <SettingsRow title="macOS notification access" description={statusDescription}>
           <span className="settings-row__value">{statusLabel}</span>
@@ -40,8 +40,8 @@ export function SettingsNotificationsSection({
             title="Turn on notifications"
             description={
               showAskMacOs
-                ? "pi-gui asks macOS when active work first moves into the background. You can also ask now."
-                : "macOS notifications are already turned off for pi-gui. Open System Settings to enable them again."
+                ? "pi-garden asks macOS when active work first moves into the background. You can also ask now."
+                : "macOS notifications are already turned off for pi-garden. Open System Settings to enable them again."
             }
           >
             <div className="settings-row__actions">
@@ -127,14 +127,14 @@ function labelForPermissionStatus(status: DesktopNotificationPermissionStatus): 
 function descriptionForPermissionStatus(status: DesktopNotificationPermissionStatus): string {
   switch (status) {
     case "granted":
-      return "macOS will allow pi-gui to show desktop notifications for background thread updates.";
+      return "macOS will allow pi-garden to show desktop notifications for background thread updates.";
     case "denied":
-      return "macOS notifications are turned off for pi-gui. Enable them in System Settings to receive background completion alerts.";
+      return "macOS notifications are turned off for pi-garden. Enable them in System Settings to receive background completion alerts.";
     case "default":
-      return "pi-gui has not asked macOS for desktop notification access yet.";
+      return "pi-garden has not asked macOS for desktop notification access yet.";
     case "unsupported":
       return "Desktop notifications are unavailable on this system.";
     default:
-      return "Checking whether macOS notifications are available for pi-gui.";
+      return "Checking whether macOS notifications are available for pi-garden.";
   }
 }

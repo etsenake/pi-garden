@@ -12,7 +12,7 @@ import {
   type MenuItemConstructorOptions,
   type MessageBoxOptions,
 } from "electron";
-import { isValidHttpBaseUrl } from "@pi-gui/pi-sdk-driver";
+import { isValidHttpBaseUrl } from "@pi-garden/pi-sdk-driver";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import type { AgentToolResult, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -75,9 +75,9 @@ import type {
   ComposerFileAttachment,
   ComposerImageAttachment,
 } from "../contracts/desktop-state";
-import type { SessionDriverEvent } from "@pi-gui/session-driver";
-import type { GenerateThreadTitleOptions } from "@pi-gui/pi-sdk-driver";
-import type { SessionRef, WorkspaceRef } from "@pi-gui/session-driver";
+import type { SessionDriverEvent } from "@pi-garden/session-driver";
+import type { GenerateThreadTitleOptions } from "@pi-garden/pi-sdk-driver";
+import type { SessionRef, WorkspaceRef } from "@pi-garden/session-driver";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -690,7 +690,7 @@ async function runManualUpdateCheck(): Promise<void> {
       // be silently suppressed if the OS permission is denied.
       const choice = await showDialog({
         type: "info",
-        title: "pi-gui",
+        title: "pi-garden",
         message: `Version ${result.latestVersion} is available.`,
         detail: `You have ${result.currentVersion}.`,
         buttons: ["Download", "Later"],
@@ -706,7 +706,7 @@ async function runManualUpdateCheck(): Promise<void> {
     if (result.status === "up-to-date") {
       await showDialog({
         type: "info",
-        title: "pi-gui",
+        title: "pi-garden",
         message: `You're up to date on version ${result.currentVersion}.`,
         buttons: ["OK"],
       });
@@ -715,16 +715,16 @@ async function runManualUpdateCheck(): Promise<void> {
 
     await showDialog({
       type: "warning",
-      title: "pi-gui",
+      title: "pi-garden",
       message: "Could not check for updates right now.",
       detail: result.message,
       buttons: ["OK"],
     });
   } catch (error) {
-    console.error("pi-gui: manual update check failed:", error);
+    console.error("pi-garden: manual update check failed:", error);
     await showDialog({
       type: "warning",
-      title: "pi-gui",
+      title: "pi-garden",
       message: "Could not check for updates right now.",
       detail: error instanceof Error ? error.message : String(error),
       buttons: ["OK"],
@@ -826,7 +826,7 @@ function installApplicationMenu(): void {
 }
 
 // Ensure npm (and other Homebrew/npm-global binaries) are available even when
-// pi-gui is launched via Finder/Dock (which hands the process a minimal PATH).
+// pi-garden is launched via Finder/Dock (which hands the process a minimal PATH).
 // POSIX-only; on Windows the PATH is left untouched (see augmentPosixPath).
 const augmentedPath = augmentPosixPath();
 if (augmentedPath.changed) {
@@ -891,7 +891,7 @@ app
       hostAssets: {
         "frame-bridge.js": {
           body: await readFile(
-            createRequire(__filename).resolve("@pi-gui/extension-ui/frame-bridge"),
+            createRequire(__filename).resolve("@pi-garden/extension-ui/frame-bridge"),
             "utf8",
           ),
           contentType: "text/javascript; charset=utf-8",
@@ -923,15 +923,15 @@ app
       },
       builtinExtensions: [
         {
-          name: "pi-gui-thread-orchestration",
+          name: "pi-garden-thread-orchestration",
           displayName: "Thread orchestration",
-          description: "Lets pi start, read and message other pi-gui threads",
+          description: "Lets pi start, read and message other pi-garden threads",
           factory: createOrchestrationRuntimeExtension(orchestrationRuntimeBridge),
         },
         {
-          name: "pi-gui-scheduled-tasks",
+          name: "pi-garden-scheduled-tasks",
           displayName: "Scheduled tasks",
-          description: "Lets pi create and update local pi-gui scheduled tasks",
+          description: "Lets pi create and update local pi-garden scheduled tasks",
           factory: createScheduledTaskRuntimeExtension(scheduledTaskRuntimeBridge, (ctx) => {
             try {
               return sessionRefFromExtensionContext(ctx).workspaceId;
@@ -1206,13 +1206,13 @@ app.on("before-quit", (event) => {
   quittingAfterStoreFlush = true;
   const flush = Promise.all([store.flushPersistence(), extensionViewOwner?.dispose()]).catch(
     (error) => {
-      console.error("pi-gui: persistence flush failed during quit:", error);
+      console.error("pi-garden: persistence flush failed during quit:", error);
     },
   );
   // Never let a hung flush block quit forever — quit after a bounded wait.
   const flushDeadline = new Promise<void>((resolve) => {
     setTimeout(() => {
-      console.warn("pi-gui: persistence flush timed out during quit; quitting anyway.");
+      console.warn("pi-garden: persistence flush timed out during quit; quitting anyway.");
       resolve();
     }, QUIT_FLUSH_TIMEOUT_MS);
   });
@@ -1405,7 +1405,7 @@ async function promptForText(
     maximizable: false,
     fullscreenable: false,
     autoHideMenuBar: process.platform !== "darwin",
-    title: "pi-gui",
+    title: "pi-garden",
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
   });
 

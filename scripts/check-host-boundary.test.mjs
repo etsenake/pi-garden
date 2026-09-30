@@ -6,7 +6,7 @@ import test from "node:test";
 import { checkHostBoundary } from "./check-host-boundary.mjs";
 
 function fixture(host, extra = {}) {
-  const root = mkdtempSync(path.join(os.tmpdir(), "pi-gui-host-boundary-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "pi-garden-host-boundary-"));
   const files = {
     "apps/desktop/tsconfig.json": JSON.stringify({
       compilerOptions: {

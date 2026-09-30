@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import type { SessionDriverEvent, SessionRef } from "@pi-gui/session-driver";
+import type { SessionDriverEvent, SessionRef } from "@pi-garden/session-driver";
 import {
   commitAllInGitRepo,
   createNamedThread,
@@ -123,7 +123,7 @@ test("reviewed marks survive relaunch and apply only to the reviewed file revisi
   const sessionRef = await selectedSessionRef(firstWindow);
   // Legacy renderer marks are fixture state: they must not become authoritative,
   // and replacing the store must not delete the user's old bytes.
-  const storageKey = `pi-gui:reviewed-files:v1:${sessionRef.workspaceId}:${sessionRef.sessionId}`;
+  const storageKey = `pi-garden:reviewed-files:v1:${sessionRef.workspaceId}:${sessionRef.sessionId}`;
   const legacyValue = JSON.stringify([JSON.stringify([sessionRef.workspaceId, "notes.md"])]);
   try {
     await firstWindow.evaluate(({ key, value }) => globalThis.localStorage.setItem(key, value), {

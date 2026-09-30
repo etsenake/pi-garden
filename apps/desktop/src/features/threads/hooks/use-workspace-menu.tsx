@@ -142,7 +142,7 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
 
   const removeWorkspace = (workspace: WorkspaceRecord) => {
     const confirmed = window.confirm(
-      `Remove ${workspace.name} from pi-gui? This will not delete any files.`,
+      `Remove ${workspace.name} from pi-garden? This will not delete any files.`,
     );
     setWorkspaceMenuId(null);
     setWorkspaceRenameId(null);

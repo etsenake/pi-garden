@@ -131,7 +131,7 @@ export function ScheduledTasksView({
           <h2>{filter === "active" ? "No active scheduled tasks" : "No scheduled tasks"}</h2>
           <p>
             {filter === "active"
-              ? "Scheduled tasks run on this device while pi-gui is open. They do not run in the cloud or after you quit."
+              ? "Scheduled tasks run on this device while pi-garden is open. They do not run in the cloud or after you quit."
               : "Create a task manually or ask pi to set one up."}
           </p>
         </div>

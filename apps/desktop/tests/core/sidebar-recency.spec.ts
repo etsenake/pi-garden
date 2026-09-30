@@ -18,7 +18,7 @@ import {
 } from "../helpers/electron-app";
 
 const proofDir =
-  process.env.PI_APP_RECENCY_PROOF_DIR ?? join(tmpdir(), "pi-gui-recency-thread-list");
+  process.env.PI_APP_RECENCY_PROOF_DIR ?? join(tmpdir(), "pi-garden-recency-thread-list");
 
 test("caps each time bucket at five and hides workspace headers", async () => {
   test.setTimeout(90_000);

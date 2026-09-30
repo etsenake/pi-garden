@@ -4,7 +4,7 @@ A normal, file-based Pi extension with an optional custom desktop view. It revie
 
 ## Build and load
 
-From the repository root, with the existing dependencies and `@pi-gui/extension-ui` workspace package built:
+From the repository root, with the existing dependencies and `@pi-garden/extension-ui` workspace package built:
 
 ```sh
 node examples/desktop-extensions/pr-review/build.mjs
@@ -32,7 +32,7 @@ Findings reference existing files and line numbers at the PR head. A deleted-fil
 - `contract.ts` shares the service token and JSON domain types. The browser calls `refresh`, `request`, and `prepareFix` through its scoped Chord source.
 - `repository.ts` runs bounded, argument-based Git/GitHub reads. The browser receives no command execution capability.
 - `desktop.ts` is independently bundled browser code. `mount(root, host)` returns a disposer, observes the host abort signal, consumes theme values, and uses only `openFile` and `prepareTaskDraft` host actions.
-- Versioned `pi-gui.pr-review.v1` entries are the durable owner. Chord is the live projection. Branch restoration reads `getBranch()`. A request or run with no settlement restores as **Interrupted**, never as a live or successful operation.
+- Versioned `pi-garden.pr-review.v1` entries are the durable owner. Chord is the live projection. Branch restoration reads `getBranch()`. A request or run with no settlement restores as **Interrupted**, never as a live or successful operation.
 
 Pi 0.87's `sendUserMessage` API returns `void`; an accepted service call means **Requested**, not provider admission. The matching `before_agent_start` confirms a running review. A preflight rejection appears through Pi's extension runtime diagnostics; this example does not automatically retry a request with an unknown outcome. Reload after resolving a preflight error restores it as interrupted. The final outcome comes from `agent_before_settle`, with status persisted only at `agent_settled`, after retries and continuations finish.
 

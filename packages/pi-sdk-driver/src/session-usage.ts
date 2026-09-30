@@ -5,7 +5,7 @@ import type {
   SessionPromptCache,
   SessionTokenCounts,
   SessionUsageSnapshot,
-} from "@pi-gui/session-driver";
+} from "@pi-garden/session-driver";
 
 /**
  * Reads context, cache and usage from pi at a turn boundary. pi owns every

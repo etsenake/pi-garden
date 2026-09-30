@@ -1,4 +1,4 @@
-import type { SessionRef } from "@pi-gui/session-driver/types";
+import type { SessionRef } from "@pi-garden/session-driver/types";
 
 export interface DesktopExtensionViewInfo {
   readonly id: string;

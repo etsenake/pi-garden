@@ -19,8 +19,8 @@ const execFileAsync = promisify(execFile);
 const frameRate = 5;
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../../..");
-const publishingRoot = process.env.PI_GUI_MARKETING_STAGE_DIR
-  ? path.resolve(process.env.PI_GUI_MARKETING_STAGE_DIR)
+const publishingRoot = process.env.PI_GARDEN_MARKETING_STAGE_DIR
+  ? path.resolve(process.env.PI_GARDEN_MARKETING_STAGE_DIR)
   : repoRoot;
 const capturesDir = path.join(publishingRoot, "video", "public", "captures");
 const evidenceRoot = path.join(repoRoot, ".artifacts", "marketing", "showcase-captures");
@@ -338,16 +338,16 @@ async function withFreshApp(
 }
 
 async function main(): Promise<void> {
-  if (process.env.PI_GUI_MARKETING_ALLOW_PROVIDER_ENV !== "1") {
+  if (process.env.PI_GARDEN_MARKETING_ALLOW_PROVIDER_ENV !== "1") {
     throw new Error(
-      "Showcase capture submits real prompts. Set PI_GUI_MARKETING_ALLOW_PROVIDER_ENV=1 plus PI_GUI_MARKETING_PROVIDER and PI_GUI_MARKETING_MODEL to opt in to provider environment variables.",
+      "Showcase capture submits real prompts. Set PI_GARDEN_MARKETING_ALLOW_PROVIDER_ENV=1 plus PI_GARDEN_MARKETING_PROVIDER and PI_GARDEN_MARKETING_MODEL to opt in to provider environment variables.",
     );
   }
-  const provider = process.env.PI_GUI_MARKETING_PROVIDER?.trim();
-  const modelId = process.env.PI_GUI_MARKETING_MODEL?.trim();
+  const provider = process.env.PI_GARDEN_MARKETING_PROVIDER?.trim();
+  const modelId = process.env.PI_GARDEN_MARKETING_MODEL?.trim();
   if (!provider || !modelId) {
     throw new Error(
-      "PI_GUI_MARKETING_PROVIDER and PI_GUI_MARKETING_MODEL are required for showcase capture.",
+      "PI_GARDEN_MARKETING_PROVIDER and PI_GARDEN_MARKETING_MODEL are required for showcase capture.",
     );
   }
 

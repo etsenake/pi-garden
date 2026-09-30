@@ -1,6 +1,6 @@
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
-import type { PiSdkDriver } from "@pi-gui/pi-sdk-driver";
+import type { PiSdkDriver } from "@pi-garden/pi-sdk-driver";
 import {
   createNamedThread,
   fireDueScheduledTasks,
@@ -198,7 +198,7 @@ test("a scheduled run can use the scheduled-task tools while it is still running
           throw new Error("Scheduled-task test hooks are unavailable");
         }
         const { createRequire } = process.getBuiltinModule("module");
-        const { PiSdkDriver: Driver } = createRequire(input.entry)("@pi-gui/pi-sdk-driver") as {
+        const { PiSdkDriver: Driver } = createRequire(input.entry)("@pi-garden/pi-sdk-driver") as {
           PiSdkDriver: typeof PiSdkDriver;
         };
         let listed = "";

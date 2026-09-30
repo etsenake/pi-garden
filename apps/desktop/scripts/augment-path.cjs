@@ -3,7 +3,7 @@
 const path = require("node:path");
 
 /**
- * Compute the PATH pi-gui should use so npm / Homebrew / npm-global binaries
+ * Compute the PATH pi-garden should use so npm / Homebrew / npm-global binaries
  * stay reachable when the app is launched from Finder/Dock (which hands the
  * process a minimal PATH).
  *

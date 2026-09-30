@@ -77,7 +77,7 @@ jobs:
         run: pnpm --filter @pi-gui/website run build
 
       - name: Build desktop
-        run: pnpm --filter @pi-gui/desktop run build
+        run: pnpm --filter @pi-garden/desktop run build
 
       - name: Package macOS
         env:
@@ -239,7 +239,7 @@ jobs:
           ./apps/desktop/scripts/verify-windows-release.ps1 `
             -ReleaseDir "$PWD/apps/desktop/release" `
             -Version "$($env:GITHUB_REF_NAME -replace '^v', '')" `
-            -PackagedApp "$PWD/apps/desktop/release/win-unpacked/pi-gui.exe" `
+            -PackagedApp "$PWD/apps/desktop/release/win-unpacked/pi-garden.exe" `
             -SmokePackages
 
       - name: Stage validated Windows artifacts
@@ -643,13 +643,13 @@ jobs:
         run: |
           mkdir release-download
           gh release download "$GITHUB_REF_NAME" \
-            --pattern "pi-gui-${GITHUB_REF_NAME#v}-arm64.dmg" \
+            --pattern "pi-garden-${GITHUB_REF_NAME#v}-arm64.dmg" \
             --dir release-download
 
       - name: Checkout Homebrew tap
         uses: actions/checkout@v7
         with:
-          repository: minghinmatthewlam/homebrew-tap
+          repository: etsenake/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
           fetch-depth: 0
@@ -663,7 +663,7 @@ jobs:
             --version "${GITHUB_REF_NAME#v}" \
             --tag "$GITHUB_REF_NAME" \
             --github-repo "$GITHUB_REPOSITORY" \
-            --asset-name "pi-gui-${GITHUB_REF_NAME#v}-arm64.dmg" \
-            --dmg-path "$PWD/release-download/pi-gui-${GITHUB_REF_NAME#v}-arm64.dmg" \
+            --asset-name "pi-garden-${GITHUB_REF_NAME#v}-arm64.dmg" \
+            --dmg-path "$PWD/release-download/pi-garden-${GITHUB_REF_NAME#v}-arm64.dmg" \
             --commit \
             --push

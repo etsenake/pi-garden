@@ -7,13 +7,13 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 export const createChildThreadToolName = "create_child_thread";
-export const createChildThreadAction = "pi_gui_create_child_thread";
+export const createChildThreadAction = "pi_garden_create_child_thread";
 export const listThreadsToolName = "list_threads";
-export const listThreadsAction = "pi_gui_list_threads";
+export const listThreadsAction = "pi_garden_list_threads";
 export const readThreadToolName = "read_thread";
-export const readThreadAction = "pi_gui_read_thread";
+export const readThreadAction = "pi_garden_read_thread";
 export const sendMessageToThreadToolName = "send_message_to_thread";
-export const sendMessageToThreadAction = "pi_gui_send_message_to_thread";
+export const sendMessageToThreadAction = "pi_garden_send_message_to_thread";
 
 export interface CreateChildThreadToolDetails {
   readonly action: typeof createChildThreadAction;
@@ -107,8 +107,9 @@ function createCreateChildThreadTool(
     name: createChildThreadToolName,
     label: "Create child thread",
     description:
-      "Start a separate pi-gui child thread for a delegated investigation or implementation task.",
-    promptSnippet: "create_child_thread: start a separate pi-gui child thread for delegated work.",
+      "Start a separate pi-garden child thread for a delegated investigation or implementation task.",
+    promptSnippet:
+      "create_child_thread: start a separate pi-garden child thread for delegated work.",
     promptGuidelines: [
       "Use create_child_thread when the user asks you to spin up, delegate to, or run a separate child thread.",
       "Keep the child prompt concrete and self-contained so the user can inspect the resulting thread.",
@@ -139,11 +140,11 @@ function createListThreadsTool(
   return {
     name: listThreadsToolName,
     label: "List threads",
-    description: "List pi-gui threads visible to the current workspace and parent thread.",
+    description: "List pi-garden threads visible to the current workspace and parent thread.",
     promptSnippet:
-      "list_threads: list relevant pi-gui threads for the current workspace and parent context.",
+      "list_threads: list relevant pi-garden threads for the current workspace and parent context.",
     promptGuidelines: [
-      "Use list_threads before reading or messaging another pi-gui thread when you need the exact thread id.",
+      "Use list_threads before reading or messaging another pi-garden thread when you need the exact thread id.",
       "Use the returned thread id with read_thread or send_message_to_thread.",
     ],
     parameters: {
@@ -162,8 +163,8 @@ function createReadThreadTool(
   return {
     name: readThreadToolName,
     label: "Read thread",
-    description: "Read a pi-gui thread transcript or child thread summary by id.",
-    promptSnippet: "read_thread: read a pi-gui thread transcript by id.",
+    description: "Read a pi-garden thread transcript or child thread summary by id.",
+    promptSnippet: "read_thread: read a pi-garden thread transcript by id.",
     promptGuidelines: [
       "Use read_thread with a thread id returned by list_threads or create_child_thread.",
       "Prefer reading a child thread before summarizing its status back to the parent.",
@@ -201,10 +202,10 @@ function createSendMessageToThreadTool(
   return {
     name: sendMessageToThreadToolName,
     label: "Send message to thread",
-    description: "Send a follow-up message to an existing pi-gui thread.",
-    promptSnippet: "send_message_to_thread: send a follow-up to an existing pi-gui thread.",
+    description: "Send a follow-up message to an existing pi-garden thread.",
+    promptSnippet: "send_message_to_thread: send a follow-up to an existing pi-garden thread.",
     promptGuidelines: [
-      "Use send_message_to_thread to follow up with an existing child or sibling pi-gui thread.",
+      "Use send_message_to_thread to follow up with an existing child or sibling pi-garden thread.",
       "Use a thread id returned by list_threads or create_child_thread.",
     ],
     parameters: {

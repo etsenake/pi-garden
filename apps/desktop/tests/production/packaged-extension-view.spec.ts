@@ -35,7 +35,7 @@ test("packaged extension frame loads its bundled bridge and exchanges live Chord
     await installDesktopExtensionFixture(
       workspace,
       "http://127.0.0.1:9/unused",
-      join(artifact.appPath, "node_modules", "@pi-gui", "extension-ui", "dist", "index.js"),
+      join(artifact.appPath, "node_modules", "@pi-garden", "extension-ui", "dist", "index.js"),
     );
     const window = await harness.firstWindow();
     await waitForWorkspaceByPath(window, workspace);

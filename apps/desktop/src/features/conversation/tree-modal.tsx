@@ -11,7 +11,7 @@ import type {
   SessionTreeNodeKind,
   SessionTreeNodeSnapshot,
   SessionTreeSnapshot,
-} from "@pi-gui/session-driver/types";
+} from "@pi-garden/session-driver/types";
 import { trapDialogFocus } from "../../ui/dialog-focus";
 import { ChevronDownIcon, ChevronRightIcon } from "../../ui/icons";
 

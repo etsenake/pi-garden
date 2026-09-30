@@ -1,6 +1,6 @@
-appId: com.pi-gui.desktop
-productName: pi-gui
-copyright: Copyright 2026 Matthew Lam
+appId: com.pi-garden.desktop
+productName: pi-garden
+copyright: Copyright 2026 Josh Etsenake
 electronVersion: 37.10.3
 
 directories:
@@ -49,14 +49,14 @@ mac:
       arch: arm64
   darkModeSupport: true
   extraFiles:
-    - from: build/native/pi-gui-notification-status-helper
-      to: MacOS/pi-gui-notification-status-helper
+    - from: build/native/pi-garden-notification-status-helper
+      to: MacOS/pi-garden-notification-status-helper
 
 linux:
   category: Development
-  executableName: pi-gui
-  maintainer: Matthew Lam <minghinmatthew.lam@gmail.com>
-  vendor: pi-gui
+  executableName: pi-garden
+  maintainer: Josh Etsenake <josh.etsenake@fullscript.com>
+  vendor: pi-garden
   synopsis: Codex-style desktop app for the pi coding agent
   description: A native desktop interface for pi coding agent sessions, workspaces, and tools.
   target:
@@ -69,7 +69,7 @@ linux:
 
 deb:
   artifactName: ${productName}_${version}_${arch}.${ext}
-  packageName: pi-gui
+  packageName: pi-garden
   packageCategory: devel
   priority: optional
   afterRemove: resources/linux/after-remove.sh
@@ -86,7 +86,7 @@ deb:
     - libgbm1
 
 win:
-  executableName: pi-gui
+  executableName: pi-garden
   # Keep icon/version metadata editing; signing is optional without credentials.
   signAndEditExecutable: true
   target:
@@ -121,5 +121,5 @@ dmg:
 
 publish:
   provider: github
-  owner: minghinmatthewlam
-  repo: pi-gui
+  owner: etsenake
+  repo: pi-garden

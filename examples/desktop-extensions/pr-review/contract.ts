@@ -60,7 +60,7 @@ export interface ReviewService {
   prepareFix(input: { reviewId: string; findingId: string }, context: Context): Promise<FixDraft>;
 }
 
-export const PRReview = defineService<ReviewService>("pi-gui.examples.pr-review.v1");
+export const PRReview = defineService<ReviewService>("pi-garden.examples.pr-review.v1");
 
 export function staleReason(review: ReviewRecord, current: ReviewTarget | null): string | null {
   if (!current) return "The current PR could not be verified. Refresh before using these findings.";

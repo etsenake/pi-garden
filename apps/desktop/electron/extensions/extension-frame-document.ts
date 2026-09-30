@@ -16,7 +16,7 @@ import { mount } from ${literal(input.frontendUrl)};
 const connectionId = ${literal(input.connectionId)};
 let connected = false;
 window.addEventListener('message', async (event) => {
-  if (connected || event.source !== parent || event.data?.type !== 'pi-gui:extension-connect' || event.data.connectionId !== connectionId || event.ports.length !== 1) return;
+  if (connected || event.source !== parent || event.data?.type !== 'pi-garden:extension-connect' || event.data.connectionId !== connectionId || event.ports.length !== 1) return;
   connected = true;
   const port = event.ports[0];
   const root = document.getElementById('root');
@@ -32,7 +32,7 @@ window.addEventListener('message', async (event) => {
   const showError = (error) => {
     root.className = 'host-error';
     root.textContent = error instanceof Error ? error.message : String(error);
-    port.postMessage({type:'pi-gui:frame-error',message:root.textContent});
+    port.postMessage({type:'pi-garden:frame-error',message:root.textContent});
   };
   const connection = createChordClientConnection({send: message => port.postMessage(message),onError:showError});
   const action = (input) => new Promise((resolve,reject) => {
@@ -50,7 +50,7 @@ window.addEventListener('message', async (event) => {
     if (dispose) Promise.resolve().then(dispose).catch(showError);
   }, {once:true});
   port.onmessage = ({data}) => {
-    if (data?.type === 'pi-gui:theme-changed') { applyTheme(data.theme); return; }
+    if (data?.type === 'pi-garden:theme-changed') { applyTheme(data.theme); return; }
     if (data?.type === 'host-action-result') {
       const request = pending.get(data.requestId);
       if (!request) return;
@@ -70,7 +70,7 @@ window.addEventListener('message', async (event) => {
     }});
     if (typeof dispose !== 'function') throw new Error('The extension mount must return a cleanup function.');
     if (connection.signal.aborted) await dispose();
-    else port.postMessage({type:'pi-gui:frame-ready'});
+    else port.postMessage({type:'pi-garden:frame-ready'});
   } catch (error) { showError(error); connection.close('Extension mount failed'); }
 }, {once:false});
 </script></body></html>`;

@@ -14,7 +14,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import type { SessionRef, TurnCaptureBoundary } from "@pi-gui/session-driver";
+import type { SessionRef, TurnCaptureBoundary } from "@pi-garden/session-driver";
 import type { ReviewCoverage, ReviewIssue } from "../../contracts/review";
 import { readJsonWithBackup, writeFileAtomicQueued } from "../persistence/atomic-file-write";
 import { isolatedGitEnvironment } from "../platform/files/git-environment";
@@ -60,7 +60,7 @@ const MAX_CACHED_CHECKOUTS = 16;
 /** Budget for building a checkout's first inventory in the background. */
 const WARM_TIMEOUT_MS = 60_000;
 const WARM_RETRY_MS = 15 * 60 * 1000;
-const SNAPSHOT_REF_PREFIX = "refs/pi-gui/snapshots/";
+const SNAPSHOT_REF_PREFIX = "refs/pi-garden/snapshots/";
 
 interface FileVersion {
   readonly dev: number;

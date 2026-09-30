@@ -15,10 +15,10 @@ import { desktopShortcut } from "../../../../apps/desktop/tests/helpers/native-i
 
 test("maintenance: skills, pin, thread list, worktree, queued follow-ups", async () => {
   test.setTimeout(600_000);
-  const evidence = process.env.PI_GUI_PROOF_DIR!;
+  const evidence = process.env.PI_GARDEN_PROOF_DIR!;
   const source = process.env.PI_APP_REAL_AUTH_SOURCE_DIR;
-  const provider = process.env.PI_GUI_PROVIDER;
-  const model = process.env.PI_GUI_MODEL;
+  const provider = process.env.PI_GARDEN_PROVIDER;
+  const model = process.env.PI_GARDEN_MODEL;
   if (process.env.PI_APP_REAL_AUTH !== "1" || !source || !provider || !model) {
     throw new Error(
       "BLOCKED: maintenance proof requires explicit real-auth source, provider and model; it never skips to a pass",
@@ -26,7 +26,7 @@ test("maintenance: skills, pin, thread list, worktree, queued follow-ups", async
   }
   const auth = JSON.parse(await readFile(join(source, "auth.json"), "utf8"));
   if (!auth[provider]) throw new Error(`BLOCKED: no saved credentials for ${provider}`);
-  const privateRoot = await mkdtemp(join(tmpdir(), "pi-gui-maintenance-private-"));
+  const privateRoot = await mkdtemp(join(tmpdir(), "pi-garden-maintenance-private-"));
   await chmod(privateRoot, 0o700);
   const profile = join(privateRoot, "profile");
   const agentDir = join(privateRoot, "agent");

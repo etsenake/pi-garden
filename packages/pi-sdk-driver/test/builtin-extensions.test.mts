@@ -10,7 +10,7 @@ import { PiSdkDriver } from "../dist/pi-sdk-driver.js";
 import { RuntimeSupervisor } from "../dist/runtime-supervisor.js";
 
 const DEMO: BuiltinExtension = {
-  name: "pi-gui-demo",
+  name: "pi-garden-demo",
   displayName: "Demo tools",
   description: "Adds a demo tool",
   factory: (pi: ExtensionAPI) => {
@@ -25,7 +25,7 @@ const DEMO: BuiltinExtension = {
 };
 
 async function createDirs(): Promise<{ agentDir: string; workspacePath: string }> {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-builtins-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-builtins-"));
   const agentDir = join(root, "agent");
   const workspacePath = join(root, "workspace");
   await mkdir(agentDir, { recursive: true });
@@ -47,7 +47,7 @@ await test("a switched-off built-in contributes no tools, and comes back on the 
   const demoTools = () =>
     loader
       .getExtensions()
-      .extensions.filter((extension) => extension.path === "<inline:pi-gui-demo>")
+      .extensions.filter((extension) => extension.path === "<inline:pi-garden-demo>")
       .flatMap((extension) => [...extension.tools.keys()]);
 
   await loader.reload();
@@ -71,7 +71,7 @@ await test("Settings lists a switched-off built-in with its tools and name", asy
     const snapshot = refresh
       ? await supervisor.refreshRuntime(workspace)
       : await supervisor.getRuntimeSnapshot(workspace);
-    const record = snapshot.extensions.find((entry) => entry.path === "<inline:pi-gui-demo>");
+    const record = snapshot.extensions.find((entry) => entry.path === "<inline:pi-garden-demo>");
     return record && { name: record.displayName, enabled: record.enabled, tools: record.tools };
   };
 
@@ -88,7 +88,7 @@ await test("Settings lists a switched-off built-in with its tools and name", asy
     tools: ["demo_tool"],
   });
 
-  assert.equal(supervisor.builtinExtensionName("<inline:pi-gui-demo>"), "pi-gui-demo");
+  assert.equal(supervisor.builtinExtensionName("<inline:pi-garden-demo>"), "pi-garden-demo");
   assert.equal(supervisor.builtinExtensionName(join(workspacePath, "ext.ts")), undefined);
 });
 

@@ -7,11 +7,11 @@ const SHA256_PATTERN = /^(\s*sha256\s+")([^"]+)(")$/m;
 const URL_PATTERN = /^(\s*url\s+")([^"]+)(")$/m;
 const CASK_PATTERN = /^cask "([^"]+)" do$/m;
 
-export function resolveCaskPath(tapDir, caskToken = "pi-gui") {
+export function resolveCaskPath(tapDir, caskToken = "pi-garden") {
   return path.join(path.resolve(tapDir), "Casks", `${caskToken}.rb`);
 }
 
-export function renderCask({ assetUrl, caskToken = "pi-gui", sha256, version }) {
+export function renderCask({ assetUrl, caskToken = "pi-garden", sha256, version }) {
   return `# typed: false
 # frozen_string_literal: true
 
@@ -20,20 +20,20 @@ cask "${caskToken}" do
   sha256 "${sha256}"
 
   url "${assetUrl}"
-  name "pi-gui"
+  name "pi-garden"
   desc "Codex-style desktop shell for pi"
-  homepage "https://github.com/minghinmatthewlam/pi-gui"
+  homepage "https://github.com/etsenake/pi-garden"
 
   depends_on arch: :arm64
 
-  app "pi-gui.app"
+  app "pi-garden.app"
 end
 `;
 }
 
 export function updateCaskContent(
   existingContent,
-  { assetUrl, caskToken = "pi-gui", sha256, version },
+  { assetUrl, caskToken = "pi-garden", sha256, version },
 ) {
   const tokenMatch = existingContent.match(CASK_PATTERN);
   if (!tokenMatch) {
@@ -74,7 +74,7 @@ export function updateCaskContent(
 
 export async function applyHomebrewTapUpdate({
   assetUrl,
-  caskToken = "pi-gui",
+  caskToken = "pi-garden",
   dryRun = false,
   sha256,
   tapDir,

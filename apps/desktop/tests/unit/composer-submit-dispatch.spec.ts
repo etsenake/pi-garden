@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { RuntimeCommandRecord } from "@pi-gui/session-driver/runtime-types";
+import type { RuntimeCommandRecord } from "@pi-garden/session-driver/runtime-types";
 import { composerSubmitNeedsSenderView } from "../../contracts/composer-commands";
 
 function command(name: string, source: RuntimeCommandRecord["source"]): RuntimeCommandRecord {

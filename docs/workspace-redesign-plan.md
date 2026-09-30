@@ -8,7 +8,7 @@ The conversation remains the main surface. Files, Changes, Terminal, and optiona
 
 The composer keeps both model and reasoning level visible. The side-workspace toggle is icon-only, with an accessible name, tooltip, pressed state, and existing keyboard shortcut. Appearance and density stay in Settings. There is no local/cloud picker when only local operation exists.
 
-Chord supplies extension services, replicated state and facet lifecycle. Pi-gui supplies the desktop view host and a small registration adapter to existing Pi extensions. Authors provide browser interfaces rather than a fixed blocks schema. The [custom frontend design](chord-desktop-extension-design.md) records the implemented contract, ownership and verification scope. Its Pi EventBus bridge performs discovery only.
+Chord supplies extension services, replicated state and facet lifecycle. Pi-garden supplies the desktop view host and a small registration adapter to existing Pi extensions. Authors provide browser interfaces rather than a fixed blocks schema. The [custom frontend design](chord-desktop-extension-design.md) records the implemented contract, ownership and verification scope. Its Pi EventBus bridge performs discovery only.
 
 ## Baseline behavior before the workspace foundation
 
@@ -38,7 +38,7 @@ Neutral Default light/dark colors, consistent spacing, a quieter sidebar and com
 A user opens **+ → PR Review**, asks Pi to review, and creates a fix task:
 
 1. The workbench adds or focuses the extension's tool tab for the selected task. Opening the tab does not start a review.
-2. Pi-gui's view host mounts the extension's desktop interface and connects it to the backend for that exact Pi session. The custom frontend and its connection are scoped to the current runtime generation.
+2. Pi-garden's view host mounts the extension's desktop interface and connects it to the backend for that exact Pi session. The custom frontend and its connection are scoped to the current runtime generation.
 3. The user refreshes the real GitHub PR and presses **Review with Pi**. The frontend calls the extension's backend through Chord. Pi's public `sendUserMessage` returns before admission, so the example displays Requested until the matching Pi hook confirms Running. Transcript and normal Stop controls show the actual run.
 4. The extension saves its findings in Pi extension state and updates the state exposed to its frontend. The frontend renders the findings with its own layout. Its live state is a projection, not a second durable findings store.
 5. **Create fix task** calls a narrow host action which prepares a draft in the PR's checkout. The user sends it through the normal composer.
@@ -168,7 +168,7 @@ The [implemented author contract](chord-desktop-extension-design.md) uses the re
 
 The helper is private, not an npm publication or upstream Pi API. The [author README](../examples/desktop-extensions/README.md) documents local configuration, browser builds, offline checks, terminal fallback, editing and reload. Both examples passed desktop workflows, and separate locally packed helper/example tarballs loaded through actual Pi outside this repository. The [verification report](workspace-redesign-verification.md) distinguishes that loader proof from Electron and provider execution.
 
-Pi-gui's view host owns the connection between a registered frontend and a tool tab; the extension owns its domain data, operations and rendering. Loading, ready, unavailable and failed states must be visible. Backend operations require validated inputs, explicit outcomes, bounded pending requests and no automatic replay after an unknown outcome. Use upstream identity, cancellation and replacement behavior where it applies, while retaining explicit task targeting at the desktop boundary. Do not invent parallel lifecycle or state-replication mechanisms by default.
+Pi-garden's view host owns the connection between a registered frontend and a tool tab; the extension owns its domain data, operations and rendering. Loading, ready, unavailable and failed states must be visible. Backend operations require validated inputs, explicit outcomes, bounded pending requests and no automatic replay after an unknown outcome. Use upstream identity, cancellation and replacement behavior where it applies, while retaining explicit task targeting at the desktop boundary. Do not invent parallel lifecycle or state-replication mechanisms by default.
 
 Main binds each connection to its initiating IPC sender, task, view and runtime generation. Actions validate that connection and the window's current task after awaited work and again when a queued state action starts. The renderer persists the outgoing task's pending composer draft before forwarding a draft-creation action, and drops the action if its mount/task changed during preflight. File navigation returns only to the initiating window; closed, crashed or obsolete connections cannot redirect it to the foreground window. The implemented recovery is an unavailable/rejected presentation action with extension-owned results retained, not a new late-result link or inbox. Background state updates do not navigate.
 
@@ -206,7 +206,7 @@ Pi Coding Agent 0.87.0 is implemented and verified. Visible history now uses Pi'
 - The macOS arm64 packaged app launched and created a thread through its real UI. Packaged model-registry, provider implementation imports, native dependency presence and recursive Pi dependency-version checks passed. The recursive audit covered 137 packages. Staging pins and two explicit nested copies prevent the packager from silently selecting incompatible versions.
 - Independent review found and rechecked the assistant-message and idle-boundary fixes; no concrete findings remain in the final reviewed changes.
 
-Local evidence is retained under `.artifacts/pi-087-upgrade/` and `.artifacts/verify-pi-gui/run-vYTlSs/`. The Chord probes and their scope are documented in the [extension design](chord-desktop-extension-design.md). Windows/Linux packaging, notarization and the proposed custom-view Electron host were not verified or implemented in the upgrade. The subsequent daily coding polish and tool tabs are described above.
+Local evidence is retained under `.artifacts/pi-087-upgrade/` and `.artifacts/verify-pi-garden/run-vYTlSs/`. The Chord probes and their scope are documented in the [extension design](chord-desktop-extension-design.md). Windows/Linux packaging, notarization and the proposed custom-view Electron host were not verified or implemented in the upgrade. The subsequent daily coding polish and tool tabs are described above.
 
 ## Historical workspace foundation verification — September 22, 2026
 
@@ -216,7 +216,7 @@ The first runs exposed stale tests for the removed title/picker controls and one
 
 The visible `openai-codex/gpt-5.6-sol` conversation proof passed all ten checkpoints in `run-Kbam6L`: send/stream, reading and typing during output, completion, switching during a tool run, real tool output/file creation, Stop, draft isolation, archive/restore, and both conversations after restart. The maintenance proof passed all seven checkpoints in `run-E5XxGQ`, including Skills Try/aliases, pinning while running, thread-list expansion, permanent worktree creation checked against Git, and real queued follow-up/steering. No assertion failures were recorded. The conversation and follow-up traces were opened in the trace viewer and showed no errors; screenshots and the retained tool result were inspected. All four owned Electron processes exited.
 
-The detailed fixture evidence and baseline log are retained under `.artifacts/workbench-redesign/`; the two provider runs are under `.artifacts/verify-pi-gui/`. This proves the built-in workspace foundation in freshly built development Electron. It does not establish Branch/Last turn review, custom Chord frontend hosting, packaged installation, or Windows/Linux behavior.
+The detailed fixture evidence and baseline log are retained under `.artifacts/workbench-redesign/`; the two provider runs are under `.artifacts/verify-pi-garden/`. This proves the built-in workspace foundation in freshly built development Electron. It does not establish Branch/Last turn review, custom Chord frontend hosting, packaged installation, or Windows/Linux behavior.
 
 ## Implementation phases and release gates
 
@@ -235,7 +235,7 @@ P0.0–P0.2 are the previously verified baseline. P0.3/P0.4/P1.1/P1.2 are **impl
 
 The implementation followed the upgrade → workspace → review/capture → extension-host order, and the final gates above passed. P2 remains a separate product scope. Later Pi upgrades remain focused compatibility changes; capture, transcript identity and discovery hooks are explicit compatibility boundaries.
 
-Use the existing [verification skill](../.agents/skills/verify-pi-gui/SKILL.md) and [baseline](ci-baseline.md). `pnpm check` is the baseline; targeted desktop specs go through the existing `test:e2e:runner` or named Core scripts. Extend the existing `workspace-files`, `changed-files`, `integrated-terminal`, `composer-draft-sync`, `multi-window`, persistence/reopen, extension-dialog/dock/reload/isolation and worktree coverage. Add deterministic checkpoint and bridge integration fixtures. Then run the real-provider conversation/maintenance recipes with an isolated profile. Packaging/native behavior has its own proof; it is not established by browser prototypes or Core fixtures.
+Use the existing [verification skill](../.agents/skills/verify-pi-garden/SKILL.md) and [baseline](ci-baseline.md). `pnpm check` is the baseline; targeted desktop specs go through the existing `test:e2e:runner` or named Core scripts. Extend the existing `workspace-files`, `changed-files`, `integrated-terminal`, `composer-draft-sync`, `multi-window`, persistence/reopen, extension-dialog/dock/reload/isolation and worktree coverage. Add deterministic checkpoint and bridge integration fixtures. Then run the real-provider conversation/maintenance recipes with an isolated profile. Packaging/native behavior has its own proof; it is not established by browser prototypes or Core fixtures.
 
 ## Migration and enforcement
 

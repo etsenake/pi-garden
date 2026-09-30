@@ -30,7 +30,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 }
 
 async function repository(unborn = false): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "pi-gui-git-review-test-"));
+  const cwd = await mkdtemp(join(tmpdir(), "pi-garden-git-review-test-"));
   await git(cwd, "init", "-b", "trunk");
   await git(cwd, "config", "user.email", "review@example.invalid");
   await git(cwd, "config", "user.name", "Review fixture");

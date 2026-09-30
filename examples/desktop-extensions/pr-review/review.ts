@@ -3,7 +3,7 @@ import type { Finding, FixDraft, ReviewRecord, ReviewState, ReviewTarget } from 
 import { staleReason } from "./contract";
 import { relativeFile } from "./repository";
 
-export const ENTRY = "pi-gui.pr-review.v1";
+export const ENTRY = "pi-garden.pr-review.v1";
 export const initialState = (): ReviewState => ({
   target: null,
   review: null,

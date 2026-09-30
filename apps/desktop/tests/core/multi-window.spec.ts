@@ -50,15 +50,15 @@ async function waitForWindowCount(harness: DesktopHarness, count: number): Promi
 }
 
 async function browserWindowIndexForPage(harness: DesktopHarness, source: Page): Promise<number> {
-  const marker = `pi-gui-window-${Date.now()}-${Math.random()}`;
+  const marker = `pi-garden-window-${Date.now()}-${Math.random()}`;
   await source.evaluate((value) => {
-    Object.assign(window, { __piGuiTestWindowMarker: value });
+    Object.assign(window, { __piGardenTestWindowMarker: value });
   }, marker);
   const index = await harness.electronApp.evaluate(async ({ BrowserWindow }, value) => {
     const windows = BrowserWindow.getAllWindows();
     for (const [candidateIndex, candidateWindow] of windows.entries()) {
       const candidateMarker: unknown = await candidateWindow.webContents
-        .executeJavaScript("window.__piGuiTestWindowMarker", true)
+        .executeJavaScript("window.__piGardenTestWindowMarker", true)
         .catch(() => undefined);
       if (candidateMarker === value) {
         return candidateIndex;

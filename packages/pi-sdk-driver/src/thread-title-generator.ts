@@ -8,7 +8,7 @@ import {
   type CreateAgentSessionOptions,
   type ResourceLoader,
 } from "@earendil-works/pi-coding-agent";
-import type { SessionModelSelection, WorkspaceRef } from "@pi-gui/session-driver";
+import type { SessionModelSelection, WorkspaceRef } from "@pi-garden/session-driver";
 import { messageText as sessionMessageText } from "./session-supervisor-utils.js";
 
 export interface GenerateThreadTitleOptions {

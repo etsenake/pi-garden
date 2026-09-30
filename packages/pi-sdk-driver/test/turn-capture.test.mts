@@ -10,7 +10,7 @@ import type {
   AgentSessionRuntime,
   ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
-import type { SessionDriverEvent } from "@pi-gui/session-driver";
+import type { SessionDriverEvent } from "@pi-garden/session-driver";
 import { PiSdkDriver, type PiSdkDriverConfig } from "../dist/pi-sdk-driver.js";
 import { createAgentSessionRuntimeWithNpmFallback } from "../dist/npm-package-fallback.js";
 
@@ -97,7 +97,7 @@ async function fixture(
     driver?: Partial<PiSdkDriverConfig>;
   } = {},
 ) {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-turn-capture-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-turn-capture-"));
   const agentDir = join(root, "agent");
   const cwd = join(root, "workspace");
   await mkdir(agentDir);

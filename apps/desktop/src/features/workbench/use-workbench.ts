@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import type { SessionRef } from "@pi-gui/session-driver/types";
+import type { SessionRef } from "@pi-garden/session-driver/types";
 import type { PiDesktopApi } from "../../../contracts/ipc";
 import type { TaskWorkbenchTemplate, ToolRef } from "../../../contracts/workbench";
 import type { FileWorkbenchTabs } from "./file-workbench-state";

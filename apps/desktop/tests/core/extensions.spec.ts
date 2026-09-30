@@ -647,11 +647,11 @@ test("keeps a single subscription path when an extension creates a child session
   }
 });
 
-test("switches pi-gui tools off app-wide and keeps them off after a restart", async () => {
+test("switches pi-garden tools off app-wide and keeps them off after a restart", async () => {
   test.setTimeout(90_000);
   const userDataDir = await makeUserDataDir();
-  const workspacePath = await makeWorkspace("pi-gui-tools-workspace");
-  const orchestrationPath = "<inline:pi-gui-thread-orchestration>";
+  const workspacePath = await makeWorkspace("pi-garden-tools-workspace");
+  const orchestrationPath = "<inline:pi-garden-thread-orchestration>";
   const orchestrationEnabled = async (window: Page) => {
     const state = await getDesktopState(window);
     const workspace = state.workspaces.find((entry) => entry.path === workspacePath);
@@ -661,7 +661,7 @@ test("switches pi-gui tools off app-wide and keeps them off after a restart", as
         )?.enabled
       : undefined;
   };
-  const openPiGuiTools = async (window: Page) => {
+  const openPiGardenTools = async (window: Page) => {
     const list = window.getByTestId("extensions-list");
     const openButton = window.getByRole("button", { name: "Extensions", exact: true });
     // A restart restores the last open view, so Settings may already show the list.
@@ -669,7 +669,7 @@ test("switches pi-gui tools off app-wide and keeps them off after a restart", as
     if (!(await list.isVisible())) {
       await openButton.click();
     }
-    await expect(list.getByRole("heading", { name: /pi-gui tools/ })).toBeVisible();
+    await expect(list.getByRole("heading", { name: /pi-garden tools/ })).toBeVisible();
     return list.getByRole("switch", { name: "Enable Thread orchestration" });
   };
 
@@ -679,7 +679,7 @@ test("switches pi-gui tools off app-wide and keeps them off after a restart", as
   });
   try {
     const window = await harness.firstWindow();
-    const toggle = await openPiGuiTools(window);
+    const toggle = await openPiGardenTools(window);
     await expect(toggle).toBeChecked();
     await expect(toggle).toBeEnabled();
     await toggle.click();
@@ -695,7 +695,7 @@ test("switches pi-gui tools off app-wide and keeps them off after a restart", as
   });
   try {
     const window = await harness.firstWindow();
-    const toggle = await openPiGuiTools(window);
+    const toggle = await openPiGardenTools(window);
     await expect(toggle).not.toBeChecked();
     await expect(
       window.getByTestId("extensions-list").getByRole("switch", { name: "Enable Scheduled tasks" }),

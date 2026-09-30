@@ -3,7 +3,7 @@ export const MIN_SCHEDULE_INTERVAL_MS = 60_000;
 export const MAX_SCHEDULE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_SCHEDULED_TASK_RUNS = 40;
 export const SCHEDULED_TASK_INTERVIEW_PROMPT =
-  "Let's set up a scheduled task together. First, explain how scheduled tasks work in pi-gui. Then interview me to figure out what I need scheduled and when it should run.";
+  "Let's set up a scheduled task together. First, explain how scheduled tasks work in pi-garden. Then interview me to figure out what I need scheduled and when it should run.";
 
 export type ScheduledTaskStatus = "active" | "paused" | "completed";
 export type ScheduledTaskFilter = "all" | ScheduledTaskStatus;

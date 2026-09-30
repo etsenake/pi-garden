@@ -67,7 +67,7 @@ function modelKeys(
 }
 
 async function createAgentDir(): Promise<{ agentDir: string; workspacePath: string }> {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-ext-providers-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-ext-providers-"));
   const agentDir = join(root, "agent");
   const workspacePath = join(root, "workspace");
   await mkdir(agentDir, { recursive: true });
@@ -92,7 +92,7 @@ async function createAgentDir(): Promise<{ agentDir: string; workspacePath: stri
 
 /** An agent dir with no models.json providers, for multi-workspace isolation tests. */
 async function createSharedAgentDir(): Promise<{ root: string; agentDir: string }> {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-ext-providers-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-ext-providers-"));
   const agentDir = join(root, "agent");
   await mkdir(agentDir, { recursive: true });
   await writeFile(join(agentDir, "auth.json"), "{}");

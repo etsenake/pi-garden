@@ -10,8 +10,8 @@ import {
   DESKTOP_VIEW_UNREGISTER,
   type DesktopViewDeclaration,
   type DesktopViewRegistrationEvent,
-} from "@pi-gui/extension-ui";
-import type { SessionRef, WorkspaceRef } from "@pi-gui/session-driver";
+} from "@pi-garden/extension-ui";
+import type { SessionRef, WorkspaceRef } from "@pi-garden/session-driver";
 
 type ResourceLoaderOptions = NonNullable<
   CreateAgentSessionServicesOptions["resourceLoaderOptions"]
@@ -114,7 +114,7 @@ export function createDesktopExtensionBridge(options: {
         eventBus,
         extensionFactories: [
           ...(existing.extensionFactories ?? []),
-          { name: "pi-gui-desktop-views", hidden: true, factory: lifecycle },
+          { name: "pi-garden-desktop-views", hidden: true, factory: lifecycle },
         ],
         extensionsOverride(result) {
           const selected = existing.extensionsOverride?.(result) ?? result;

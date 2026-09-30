@@ -191,7 +191,7 @@ test("settings lets the user add, edit, and delete an OpenAI-compatible custom e
       baseUrl: "http://localhost:11434/v1",
       api: "openai-completions",
       apiKey: "unused",
-      piGuiCustomEndpoint: true,
+      piGardenCustomEndpoint: true,
       models: [{ id: "llama3.1" }],
     });
     await expect
@@ -569,7 +569,7 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
       apiKey: "test-api-key",
       baseUrl: modelServer.baseUrl,
       models: [{ id: "detected-model-1" }],
-      piGuiCustomEndpoint: true,
+      piGardenCustomEndpoint: true,
     });
     await saveCustomEndpointProof(window, proofDir, "04-final-added-endpoint.png");
   } finally {

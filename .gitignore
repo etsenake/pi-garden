@@ -34,5 +34,5 @@ index.html
 *-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9].js
 *-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9].css
 
-# Local verification evidence (verify-pi-gui runs, proof workspaces)
+# Local verification evidence (verify-pi-garden runs, proof workspaces)
 /.artifacts/

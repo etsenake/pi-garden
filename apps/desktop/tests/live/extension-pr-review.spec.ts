@@ -16,15 +16,15 @@ test("a real provider records PR findings through the installed extension and pr
     process.platform === "win32",
     "The offline GitHub metadata fixture uses a POSIX executable.",
   );
-  const provider = process.env.PI_GUI_PROVIDER;
-  const model = process.env.PI_GUI_MODEL;
+  const provider = process.env.PI_GARDEN_PROVIDER;
+  const model = process.env.PI_GARDEN_MODEL;
   if (!authConfig.sourceDir || !provider || !model)
-    throw new Error("Set real-auth source, PI_GUI_PROVIDER and PI_GUI_MODEL for this proof.");
+    throw new Error("Set real-auth source, PI_GARDEN_PROVIDER and PI_GARDEN_MODEL for this proof.");
   const auth: unknown = JSON.parse(await readFile(join(authConfig.sourceDir, "auth.json"), "utf8"));
   if (!auth || typeof auth !== "object" || Array.isArray(auth) || !(provider in auth))
     throw new Error("The selected provider has no saved credentials.");
   // Credential copies stay outside the shareable screenshot/trace directory.
-  const privateRoot = await mkdtemp(join(tmpdir(), "pi-gui-extension-live-private-"));
+  const privateRoot = await mkdtemp(join(tmpdir(), "pi-garden-extension-live-private-"));
   await chmod(privateRoot, 0o700);
   const agentDir = join(privateRoot, "agent");
   await mkdir(agentDir, { mode: 0o700 });

@@ -3,7 +3,7 @@ import test from "node:test";
 import { checkGithubReleaseState } from "./github-release-state.mjs";
 
 const baseOptions = {
-  repository: "minghinmatthewlam/pi-gui",
+  repository: "etsenake/pi-garden",
   tag: "v0.1.0-beta.34",
   token: "test-token",
 };
@@ -51,11 +51,11 @@ test("accepts an existing draft only when publication requires it", async () => 
   assert.deepEqual(result, { state: "draft", id: 59 });
   assert.equal(
     requests[0].url,
-    "https://api.github.com/repos/minghinmatthewlam/pi-gui/releases/tags/v0.1.0-beta.34",
+    "https://api.github.com/repos/etsenake/pi-garden/releases/tags/v0.1.0-beta.34",
   );
   assert.equal(
     requests[1].url,
-    "https://api.github.com/repos/minghinmatthewlam/pi-gui/releases?per_page=100&page=1",
+    "https://api.github.com/repos/etsenake/pi-garden/releases?per_page=100&page=1",
   );
   assert.equal(requests[1].options.headers.Authorization, "Bearer test-token");
 });

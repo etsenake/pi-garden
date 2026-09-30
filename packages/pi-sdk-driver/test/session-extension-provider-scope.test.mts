@@ -52,7 +52,7 @@ function providerExtensionSource(
 }
 
 async function makeAgentDir(): Promise<{ root: string; agentDir: string }> {
-  const root = await mkdtemp(join(tmpdir(), "pi-gui-session-ext-scope-"));
+  const root = await mkdtemp(join(tmpdir(), "pi-garden-session-ext-scope-"));
   const agentDir = join(root, "agent");
   await mkdir(agentDir, { recursive: true });
   await writeFile(join(agentDir, "auth.json"), "{}");

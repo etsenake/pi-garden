@@ -5,7 +5,7 @@
 #      variable, without printing it, unless an auth file already exists;
 #   2. starts a virtual X display, with a window manager when installed;
 #   3. sets this checkout's git author to the maintainer;
-#   4. exports the verify-pi-gui real-auth defaults for later shell commands.
+#   4. exports the verify-pi-garden real-auth defaults for later shell commands.
 # Credentials never go in the setup script, which is cached as a snapshot.
 set -uo pipefail
 
@@ -59,10 +59,10 @@ fi
 # maintainer in this checkout instead, but only for the upstream repo so a
 # contributor's cloud session on a fork never commits under the maintainer.
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] &&
-  git -C "$CLAUDE_PROJECT_DIR" remote get-url origin 2>/dev/null | grep -q 'github.com[:/]minghinmatthewlam/pi-gui\(\.git\)\?$'; then
-  git -C "$CLAUDE_PROJECT_DIR" config user.name "Matthew Lam"
-  git -C "$CLAUDE_PROJECT_DIR" config user.email "minghinmatthew.lam@gmail.com"
-  echo "git: authoring commits as Matthew Lam"
+  git -C "$CLAUDE_PROJECT_DIR" remote get-url origin 2>/dev/null | grep -q 'github.com[:/]etsenake/pi-garden\(\.git\)\?$'; then
+  git -C "$CLAUDE_PROJECT_DIR" config user.name "Josh Etsenake"
+  git -C "$CLAUDE_PROJECT_DIR" config user.email "josh.etsenake@fullscript.com"
+  echo "git: authoring commits as Josh Etsenake"
 fi
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
@@ -72,8 +72,8 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
     echo "export DISPLAY=$display"
     echo "export PI_APP_REAL_AUTH=\${PI_APP_REAL_AUTH:-1}"
     echo "export PI_APP_REAL_AUTH_SOURCE_DIR=\${PI_APP_REAL_AUTH_SOURCE_DIR:-$agent_dir}"
-    echo "export PI_GUI_PROVIDER=\${PI_GUI_PROVIDER:-openai-codex}"
-    echo "export PI_GUI_MODEL=\${PI_GUI_MODEL:-gpt-5.6-luna}"
+    echo "export PI_GARDEN_PROVIDER=\${PI_GARDEN_PROVIDER:-openai-codex}"
+    echo "export PI_GARDEN_MODEL=\${PI_GARDEN_MODEL:-gpt-5.6-luna}"
   } >>"$CLAUDE_ENV_FILE"
 fi
 exit 0

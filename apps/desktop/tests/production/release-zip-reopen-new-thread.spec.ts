@@ -20,11 +20,11 @@ import {
 test("relaunches a packaged release-zip build with a new auto-titled thread and restores title plus transcript", async () => {
   test.setTimeout(120_000);
 
-  const userDataDir = await makeUserDataDir("pi-gui-release-zip-reopen-user-data-");
+  const userDataDir = await makeUserDataDir("pi-garden-release-zip-reopen-user-data-");
   const workspacePath = await makeWorkspace("release-zip-reopen-workspace");
   const appBundlePath = await extractPackagedReleaseZipAppBundle(
     undefined,
-    "pi-gui release zip reopen.app",
+    "pi-garden release zip reopen.app",
   );
   const executablePath = await resolveAppBundleExecutable(appBundlePath);
   const promptText = "Review the release-zip reopen persistence behavior";
@@ -93,11 +93,11 @@ test("relaunches a packaged release-zip build with a new auto-titled thread and 
 test("relaunches a packaged release-zip build with multiple new threads and restores transcript selection", async () => {
   test.setTimeout(120_000);
 
-  const userDataDir = await makeUserDataDir("pi-gui-release-zip-transcript-user-data-");
+  const userDataDir = await makeUserDataDir("pi-garden-release-zip-transcript-user-data-");
   const workspacePath = await makeWorkspace("release-zip-transcript-workspace");
   const appBundlePath = await extractPackagedReleaseZipAppBundle(
     undefined,
-    "pi-gui release zip transcript.app",
+    "pi-garden release zip transcript.app",
   );
   const executablePath = await resolveAppBundleExecutable(appBundlePath);
   const firstPrompt = "Trace the first packaged transcript";

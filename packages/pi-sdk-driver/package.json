@@ -1,10 +1,10 @@
 {
-  "name": "@pi-gui/pi-sdk-driver",
+  "name": "@pi-garden/pi-sdk-driver",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "SDK-first session driver spike for pi-gui.",
+  "description": "SDK-first session driver spike for pi-garden.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -25,9 +25,9 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^0.87.1",
-    "@pi-gui/catalogs": "workspace:*",
-    "@pi-gui/extension-ui": "workspace:*",
-    "@pi-gui/session-driver": "workspace:*"
+    "@pi-garden/catalogs": "workspace:*",
+    "@pi-garden/extension-ui": "workspace:*",
+    "@pi-garden/session-driver": "workspace:*"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "^0.87.1"

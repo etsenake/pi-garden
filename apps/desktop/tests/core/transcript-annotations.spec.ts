@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import type { PiSdkDriver } from "@pi-gui/pi-sdk-driver";
-import type { SessionMessageInput } from "@pi-gui/session-driver";
+import type { PiSdkDriver } from "@pi-garden/pi-sdk-driver";
+import type { SessionMessageInput } from "@pi-garden/session-driver";
 import {
   createNamedThread,
   getDesktopState,
@@ -90,7 +90,7 @@ test("adds transcript selections to chat with comments and sends them before the
       (_electron, input) => {
         const { createRequire } = process.getBuiltinModule("module");
         const load = createRequire(input.entry);
-        const { PiSdkDriver: Driver } = load("@pi-gui/pi-sdk-driver") as {
+        const { PiSdkDriver: Driver } = load("@pi-garden/pi-sdk-driver") as {
           PiSdkDriver: typeof PiSdkDriver;
         };
         const sent: SessionMessageInput[] = [];

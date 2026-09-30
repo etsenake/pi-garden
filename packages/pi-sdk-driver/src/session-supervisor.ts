@@ -15,7 +15,7 @@ import {
   type ExtensionWidgetOptions,
   type SessionInfo,
 } from "@earendil-works/pi-coding-agent";
-import type { SessionCatalogSnapshot, WorkspaceCatalogSnapshot } from "@pi-gui/catalogs";
+import type { SessionCatalogSnapshot, WorkspaceCatalogSnapshot } from "@pi-garden/catalogs";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
@@ -24,7 +24,7 @@ import type {
   SessionQueuedMessage,
   SessionTreeNodeSnapshot,
   SessionTreeSnapshot,
-} from "@pi-gui/session-driver/types";
+} from "@pi-garden/session-driver/types";
 import type {
   CreateSessionOptions,
   ForkSessionOptions,
@@ -46,11 +46,11 @@ import type {
   Unsubscribe,
   WorkspaceId,
   WorkspaceRef,
-} from "@pi-gui/session-driver";
-import type { RuntimeCommandRecord } from "@pi-gui/session-driver/runtime-types";
-import { isMissingFileError, JsonCatalogStore } from "@pi-gui/catalogs/node";
-import type { SessionFileCatalogStorage } from "@pi-gui/catalogs";
-import { sessionKey } from "@pi-gui/session-driver";
+} from "@pi-garden/session-driver";
+import type { RuntimeCommandRecord } from "@pi-garden/session-driver/runtime-types";
+import { isMissingFileError, JsonCatalogStore } from "@pi-garden/catalogs/node";
+import type { SessionFileCatalogStorage } from "@pi-garden/catalogs";
+import { sessionKey } from "@pi-garden/session-driver";
 import { buildSessionSchemaInfo, readSessionFileSchemaVersion } from "./session-schema.js";
 import {
   gatedBuiltinExtensions,
@@ -161,7 +161,7 @@ export interface PiSdkDriverOptions {
   /** Read each time a session loads or reloads its extensions; defaults to enabled. */
   readonly isBuiltinExtensionEnabled?: BuiltinExtensionEnabled;
   readonly desktopExtensions?: PiDesktopExtensionObserver;
-  readonly onTurnCaptureBoundary?: import("@pi-gui/session-driver").TurnCaptureObserver;
+  readonly onTurnCaptureBoundary?: import("@pi-garden/session-driver").TurnCaptureObserver;
   readonly turnCaptureTimeoutMs?: number;
   readonly generateThreadTitleOverride?: (
     workspace: WorkspaceRef,
@@ -299,14 +299,14 @@ export class SessionSupervisor {
         extensionFactories: [
           ...this.builtinExtensions,
           {
-            name: "pi-gui-plan-limits",
+            name: "pi-garden-plan-limits",
             hidden: true,
             factory: createPlanLimitsExtension({
               onPlanLimits: (limits) => this.planLimitsByProvider.set(limits.provider, limits),
             }),
           },
           {
-            name: "pi-gui-transcript-identity",
+            name: "pi-garden-transcript-identity",
             hidden: true,
             factory: createTranscriptIdentityExtension({
               workspace,
@@ -332,7 +332,7 @@ export class SessionSupervisor {
           ...(this.onTurnCaptureBoundary
             ? [
                 {
-                  name: "pi-gui-turn-capture",
+                  name: "pi-garden-turn-capture",
                   hidden: true,
                   factory: createTurnCaptureExtension({
                     workspace,
@@ -1289,7 +1289,7 @@ export class SessionSupervisor {
     }
 
     // Claim the lease before opening a writable runtime. A live foreign holder
-    // or a lease we cannot write both refuse the reopen, so two pi-gui
+    // or a lease we cannot write both refuse the reopen, so two pi-garden
     // processes never write the same file.
     const leasePath = await this.claimSessionLease(sessionFile);
 
@@ -1848,7 +1848,7 @@ export class SessionSupervisor {
           title,
         });
       },
-      // pi-gui does not render arbitrary TUI custom components. Throwing a
+      // pi-garden does not render arbitrary TUI custom components. Throwing a
       // typed unsupported-host error allows extensions to catch and degrade,
       // while uncaught command paths fail fast and are surfaced cleanly by
       // the desktop host.
@@ -1897,7 +1897,7 @@ export class SessionSupervisor {
       getTheme: () => undefined,
       setTheme: () => ({
         success: false,
-        error: "Theme switching not supported in pi-gui host UI",
+        error: "Theme switching not supported in pi-garden host UI",
       }),
       getToolsExpanded: () => false,
       setToolsExpanded: () => {},

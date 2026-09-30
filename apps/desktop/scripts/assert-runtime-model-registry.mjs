@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-const dir = await mkdtemp(join(tmpdir(), "pi-gui-runtime-models-"));
+const dir = await mkdtemp(join(tmpdir(), "pi-garden-runtime-models-"));
 await writeFile(join(dir, "auth.json"), "{}\n");
 const runtime = await ModelRuntime.create({
   authPath: join(dir, "auth.json"),

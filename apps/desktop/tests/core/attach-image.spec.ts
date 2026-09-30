@@ -15,7 +15,7 @@ test("attaches an image from a stubbed picker result and shows the attachment ch
   test.setTimeout(60_000);
   const userDataDir = await makeUserDataDir();
   const workspacePath = await makeWorkspace("native-attach-image-workspace");
-  const imageDir = await mkdtemp(join(tmpdir(), "pi-gui-native-image-"));
+  const imageDir = await mkdtemp(join(tmpdir(), "pi-garden-native-image-"));
   const imagePath = join(imageDir, "screenshot.png");
   await writeTinyPng(imagePath);
 

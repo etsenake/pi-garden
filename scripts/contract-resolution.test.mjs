@@ -17,7 +17,7 @@ test("SDK driver implements canonical SessionDriver and cannot omit tree operati
   assert.deepEqual(parsed.errors, []);
   const file = path.join(directory, "src/contract-proof.ts");
   const text = `
-import type { SessionDriver } from "@pi-gui/session-driver";
+import type { SessionDriver } from "@pi-garden/session-driver";
 import type { PiSdkDriver } from "./pi-sdk-driver.js";
 declare const driver: PiSdkDriver;
 const accepted: SessionDriver = driver;
@@ -54,8 +54,8 @@ test("desktop runtime resolves its catalog backend without TypeScript aliases", 
   const root = fileURLToPath(new URL("../", import.meta.url));
   const require = createRequire(path.join(root, "apps/desktop/package.json"));
   for (const [specifier, relative] of [
-    ["@pi-gui/catalogs/node", "packages/catalogs/dist/node/index.js"],
-    ["@pi-gui/catalogs/node/atomic-write", "packages/catalogs/dist/node/atomic-write.js"],
+    ["@pi-garden/catalogs/node", "packages/catalogs/dist/node/index.js"],
+    ["@pi-garden/catalogs/node/atomic-write", "packages/catalogs/dist/node/atomic-write.js"],
   ]) {
     let resolved;
     assert.doesNotThrow(() => {

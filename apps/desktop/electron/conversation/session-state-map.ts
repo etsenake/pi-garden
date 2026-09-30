@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { SessionConfig, SessionUsageSnapshot } from "@pi-gui/session-driver";
+import type { SessionConfig, SessionUsageSnapshot } from "@pi-garden/session-driver";
 import {
   createEmptyExtensionUiState as createBaseExtensionUiState,
   type ExtensionUiState,
-} from "@pi-gui/pi-sdk-driver";
-import type { RuntimeCommandRecord } from "@pi-gui/session-driver/runtime-types";
+} from "@pi-garden/pi-sdk-driver";
+import type { RuntimeCommandRecord } from "@pi-garden/session-driver/runtime-types";
 import type {
   ComposerAttachment,
   QueuedComposerMessage,

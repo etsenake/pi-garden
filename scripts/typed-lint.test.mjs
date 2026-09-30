@@ -140,7 +140,7 @@ async function workspaceLintFailures(workspaceRoot) {
 }
 
 function lintFixture() {
-  const fixture = realpathSync(mkdtempSync(path.join(os.tmpdir(), "pi-gui-typed-lint-")));
+  const fixture = realpathSync(mkdtempSync(path.join(os.tmpdir(), "pi-garden-typed-lint-")));
   copyFileSync(path.join(root, "eslint.config.mjs"), path.join(fixture, "eslint.config.mjs"));
   symlinkSync(path.join(root, "node_modules"), path.join(fixture, "node_modules"), "junction");
   writeFileSync(

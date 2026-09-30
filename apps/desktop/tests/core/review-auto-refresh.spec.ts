@@ -49,7 +49,7 @@ test("Review picks up outside edits when the window regains focus, without blank
       }).observe(region, { childList: true, subtree: true, characterData: true });
     });
 
-    // Edits made outside pi-gui while it was in the background, then its window regains focus.
+    // Edits made outside pi-garden while it was in the background, then its window regains focus.
     await writeFile(join(workspacePath, "notes.txt"), "first\nsecond\nthird\n");
     await writeFile(join(workspacePath, "extra.txt"), "added elsewhere\n");
     await harness.electronApp.evaluate(({ BrowserWindow }) => {

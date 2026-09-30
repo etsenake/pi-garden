@@ -39,14 +39,14 @@ import type {
   ChangeReviewFileStageInput,
   ChangeReviewFileStageResult,
 } from "../contracts/review";
-import type { SessionRef } from "@pi-gui/session-driver/types";
+import type { SessionRef } from "@pi-garden/session-driver/types";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
   SessionTreeSnapshot,
-} from "@pi-gui/session-driver/types";
-import type { HostUiResponse } from "@pi-gui/session-driver";
-import type { RuntimeSettingsSnapshot } from "@pi-gui/session-driver/runtime-types";
+} from "@pi-garden/session-driver/types";
+import type { HostUiResponse } from "@pi-garden/session-driver";
+import type { RuntimeSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type {
   AppView,
   ComposerAttachment,

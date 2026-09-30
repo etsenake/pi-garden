@@ -10,7 +10,7 @@ const NORMAL_LIFECYCLE_CASES = [
 const STAYS_OPEN_ASSERTION_MS = 750;
 
 async function launchLifecycleApp(testMode: string | undefined): Promise<DesktopHarness> {
-  const userDataDir = await makeUserDataDir("pi-gui-lifecycle-");
+  const userDataDir = await makeUserDataDir("pi-garden-lifecycle-");
   const harness = await launchDesktop(userDataDir, {
     envOverrides: { PI_APP_TEST_MODE: testMode },
   });
