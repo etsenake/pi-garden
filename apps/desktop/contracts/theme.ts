@@ -236,6 +236,15 @@ export function deriveThemeTokens(seedValue: ThemeSeed, variant: ResolvedTheme):
   const text = fade(0.1, 0.13, 7);
   const muted = fade(0.35, 0.37, 4.5);
   const mutedSoft = fade(0.41, 0.42, 4);
+  // Disabled primary CTAs paint ink on `lineStrong`, not the sidebar; keep WCAG
+  // AA for UI icons (≥3:1) without changing the Garden seed palette.
+  const buttonPrimaryDisabledInk = fadeWithContrast(
+    ink,
+    s,
+    pick(0.32, 0.34),
+    3.2,
+    lineStrong,
+  );
   const shadow = light ? ink : "#000000";
   const warningInk = mix(warning, ink, pick(0.3, 0.35));
 
@@ -282,7 +291,7 @@ export function deriveThemeTokens(seedValue: ThemeSeed, variant: ResolvedTheme):
     "--button-primary-hover-border": text,
     "--button-primary-disabled-bg": lineStrong,
     "--button-primary-disabled-border": lineStrong,
-    "--button-primary-disabled-ink": mutedSoft,
+    "--button-primary-disabled-ink": buttonPrimaryDisabledInk,
     "--code-inline-bg": light ? tint(0.05, 0) : alpha(ink, 0.08),
     // Dark code blocks darken whatever is behind them, glass included.
     "--code-block-bg": light ? tint(0.035, 0) : alpha("#000000", 0.25),

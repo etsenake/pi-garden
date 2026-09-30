@@ -90,6 +90,8 @@ Pi's own `ctx.ui` (`ExtensionUIContext`) is the third path. The driver hands eve
 
 The [local author workflow](../examples/desktop-extensions/README.md) covers the file-based [PR Review](../examples/desktop-extensions/pr-review/README.md) and [Test Runs](../examples/desktop-extensions/test-runs/README.md) examples. Browser edits use a checked-in build and Reload view; backend edits use an idle Pi reload. These use Pi's ordinary discovery/trust path without a second installer or marketplace; independently installed local tarballs also passed actual Pi loading. npm publication and a dedicated extension-authoring task button are not implemented. See the [extension design](chord-desktop-extension-design.md) for example limits and the [verification report](workspace-redesign-verification.md) for completed proof.
 
+The freeze contract for desktop customization is versioned in [desktop-extension-contract.md](desktop-extension-contract.md).
+
 ## Current placement
 
 ```text

@@ -26,15 +26,24 @@ const nodeRequire = createRequire(__filename);
 const execFileAsync = promisify(execFile);
 const repoRoot = join(__dirname, "../../../..");
 const applyScript = join(repoRoot, "apps/desktop/resources/skills/adapt-for-desktop/apply.ts");
+const applyBundle = join(repoRoot, "apps/desktop/resources/skills/adapt-for-desktop/apply.mjs");
 const helperPackageDir = dirname(dirname(nodeRequire.resolve("@pi-garden/extension-ui")));
 
 async function runApplier(entry: string): Promise<string> {
-  const { stdout } = await execFileAsync(
-    "pnpm",
-    ["exec", "jiti", applyScript, entry, helperPackageDir],
-    { cwd: repoRoot },
-  );
-  return stdout.trim();
+  try {
+    await access(applyBundle);
+    const { stdout } = await execFileAsync("node", [applyBundle, entry, helperPackageDir], {
+      cwd: repoRoot,
+    });
+    return stdout.trim();
+  } catch {
+    const { stdout } = await execFileAsync(
+      "pnpm",
+      ["exec", "jiti", applyScript, entry, helperPackageDir],
+      { cwd: repoRoot },
+    );
+    return stdout.trim();
+  }
 }
 
 async function fileHash(file: string): Promise<string> {

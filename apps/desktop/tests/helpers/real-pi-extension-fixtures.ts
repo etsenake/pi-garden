@@ -55,14 +55,21 @@ export function todoToolRendererFrontend(): string {
       output.textContent = "todo idle";
       return;
     }
-    const args = tool.args && typeof tool.args === "object" ? tool.args : {};
+    const args =
+      (tool.arguments && typeof tool.arguments === "object" && tool.arguments) ||
+      (tool.args && typeof tool.args === "object" && tool.args) ||
+      {};
     const action = typeof args.action === "string" ? args.action : "";
+    const result =
+      tool.result && typeof tool.result === "object"
+        ? tool.result
+        : null;
     const resultText =
-      tool.result &&
-      Array.isArray(tool.result.content) &&
-      tool.result.content[0] &&
-      tool.result.content[0].type === "text"
-        ? tool.result.content[0].text
+      result &&
+      Array.isArray(result.content) &&
+      result.content[0] &&
+      result.content[0].type === "text"
+        ? result.content[0].text
         : "";
     output.dataset.phase = tool.phase || "";
     output.dataset.action = action;
