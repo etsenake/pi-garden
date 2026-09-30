@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import {
   getSelectedSession,
@@ -21,11 +21,9 @@ import { buildDisplayTimelineItems } from "../features/conversation/timeline-tur
 import { useTurnChanges } from "../features/conversation/hooks/use-turn-changes";
 import { formatRelativeTime } from "../lib/string-utils";
 import { restoreTopmostDialogFocus } from "../ui/dialog-focus";
-import { readComposerAttachmentsFromFiles } from "../features/conversation/composer-attachments";
 import { ComposerPanel } from "../features/conversation/composer-panel";
 import type { ComposerEditorHandle } from "../features/conversation/composer-editor";
-import { useEditorAutocomplete } from "../features/conversation/hooks/use-editor-autocomplete";
-import { DesktopEditorFrame } from "../features/extensions/desktop-editor-frame";
+import { focusComposerEditor } from "../features/conversation/composer-editor";
 import { DiffPanel } from "../features/workbench/diff-panel";
 import type { DiffPanelFileRequest } from "../features/workbench/diff-panel-types";
 import { FileWorkbench } from "../features/workbench/file-workbench";
@@ -111,7 +109,6 @@ export default function App() {
   // Unknown until main answers; until then the theme from the last launch stays.
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark" | null>(null);
   const composerRef = useRef<ComposerEditorHandle | null>(null);
-  const [failedEditorKey, setFailedEditorKey] = useState("");
   const timelinePaneRef = useRef<HTMLDivElement | null>(null);
   const [dismissedSchemaSkewSessionKeys, setDismissedSchemaSkewSessionKeys] = useState<
     ReadonlySet<string>
@@ -428,14 +425,7 @@ export default function App() {
       selectThreadRef.current({ workspaceId: entry.workspaceId, sessionId: entry.session.id }),
   });
   const threadShortcutOrderRef = useRef<readonly ThreadListEntry[] | null>(null);
-  const focusComposer = () => {
-    window.requestAnimationFrame(() => {
-      if (restoreTopmostDialogFocus()) {
-        return;
-      }
-      composerRef.current?.focus();
-    });
-  };
+  const focusComposer = () => focusComposerEditor(composerRef);
   const handleViewFileInDiff = useCallback((path: string) => {
     const workspace = selectedWorkspaceRef.current;
     if (!workspace) return;
@@ -575,24 +565,6 @@ export default function App() {
     api,
     onEnableExtension: enableSelectedMentionExtension,
   });
-  const winningEditor = extensionViews.editors.find((editor) => editor.state === "ready");
-  const winningEditorKey = winningEditor
-    ? `${winningEditor.extensionId}:${winningEditor.id}:${winningEditor.generation}`
-    : "";
-  const customEditor =
-    winningEditor && failedEditorKey !== winningEditorKey ? winningEditor : undefined;
-  const autocomplete = useEditorAutocomplete({
-    api,
-    target: workbenchTarget,
-    text: composerDraft,
-    editorRef: composerRef,
-    hostMenusOpen: mentionMenu.showMentionMenu || slashMenu.showSlashMenu,
-    enabled: Boolean(workbenchTarget),
-    onApply: ({ text, cursor }) => {
-      setComposerDraft(text);
-      requestAnimationFrame(() => composerRef.current?.setSelection(cursor, cursor));
-    },
-  });
 
   const wsMenu = useWorkspaceMenu({
     api,
@@ -622,6 +594,7 @@ export default function App() {
 
   const transcriptAnnotations = useTranscriptAnnotations(selectedSessionKey);
   const {
+    editorRegion,
     composerAttachments,
     submitComposerDraft,
     stopCurrentRun,
@@ -649,7 +622,9 @@ export default function App() {
     openTreeModal,
     handleMentionKeyDown: mentionMenu.handleMentionKeyDown,
     handleSlashKeyDown: slashMenu.handleSlashKeyDown,
-    handleAutocompleteKeyDown: autocomplete.handleKeyDown,
+    target: workbenchTarget,
+    editors: extensionViews.editors,
+    hostMenusOpen: mentionMenu.showMentionMenu || slashMenu.showSlashMenu,
     newThreadComposerRef: newThread.composerRef,
     appendNewThreadAttachment: newThread.appendAttachment,
     onNewThreadComposerError: newThread.setComposerError,
@@ -1241,77 +1216,8 @@ export default function App() {
                 editingQueuedMessageId={editingQueuedMessageId}
                 composerDraft={composerDraft}
                 composerRef={composerRef}
-                editorSlot={
-                  customEditor && workbenchTarget && api ? (
-                    <DesktopEditorFrame
-                      api={api}
-                      target={workbenchTarget}
-                      editor={customEditor}
-                      theme={activeTheme}
-                      text={composerDraft}
-                      status={selectedSession.status === "running" ? "running" : "idle"}
-                      menuOpen={autocomplete.menu.open}
-                      handleRef={composerRef}
-                      onText={(text) => setComposerDraft(text)}
-                      onSubmit={(intent) => {
-                        handleComposerKeyDown({
-                          key: "Enter",
-                          shiftKey: intent.shift,
-                          metaKey: intent.meta,
-                          ctrlKey: intent.ctrl,
-                          altKey: false,
-                          preventDefault() {},
-                          nativeEvent: { isComposing: intent.composing },
-                        } as KeyboardEvent<HTMLTextAreaElement>);
-                      }}
-                      onUnavailable={() => setFailedEditorKey(winningEditorKey)}
-                      onFiles={(files) => {
-                        void readComposerAttachmentsFromFiles(files, composerAttachments)
-                          .then((attachments) => {
-                            const existingIds = new Set(composerAttachments.map((item) => item.id));
-                            return api.addComposerAttachments(
-                              attachments.filter((item) => !existingIds.has(item.id)),
-                            );
-                          })
-                          .catch((error: unknown) => {
-                            console.error("[desktop-editor] attachments failed", error);
-                          });
-                      }}
-                    />
-                  ) : undefined
-                }
-                suggestionMenu={
-                  autocomplete.menu.open ? (
-                    <div className="slash-menu" data-testid="editor-autocomplete-menu">
-                      {autocomplete.menu.items.map((item, index) => (
-                        <button
-                          className={`slash-menu__option ${index === autocomplete.menu.selectedIndex ? "slash-menu__option--active" : ""}`}
-                          key={`${item.value}:${index}`}
-                          type="button"
-                          onClick={() => autocomplete.accept(item)}
-                        >
-                          <span className="slash-menu__option-title">{item.label}</span>
-                          {item.description ? (
-                            <span className="slash-menu__option-description">
-                              {item.description}
-                            </span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null
-                }
-                editorNotice={
-                  winningEditor?.conflict && winningEditor.conflict.length > 0 ? (
-                    <div
-                      className="composer__status"
-                      data-testid="desktop-editor-conflict"
-                      role="status"
-                    >
-                      {winningEditor.title} is the editor. Other registrations are waiting.
-                    </div>
-                  ) : null
-                }
+                editorRegion={editorRegion}
+                theme={activeTheme}
                 runtime={selectedModelRuntime}
                 usage={
                   selectedSessionKey

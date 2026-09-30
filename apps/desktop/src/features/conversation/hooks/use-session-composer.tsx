@@ -24,7 +24,10 @@ import { parseTreeComposerCommand } from "../composer-commands";
 import { formatAnnotatedPrompt } from "../annotations/annotation-prompt";
 import type { TranscriptAnnotations } from "../annotations/use-transcript-annotations";
 import type { PiDesktopApi } from "../../../../contracts/ipc";
+import type { DesktopEditorInfo } from "../../../../contracts/desktop-editor";
+import type { SessionRef } from "@pi-garden/session-driver/types";
 import type { ComposerEditorHandle } from "../composer-editor";
+import { useComposerEditorRegion } from "../composer-editor-region";
 
 interface UseSessionComposerParams {
   readonly api: PiDesktopApi | undefined;
@@ -37,7 +40,12 @@ interface UseSessionComposerParams {
   /** Sends a debounced draft write now, so it cannot land after a host action that replaces the draft. */
   readonly flushComposerDraft: () => void;
   readonly composerRef: MutableRefObject<ComposerEditorHandle | null>;
-  readonly handleAutocompleteKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
+  /** The selected session; extension autocomplete queries run against it. */
+  readonly target: SessionRef | null;
+  /** Registered custom prompt editors for the selected session. */
+  readonly editors: readonly DesktopEditorInfo[];
+  /** Mention or slash menu is open, so extension autocomplete stays closed. */
+  readonly hostMenusOpen: boolean;
   readonly requiresModelSelection: boolean;
   readonly openTreeModal: () => void;
   readonly handleMentionKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
@@ -54,11 +62,14 @@ export function useSessionComposer(params: UseSessionComposerParams) {
     snapshot,
     setSnapshot,
     selectedSession,
+    composerDraft,
     setComposerDraft,
     composerDraftRef,
     flushComposerDraft,
     composerRef,
-    handleAutocompleteKeyDown,
+    target,
+    editors,
+    hostMenusOpen,
     requiresModelSelection,
     openTreeModal,
     handleMentionKeyDown,
@@ -69,6 +80,15 @@ export function useSessionComposer(params: UseSessionComposerParams) {
     annotations,
   } = params;
 
+  const editorRegion = useComposerEditorRegion({
+    api,
+    target,
+    editors,
+    text: composerDraft,
+    setText: setComposerDraft,
+    editorRef: composerRef,
+    hostMenusOpen,
+  });
   const [attachmentsClearedOnSubmit, setAttachmentsClearedOnSubmit] = useState(false);
   const composerAttachments = attachmentsClearedOnSubmit
     ? []
@@ -353,7 +373,7 @@ export function useSessionComposer(params: UseSessionComposerParams) {
       return;
     }
 
-    if (handleAutocompleteKeyDown?.(event)) {
+    if (editorRegion.autocomplete.handleKeyDown(event)) {
       return;
     }
 
@@ -388,6 +408,7 @@ export function useSessionComposer(params: UseSessionComposerParams) {
   };
 
   return {
+    editorRegion,
     composerAttachments,
     submitComposerDraft,
     stopCurrentRun,

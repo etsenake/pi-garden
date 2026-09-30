@@ -125,24 +125,23 @@ export function useEditorAutocomplete({
     return () => window.clearTimeout(timer);
   }, [api, editorRef, enabled, hostMenusOpen, target, text]);
 
+  const applyItem = (item: EditorAutocompleteItem, prefix: string, cursor: number) => {
+    if (!api || !target) return Promise.resolve();
+    return api.applyEditorAutocomplete({ target, text, cursor, prefix, item }).then((applied) => {
+      if (!applied) return;
+      onApplyRef.current(applied);
+      editorRef.current?.focus();
+      requestAnimationFrame(() => editorRef.current?.setSelection(applied.cursor, applied.cursor));
+    });
+  };
+
   const accept = (item: EditorAutocompleteItem) => {
-    if (!api || !target) return;
     const cursor = editorRef.current?.getSelection()?.start ?? text.length;
     const prefix = menuRef.current.prefix;
     setMenu({ items: [], prefix: "", selectedIndex: 0, open: false });
-    void api
-      .applyEditorAutocomplete({ target, text, cursor, prefix, item })
-      .then((applied) => {
-        if (!applied) return;
-        onApplyRef.current(applied);
-        editorRef.current?.focus();
-        requestAnimationFrame(() =>
-          editorRef.current?.setSelection(applied.cursor, applied.cursor),
-        );
-      })
-      .catch((error: unknown) => {
-        console.error("[editor-autocomplete] apply failed", error);
-      });
+    applyItem(item, prefix, cursor).catch((error: unknown) => {
+      console.error("[editor-autocomplete] apply failed", error);
+    });
   };
 
   const handleKeyDown = (event: {
@@ -155,37 +154,16 @@ export function useEditorAutocomplete({
       if (event.key === "Tab" && !event.shiftKey && api && target && enabled && !hostMenusOpen) {
         event.preventDefault();
         const cursor = editorRef.current?.getSelection()?.start ?? text.length;
-        void api
+        api
           .queryEditorAutocomplete({ target, text, cursor, force: true })
           .then((result) => {
             triggersRef.current = result.triggerCharacters;
             const first = result.items[0];
             if (result.items.length === 1 && first) {
-              void api
-                .applyEditorAutocomplete({
-                  target,
-                  text,
-                  cursor,
-                  prefix: result.prefix,
-                  item: first,
-                })
-                .then((applied) => {
-                  if (!applied) return;
-                  onApplyRef.current(applied);
-                  editorRef.current?.focus();
-                  requestAnimationFrame(() =>
-                    editorRef.current?.setSelection(applied.cursor, applied.cursor),
-                  );
-                });
-              return;
+              return applyItem(first, result.prefix, cursor);
             }
             if (result.items.length > 0) {
-              setMenu({
-                items: result.items,
-                prefix: result.prefix,
-                selectedIndex: 0,
-                open: true,
-              });
+              setMenu({ items: result.items, prefix: result.prefix, selectedIndex: 0, open: true });
             }
           })
           .catch((error: unknown) => {

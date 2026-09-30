@@ -212,12 +212,27 @@ window.addEventListener('message', async (event) => {
     if (shortcuts.has(id)) {
       event.preventDefault();
       port.postMessage({type:'pi-garden:editor-shortcut', id, key: event.key, code: event.code, shift: event.shiftKey, meta: event.metaKey, ctrl: event.ctrlKey, alt: event.altKey});
-      return;
     }
-    if (menuOpen && !event.metaKey && !event.ctrlKey && !event.altKey && ['ArrowUp','ArrowDown','Tab','Enter','Escape'].includes(event.key)) {
-      event.preventDefault();
-      port.postMessage({type:'pi-garden:editor-menu-key', key: event.key, shift: event.shiftKey});
-    }
+  });
+  // Host suggestion menus own navigation keys while open, and Tab always asks the host
+  // for a forced completion. These are taken in the capture phase so the frontend never
+  // sees them as editing keys.
+  window.addEventListener('keydown', (event) => {
+    if (event.isComposing || event.keyCode === 229 || event.metaKey || event.ctrlKey || event.altKey) return;
+    const menuKey = menuOpen && ['ArrowUp','ArrowDown','Tab','Enter','Escape'].includes(event.key);
+    const forceKey = event.key === 'Tab' && !event.shiftKey;
+    if (!menuKey && !forceKey) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    port.postMessage({type:'pi-garden:editor-menu-key', key: event.key, shift: event.shiftKey});
+  }, true);
+  window.addEventListener('error', (event) => {
+    showError(event.error instanceof Error ? event.error : new Error(event.message || 'The editor crashed.'));
+    connection.close('Editor crashed');
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    showError(event.reason instanceof Error ? event.reason : new Error(String(event.reason ?? 'The editor crashed.')));
+    connection.close('Editor crashed');
   });
   const postFiles = async (fileList) => {
     const files = [...fileList].slice(0, 8);

@@ -16,6 +16,8 @@ import type {
   SessionRecord,
 } from "../../../contracts/desktop-state";
 import type { ComposerEditorHandle } from "./composer-editor";
+import { composerEditorRegionSlots, type ComposerEditorRegion } from "./composer-editor-region";
+import type { ActiveTheme } from "../../ui/active-theme";
 import type { MentionOption } from "./hooks/use-mention-menu";
 import { ArrowUpIcon, PlusIcon, StopSquareIcon } from "../../ui/icons";
 import type {
@@ -51,9 +53,9 @@ interface ComposerPanelProps {
   readonly composerDraft: string;
   readonly setComposerDraft: Dispatch<SetStateAction<string>>;
   readonly composerRef: RefObject<ComposerEditorHandle | null>;
-  readonly editorSlot?: ReactNode;
-  readonly suggestionMenu?: ReactNode;
-  readonly editorNotice?: ReactNode;
+  /** Custom prompt editor and extension autocomplete for the textarea region. */
+  readonly editorRegion: ComposerEditorRegion;
+  readonly theme: ActiveTheme;
   readonly attachments: readonly ComposerAttachment[];
   readonly queuedMessages: readonly QueuedComposerMessage[];
   readonly editingQueuedMessageId?: string;
@@ -112,9 +114,8 @@ export function ComposerPanel({
   composerDraft,
   setComposerDraft,
   composerRef,
-  editorSlot,
-  suggestionMenu,
-  editorNotice,
+  editorRegion,
+  theme,
   attachments,
   queuedMessages,
   editingQueuedMessageId,
@@ -162,6 +163,12 @@ export function ComposerPanel({
   const hasComposerInput =
     composerDraft.trim().length > 0 || attachments.length > 0 || annotations.list.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && !hasComposerInput;
+  const editorSlots = composerEditorRegionSlots(editorRegion, {
+    theme,
+    status: selectedSession.status === "running" ? "running" : "idle",
+    attachments,
+    onKeyDown: onComposerKeyDown,
+  });
 
   return (
     <footer className="composer" aria-busy={preparingTaskDraft}>
@@ -184,9 +191,7 @@ export function ComposerPanel({
           composerDraft={composerDraft}
           setComposerDraft={setComposerDraft}
           composerRef={composerRef}
-          editorSlot={editorSlot}
-          suggestionMenu={suggestionMenu}
-          editorNotice={editorNotice}
+          {...editorSlots}
           attachments={attachments}
           queuedMessages={queuedMessages}
           editingQueuedMessageId={editingQueuedMessageId}

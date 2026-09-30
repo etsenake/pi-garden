@@ -20,6 +20,7 @@ export function DesktopEditorFrame({
   handleRef,
   onText,
   onSubmit,
+  onMenuKey,
   onUnavailable,
   onFiles,
 }: {
@@ -38,6 +39,12 @@ export function DesktopEditorFrame({
     readonly ctrl: boolean;
     readonly composing: boolean;
   }) => void;
+  /**
+   * Navigation keys the frontend gave up while a host menu was open, plus Tab for a
+   * forced completion. The host routes them through the same composer key path as the
+   * textarea.
+   */
+  readonly onMenuKey: (key: { readonly key: string; readonly shift: boolean }) => void;
   readonly onUnavailable: (message: string) => void;
   readonly onFiles: (files: File[]) => void;
 }) {
@@ -51,10 +58,12 @@ export function DesktopEditorFrame({
   const onTextRef = useRef(onText);
   const onSubmitRef = useRef(onSubmit);
   const onFilesRef = useRef(onFiles);
+  const onMenuKeyRef = useRef(onMenuKey);
   const onUnavailableRef = useRef(onUnavailable);
   onTextRef.current = onText;
   onSubmitRef.current = onSubmit;
   onFilesRef.current = onFiles;
+  onMenuKeyRef.current = onMenuKey;
   onUnavailableRef.current = onUnavailable;
   const composingRef = useRef(false);
   const themeMessage = toExtensionViewTheme(theme);
@@ -203,14 +212,10 @@ export function DesktopEditorFrame({
           return;
         }
         if (record.type === "pi-garden:editor-menu-key") {
-          window.dispatchEvent(
-            new KeyboardEvent("keydown", {
-              key: typeof record.key === "string" ? record.key : "",
-              shiftKey: record.shift === true,
-              bubbles: true,
-              cancelable: true,
-            }),
-          );
+          onMenuKeyRef.current({
+            key: typeof record.key === "string" ? record.key : "",
+            shift: record.shift === true,
+          });
           return;
         }
         if (record.type === "pi-garden:editor-query" || record.type === "pi-garden:editor-apply") {
@@ -300,7 +305,9 @@ export function DesktopEditorFrame({
       })
       .then((next) => {
         if (disposed) {
-          void api.closeExtensionView(next.connectionId);
+          api.closeExtensionView(next.connectionId).catch((error: unknown) => {
+            console.error("[desktop-editor] close failed", error);
+          });
           return;
         }
         opened = next;
@@ -316,7 +323,6 @@ export function DesktopEditorFrame({
       dispose();
     };
     // The draft text is pushed by a separate effect so typing does not reopen the frame.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, editor.extensionId, editor.generation, editor.id, editor.state, scopeKey, target]);
 
   return (

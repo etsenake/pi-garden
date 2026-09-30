@@ -1,3 +1,5 @@
+import { restoreTopmostDialogFocus } from "../../ui/dialog-focus";
+
 export interface ComposerEditorSelection {
   readonly start: number;
   readonly end: number;
@@ -35,4 +37,12 @@ export function bindTextareaEditor(textarea: HTMLTextAreaElement): ComposerEdito
       textarea.style.height = `${Math.min(textarea.scrollHeight, maxPx)}px`;
     },
   };
+}
+
+/** Returns focus to the prompt editor on the next frame unless a dialog owns focus. */
+export function focusComposerEditor(editorRef: { readonly current: ComposerEditorHandle | null }) {
+  window.requestAnimationFrame(() => {
+    if (restoreTopmostDialogFocus()) return;
+    editorRef.current?.focus();
+  });
 }
