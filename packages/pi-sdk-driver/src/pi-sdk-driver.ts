@@ -24,6 +24,12 @@ import type {
   WorkspaceRef,
 } from "@pi-garden/session-driver";
 import type { ExtensionCommandCompletion } from "./extension-actions.js";
+import type {
+  EditorAutocompleteApplied,
+  EditorAutocompleteApplyInput,
+  EditorAutocompleteQuery,
+  EditorAutocompleteResponse,
+} from "./editor-autocomplete.js";
 import {
   SessionSupervisor,
   type PiSdkDriverOptions,
@@ -133,6 +139,20 @@ export class PiSdkDriver implements SessionDriver {
     args?: string,
   ): Promise<void> {
     return this.supervisor.invokeExtensionAction(sessionRef, generation, actionId, args);
+  }
+
+  queryEditorAutocomplete(
+    sessionRef: SessionRef,
+    query: EditorAutocompleteQuery,
+  ): Promise<EditorAutocompleteResponse> {
+    return this.supervisor.queryEditorAutocomplete(sessionRef, query);
+  }
+
+  applyEditorAutocomplete(
+    sessionRef: SessionRef,
+    input: EditorAutocompleteApplyInput,
+  ): Promise<EditorAutocompleteApplied | null> {
+    return this.supervisor.applyEditorAutocomplete(sessionRef, input);
   }
 
   completeExtensionCommandArgument(

@@ -12,9 +12,21 @@ import {
   type ExtensionCommandContextActions,
   type ExtensionUIDialogOptions,
   type ExtensionUIContext,
+  type AutocompleteProviderFactory,
   type ExtensionWidgetOptions,
   type SessionInfo,
 } from "@earendil-works/pi-coding-agent";
+import type { AutocompleteProvider } from "@earendil-works/pi-tui";
+import {
+  composeAutocompleteProviders,
+  createSessionBaseProvider,
+  runAutocompleteApply,
+  runAutocompleteQuery,
+  type EditorAutocompleteApplied,
+  type EditorAutocompleteApplyInput,
+  type EditorAutocompleteQuery,
+  type EditorAutocompleteResponse,
+} from "./editor-autocomplete.js";
 import type { SessionCatalogSnapshot, WorkspaceCatalogSnapshot } from "@pi-garden/catalogs";
 import type {
   NavigateSessionTreeOptions,
@@ -246,6 +258,14 @@ interface ManagedSessionRecord {
   leasePath: string | undefined;
   /** mtime (epoch ms) of the JSONL last reconciled into the served transcript. */
   transcriptDiskMtimeMs: number | undefined;
+  /** Terminal editor factory retained for getEditorComponent. Never invoked. */
+  editorComponentFactory: Parameters<ExtensionUIContext["setEditorComponent"]>[0];
+  autocompleteFactories: AutocompleteProviderFactory[];
+  autocompleteEpoch: number;
+  autocompleteBuiltEpoch: number;
+  autocompleteProvider: AutocompleteProvider | undefined;
+  autocompleteAbort: AbortController | undefined;
+  autocompleteRequest: number;
 }
 
 interface RegisteredCommandAdapter {
@@ -477,6 +497,65 @@ export class SessionSupervisor {
     if (handled) return;
     if (await invokeProjectedPiAction(session, actionId, args)) return;
     throw new Error(STALE_EXTENSION_ACTION_MESSAGE);
+  }
+
+  async queryEditorAutocomplete(
+    ref: SessionRef,
+    query: EditorAutocompleteQuery,
+  ): Promise<EditorAutocompleteResponse> {
+    const record = this.records.get(sessionKey(ref));
+    if (!record?.session) return { items: [], prefix: "", triggerCharacters: [] };
+    await this.ensureAutocompleteProvider(record);
+    const provider = record.autocompleteProvider;
+    if (!provider) return { items: [], prefix: "", triggerCharacters: [] };
+    record.autocompleteAbort?.abort();
+    const controller = new AbortController();
+    record.autocompleteAbort = controller;
+    const request = record.autocompleteRequest + 1;
+    record.autocompleteRequest = request;
+    const result = await runAutocompleteQuery(provider, query, controller.signal);
+    if (record.autocompleteRequest !== request) {
+      return { items: [], prefix: "", triggerCharacters: result.triggerCharacters };
+    }
+    return result;
+  }
+
+  async applyEditorAutocomplete(
+    ref: SessionRef,
+    input: EditorAutocompleteApplyInput,
+  ): Promise<EditorAutocompleteApplied | null> {
+    const record = this.records.get(sessionKey(ref));
+    if (!record?.session) return null;
+    await this.ensureAutocompleteProvider(record);
+    if (!record.autocompleteProvider) return null;
+    return runAutocompleteApply(record.autocompleteProvider, input);
+  }
+
+  private async ensureAutocompleteProvider(record: ManagedSessionRecord): Promise<void> {
+    if (record.autocompleteProvider && record.autocompleteBuiltEpoch === record.autocompleteEpoch) {
+      return;
+    }
+    const session = record.session;
+    if (!session) return;
+    const epoch = record.autocompleteEpoch;
+    const factories = record.autocompleteFactories.slice();
+    let base: Awaited<ReturnType<typeof createSessionBaseProvider>>;
+    try {
+      base = await createSessionBaseProvider(session);
+    } catch (error) {
+      console.error("[pi-sdk-driver] base autocomplete provider failed", error);
+      record.autocompleteProvider = undefined;
+      record.autocompleteBuiltEpoch = epoch;
+      return;
+    }
+    if (record.session !== session || record.autocompleteEpoch !== epoch) return;
+    const chain = composeAutocompleteProviders(base, factories);
+    for (const error of chain.errors) {
+      console.error("[pi-sdk-driver] autocomplete provider failed", error);
+    }
+    if (record.session !== session || record.autocompleteEpoch !== epoch) return;
+    record.autocompleteProvider = chain.provider;
+    record.autocompleteBuiltEpoch = epoch;
   }
 
   /** Argument completions for one Pi command in the bound generation. Stale or failing providers return []. */
@@ -1517,6 +1596,13 @@ export class SessionSupervisor {
       usage: undefined,
       leasePath: undefined,
       transcriptDiskMtimeMs: undefined,
+      editorComponentFactory: undefined,
+      autocompleteFactories: [],
+      autocompleteEpoch: 0,
+      autocompleteBuiltEpoch: -1,
+      autocompleteProvider: undefined,
+      autocompleteAbort: undefined,
+      autocompleteRequest: 0,
     };
     return record;
   }
@@ -1721,6 +1807,13 @@ export class SessionSupervisor {
       this.handleAgentEvent(record, event);
     });
     record.bindingExtensions = true;
+    record.editorComponentFactory = undefined;
+    record.autocompleteFactories = [];
+    record.autocompleteEpoch += 1;
+    record.autocompleteProvider = undefined;
+    record.autocompleteBuiltEpoch = -1;
+    record.autocompleteAbort?.abort();
+    record.autocompleteAbort = undefined;
     try {
       await session.bindExtensions({
         uiContext: this.createExtensionUiContext(record),
@@ -2088,9 +2181,16 @@ export class SessionSupervisor {
                 ? response.value
                 : undefined,
         ),
-      setEditorComponent: () => {},
-      getEditorComponent: () => undefined,
-      addAutocompleteProvider: () => {},
+      setEditorComponent: (factory) => {
+        // The terminal factory stays available to getEditorComponent and is never called.
+        record.editorComponentFactory = factory;
+      },
+      getEditorComponent: () => record.editorComponentFactory,
+      addAutocompleteProvider: (factory) => {
+        record.autocompleteFactories.push(factory);
+        record.autocompleteEpoch += 1;
+        record.autocompleteProvider = undefined;
+      },
       theme: activeTheme,
       getAllThemes: () => themeCatalogForExtension(this.hostTheme, workspacePath),
       getTheme: (name) => {

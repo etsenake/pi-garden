@@ -388,6 +388,9 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: ^0.87.1
         version: 0.87.1(ws@8.21.3)(zod@4.3.6)
+      '@earendil-works/pi-tui':
+        specifier: ^0.87.1
+        version: 0.87.1
       '@pi-garden/catalogs':
         specifier: workspace:*
         version: link:../catalogs

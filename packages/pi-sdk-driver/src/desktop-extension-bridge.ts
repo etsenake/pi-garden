@@ -13,6 +13,9 @@ import {
   EXTENSION_ACTION_REGISTER,
   EXTENSION_ACTION_UNREGISTER,
   STALE_EXTENSION_ACTION_MESSAGE,
+  DESKTOP_EDITOR_DISCOVER,
+  DESKTOP_EDITOR_REGISTER,
+  DESKTOP_EDITOR_UNREGISTER,
   RICH_SURFACE_DISCOVER,
   RICH_SURFACE_REGISTER,
   RICH_SURFACE_UNREGISTER,
@@ -28,6 +31,8 @@ import {
   type ExtensionActionHandler,
   type ExtensionActionRecord,
   type ExtensionActionRegistrationEvent,
+  type DesktopEditorDeclaration,
+  type DesktopEditorRegistrationEvent,
   type RichSurfaceDeclaration,
   type RichSurfaceRegistrationEvent,
   type SurfaceContribution,
@@ -46,6 +51,8 @@ export interface PiDesktopExtensionRuntime {
   readonly declarations: readonly DesktopViewDeclaration[];
   /** Rich surfaces other than compatibility workbench views from `registerDesktopView`. */
   readonly richSurfaces: readonly RichSurfaceDeclaration[];
+  /** Prompt-region editors from `registerDesktopEditor`. Not rich surfaces. */
+  readonly editors: readonly DesktopEditorDeclaration[];
   /** Data-only host contributions from the extensions loaded in this runtime. */
   readonly contributions: readonly SurfaceContribution[];
   /**
@@ -94,6 +101,7 @@ export function createDesktopExtensionBridge(options: {
   const eventBus = createEventBus();
   const declarations = new Set<DesktopViewDeclaration>();
   const richSurfaces = new Set<RichSurfaceDeclaration>();
+  const editors = new Set<DesktopEditorDeclaration>();
   const contributions = new Map<string, SurfaceContribution>();
   const explicitActions = new Map<
     string,
@@ -126,6 +134,7 @@ export function createDesktopExtensionBridge(options: {
       extensions: loadedExtensions.map((extension) => ({ ...extension })),
       declarations: [...declarations],
       richSurfaces: [...richSurfaces],
+      editors: [...editors],
       contributions: [...contributions.values()].sort(compareSurfaceContributions),
       actions: options.projectActions?.(epoch.target, explicit) ?? explicit,
     };
@@ -140,6 +149,16 @@ export function createDesktopExtensionBridge(options: {
   });
   eventBus.on(DESKTOP_VIEW_UNREGISTER, (value) => {
     if (!declarations.delete(value as DesktopViewDeclaration)) return;
+    publish();
+  });
+  eventBus.on(DESKTOP_EDITOR_REGISTER, (value) => {
+    if (!isDesktopEditorRegistration(value)) return;
+    editors.add(value.declaration);
+    value.accept?.();
+    publish();
+  });
+  eventBus.on(DESKTOP_EDITOR_UNREGISTER, (value) => {
+    if (!editors.delete(value as DesktopEditorDeclaration)) return;
     publish();
   });
   eventBus.on(RICH_SURFACE_REGISTER, (value) => {
@@ -199,12 +218,14 @@ export function createDesktopExtensionBridge(options: {
       // Only live Pi extension instances answer; registration does not execute their factory again.
       declarations.clear();
       richSurfaces.clear();
+      editors.clear();
       contributions.clear();
       explicitActions.clear();
       discovering = true;
       try {
         eventBus.emit(DESKTOP_VIEW_DISCOVER, {});
         eventBus.emit(RICH_SURFACE_DISCOVER, {});
+        eventBus.emit(DESKTOP_EDITOR_DISCOVER, {});
         eventBus.emit(SURFACE_CONTRIBUTION_DISCOVER, {});
         eventBus.emit(EXTENSION_ACTION_DISCOVER, {});
       } finally {
@@ -217,6 +238,7 @@ export function createDesktopExtensionBridge(options: {
       active = undefined;
       declarations.clear();
       richSurfaces.clear();
+      editors.clear();
       contributions.clear();
       explicitActions.clear();
       if (!epoch) return;
@@ -321,6 +343,18 @@ function isRichSurfaceRegistration(value: unknown): value is RichSurfaceRegistra
   ) {
     return false;
   }
+  return !("accept" in value) || value.accept === undefined || typeof value.accept === "function";
+}
+
+function isDesktopEditorRegistration(value: unknown): value is DesktopEditorRegistrationEvent {
+  if (typeof value !== "object" || value === null || !("declaration" in value)) return false;
+  const declaration = value.declaration;
+  if (typeof declaration !== "object" || declaration === null) return false;
+  const record = declaration as DesktopEditorDeclaration;
+  if (typeof record.id !== "string" || typeof record.source !== "string") return false;
+  if (typeof record.frontend !== "string" && !(record.frontend instanceof URL)) return false;
+  if (record.backend !== undefined && typeof record.backend !== "function") return false;
+  if (record.title !== undefined && typeof record.title !== "string") return false;
   return !("accept" in value) || value.accept === undefined || typeof value.accept === "function";
 }
 
