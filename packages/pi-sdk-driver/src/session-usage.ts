@@ -1,5 +1,6 @@
 import type { AgentSession, ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type {
+  SessionModelCost,
   SessionPlanLimit,
   SessionPlanLimits,
   SessionPromptCache,
@@ -22,6 +23,8 @@ export function readSessionUsage(
   const contextUsage = stats.contextUsage;
   const compaction = session.settingsManager.getCompactionSettings(model);
   const branch = session.sessionManager.getBranch();
+  const routed = session.routedModel;
+  const costByModel = costByPhysicalModel(branch);
 
   return {
     ...(contextUsage
@@ -44,6 +47,16 @@ export function readSessionUsage(
       cacheWrite: stats.tokens.cacheWrite,
       cost: stats.cost,
     },
+    // Only when more than one physical model contributed assistant usage.
+    ...(costByModel && costByModel.length > 1 ? { costByModel } : {}),
+    ...(routed
+      ? {
+          routedModel: {
+            provider: routed.model.provider,
+            model: routed.model.id,
+          },
+        }
+      : {}),
     // Kimi Coding is subscription-backed despite API-key auth; pi's footer special-cases it too.
     subscription:
       model.provider === "kimi-coding" || session.modelRuntime.isUsingSubscription(model.provider),
@@ -64,6 +77,45 @@ interface AssistantUsage {
 
 function withLastTurn(usage: AssistantUsage | undefined): { lastTurn?: SessionTokenCounts } {
   return usage ? { lastTurn: usage.counts } : {};
+}
+
+/**
+ * Assistant-message costs grouped by physical provider/model. Nested tool-result
+ * usage has no model tag in Pi, so it stays in `totals` only — this breakdown is
+ * omitted unless more than one physical model appears.
+ */
+function costByPhysicalModel(branch: readonly BranchEntry[]): SessionModelCost[] | undefined {
+  const byKey = new Map<string, SessionModelCost>();
+  for (const entry of branch) {
+    if (entry?.type !== "message" || entry.message.role !== "assistant") continue;
+    const message = entry.message;
+    const { input, output, cacheRead, cacheWrite, cost } = message.usage;
+    if (input + output + cacheRead + cacheWrite === 0 && cost.total === 0) continue;
+    const key = `${message.provider}\0${message.model}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      byKey.set(key, {
+        provider: message.provider,
+        model: message.model,
+        cost: existing.cost + cost.total,
+        tokens: {
+          input: existing.tokens.input + input,
+          output: existing.tokens.output + output,
+          cacheRead: existing.tokens.cacheRead + cacheRead,
+          cacheWrite: existing.tokens.cacheWrite + cacheWrite,
+        },
+      });
+    } else {
+      byKey.set(key, {
+        provider: message.provider,
+        model: message.model,
+        cost: cost.total,
+        tokens: { input, output, cacheRead, cacheWrite },
+      });
+    }
+  }
+  if (byKey.size === 0) return undefined;
+  return [...byKey.values()];
 }
 
 function latestAssistantUsage(branch: readonly BranchEntry[]): AssistantUsage | undefined {

@@ -21,9 +21,14 @@ import {
   isThreadGrouping,
 } from "../../contracts/desktop-state";
 import type {
+  AddMcpServerInput,
   CustomProviderConfig,
   CustomProviderProbeInput,
+  DesktopMcpExposure,
+  DesktopMcpServerConfig,
+  RemoveMcpServerInput,
   TerminalSize,
+  UpdateMcpServerInput,
 } from "../../contracts/ipc";
 import {
   assertScheduledTaskSchedule,
@@ -338,6 +343,116 @@ export function expectCustomProviderProbeInput(value: unknown): CustomProviderPr
   return {
     baseUrl: expectNonEmptyString(record.baseUrl, "input.baseUrl"),
     apiKey: expectOptionalString(record.apiKey, "input.apiKey"),
+  };
+}
+
+const MCP_EXPOSURES = [
+  "codemode",
+  "codemode-deferred",
+  "deferred",
+  "direct",
+  "hidden",
+] as const satisfies readonly DesktopMcpExposure[];
+
+function expectMcpScope(value: unknown, name: string): "global" | "project" {
+  if (value !== "global" && value !== "project") {
+    throw new Error(`${name} must be "global" or "project"`);
+  }
+  return value;
+}
+
+function expectMcpExposure(value: unknown, name: string): DesktopMcpExposure {
+  if (typeof value !== "string" || !(MCP_EXPOSURES as readonly string[]).includes(value)) {
+    throw new Error(`${name} must be one of ${MCP_EXPOSURES.join(", ")}`);
+  }
+  return value as DesktopMcpExposure;
+}
+
+function expectStringRecord(
+  value: unknown,
+  name: string,
+): Readonly<Record<string, string>> {
+  const record = expectRecord(value, name);
+  const result: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(record)) {
+    if (typeof entry !== "string") {
+      throw new Error(`${name}.${key} must be a string`);
+    }
+    result[key] = entry;
+  }
+  return result;
+}
+
+export function expectDesktopMcpServerConfig(value: unknown): DesktopMcpServerConfig {
+  const record = expectRecord(value, "config");
+  const enabled =
+    record.enabled === undefined ? undefined : expectBoolean(record.enabled, "config.enabled");
+  const exposure =
+    record.exposure === undefined
+      ? undefined
+      : expectMcpExposure(record.exposure, "config.exposure");
+  if (typeof record.url === "string") {
+    return {
+      ...(record.type === undefined ? {} : { type: "http" as const }),
+      url: expectNonEmptyString(record.url, "config.url"),
+      ...(record.headers === undefined
+        ? {}
+        : { headers: { ...expectStringRecord(record.headers, "config.headers") } }),
+      ...(record.oauth === undefined ? {} : { oauth: expectRecord(record.oauth, "config.oauth") }),
+      ...(enabled === undefined ? {} : { enabled }),
+      ...(exposure === undefined ? {} : { exposure }),
+    };
+  }
+  return {
+    ...(record.type === undefined ? {} : { type: "stdio" as const }),
+    command: expectNonEmptyString(record.command, "config.command"),
+    ...(record.args === undefined
+      ? {}
+      : { args: [...expectStringArray(record.args, "config.args")] }),
+    ...(record.env === undefined
+      ? {}
+      : { env: { ...expectStringRecord(record.env, "config.env") } }),
+    ...(record.cwd === undefined
+      ? {}
+      : { cwd: expectNonEmptyString(record.cwd, "config.cwd") }),
+    ...(enabled === undefined ? {} : { enabled }),
+    ...(exposure === undefined ? {} : { exposure }),
+  };
+}
+
+export function expectAddMcpServerInput(value: unknown): AddMcpServerInput {
+  const record = expectRecord(value, "input");
+  return {
+    scope: expectMcpScope(record.scope, "input.scope"),
+    name: expectNonEmptyString(record.name, "input.name"),
+    config: expectDesktopMcpServerConfig(record.config),
+  };
+}
+
+export function expectRemoveMcpServerInput(value: unknown): RemoveMcpServerInput {
+  const record = expectRecord(value, "input");
+  return {
+    scope: expectMcpScope(record.scope, "input.scope"),
+    name: expectNonEmptyString(record.name, "input.name"),
+  };
+}
+
+export function expectUpdateMcpServerInput(value: unknown): UpdateMcpServerInput {
+  const record = expectRecord(value, "input");
+  const enabled =
+    record.enabled === undefined ? undefined : expectBoolean(record.enabled, "input.enabled");
+  const exposure =
+    record.exposure === undefined
+      ? undefined
+      : expectMcpExposure(record.exposure, "input.exposure");
+  if (enabled === undefined && exposure === undefined) {
+    throw new Error("input must include enabled and/or exposure");
+  }
+  return {
+    scope: expectMcpScope(record.scope, "input.scope"),
+    name: expectNonEmptyString(record.name, "input.name"),
+    ...(enabled === undefined ? {} : { enabled }),
+    ...(exposure === undefined ? {} : { exposure }),
   };
 }
 

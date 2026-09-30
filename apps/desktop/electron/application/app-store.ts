@@ -116,7 +116,12 @@ import {
   toSessionQueuedMessages,
   toSessionRef,
 } from "./app-store-utils";
-import type { CustomProviderConfig } from "../../contracts/ipc";
+import type {
+  AddMcpServerInput,
+  CustomProviderConfig,
+  RemoveMcpServerInput,
+  UpdateMcpServerInput,
+} from "../../contracts/ipc";
 import { resolveRepoWorkspaceId } from "../../contracts/workspace-roots";
 import { decodeTaskWorkbenchTemplate, type TaskWorkbenchTemplate } from "../../contracts/workbench";
 import { composerImageSavedSkipMessage } from "../../contracts/composer-attachments";
@@ -1907,6 +1912,67 @@ export class DesktopAppStore {
       workspaceId,
       (ws) => this.driver.runtimeSupervisor.setExtensionEnabled(ws, filePath, enabled),
       { reloadSessions: true },
+    );
+  }
+
+  async addMcpServer(workspaceId: string, input: AddMcpServerInput): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(
+      workspaceId,
+      (ws) => this.driver.runtimeSupervisor.addMcpServer(ws, input),
+      { reloadSessions: true },
+    );
+  }
+
+  async removeMcpServer(
+    workspaceId: string,
+    input: RemoveMcpServerInput,
+  ): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(
+      workspaceId,
+      (ws) => this.driver.runtimeSupervisor.removeMcpServer(ws, input),
+      { reloadSessions: true },
+    );
+  }
+
+  async updateMcpServer(
+    workspaceId: string,
+    input: UpdateMcpServerInput,
+  ): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(
+      workspaceId,
+      (ws) => this.driver.runtimeSupervisor.updateMcpServer(ws, input),
+      { reloadSessions: true },
+    );
+  }
+
+  async setProjectTrust(workspaceId: string, trusted: boolean): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(
+      workspaceId,
+      (ws) => this.driver.runtimeSupervisor.setProjectTrust(ws, trusted),
+      { reloadSessions: true, refreshAllWorkspaces: false },
+    );
+  }
+
+  async setDefaultTools(
+    workspaceId: string,
+    entries: readonly string[],
+  ): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(
+      workspaceId,
+      (ws) => this.driver.runtimeSupervisor.setDefaultTools(ws, entries),
+      { reloadSessions: true },
+    );
+  }
+
+  async setPiBuiltinEnabled(
+    workspaceId: string,
+    name: string,
+    enabled: boolean,
+  ): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(
+      workspaceId,
+      (ws) => this.driver.runtimeSupervisor.setPiBuiltinEnabled(ws, name, enabled),
+      { reloadSessions: true, refreshAllWorkspaces: true },
     );
   }
 

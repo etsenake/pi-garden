@@ -36,6 +36,7 @@ import { mainFrameHandler } from "./main-frame-ipc";
 import { assertComposerAttachmentPixels } from "./composer-attachment-pixels";
 import {
   expectAppView,
+  expectAddMcpServerInput,
   expectBoolean,
   expectComposerAttachments,
   expectCreateSessionInput,
@@ -51,6 +52,7 @@ import {
   expectOptionalDeliverOptions,
   expectOptionalString,
   expectOptionalThinkingLevel,
+  expectRemoveMcpServerInput,
   expectRemoveWorktreeInput,
   expectSendChildThreadFollowUpInput,
   expectSaveTaskWorkbenchTemplateInput,
@@ -60,6 +62,7 @@ import {
   expectStartThreadInput,
   expectCreateScheduledTaskInput,
   expectUpdateScheduledTaskInput,
+  expectUpdateMcpServerInput,
   expectString,
   expectStringArray,
   expectTerminalSize,
@@ -156,6 +159,12 @@ type SettingsOwner = Pick<
   | "setScopedModelPatterns"
   | "setSkillEnabled"
   | "setExtensionEnabled"
+  | "addMcpServer"
+  | "removeMcpServer"
+  | "updateMcpServer"
+  | "setProjectTrust"
+  | "setDefaultTools"
+  | "setPiBuiltinEnabled"
   | "setNotificationPreferences"
   | "setIntegratedTerminalShell"
   | "setEnableTransparency"
@@ -582,6 +591,61 @@ export function registerDesktopIpc({
         owners.settings.setExtensionEnabled(
           expectNonEmptyString(rawWorkspaceId, "workspaceId"),
           expectNonEmptyString(rawFilePath, "filePath"),
+          expectBoolean(rawEnabled, "enabled"),
+        ),
+      ),
+  );
+  ipcMain.handle(desktopIpc.addMcpServer, (event, rawWorkspaceId: unknown, rawInput: unknown) =>
+    run(event, () =>
+      owners.settings.addMcpServer(
+        expectNonEmptyString(rawWorkspaceId, "workspaceId"),
+        expectAddMcpServerInput(rawInput),
+      ),
+    ),
+  );
+  ipcMain.handle(desktopIpc.removeMcpServer, (event, rawWorkspaceId: unknown, rawInput: unknown) =>
+    run(event, () =>
+      owners.settings.removeMcpServer(
+        expectNonEmptyString(rawWorkspaceId, "workspaceId"),
+        expectRemoveMcpServerInput(rawInput),
+      ),
+    ),
+  );
+  ipcMain.handle(desktopIpc.updateMcpServer, (event, rawWorkspaceId: unknown, rawInput: unknown) =>
+    run(event, () =>
+      owners.settings.updateMcpServer(
+        expectNonEmptyString(rawWorkspaceId, "workspaceId"),
+        expectUpdateMcpServerInput(rawInput),
+      ),
+    ),
+  );
+  ipcMain.handle(
+    desktopIpc.setProjectTrust,
+    (event, rawWorkspaceId: unknown, rawTrusted: unknown) =>
+      run(event, () =>
+        owners.settings.setProjectTrust(
+          expectNonEmptyString(rawWorkspaceId, "workspaceId"),
+          expectBoolean(rawTrusted, "trusted"),
+        ),
+      ),
+  );
+  ipcMain.handle(
+    desktopIpc.setDefaultTools,
+    (event, rawWorkspaceId: unknown, rawEntries: unknown) =>
+      run(event, () =>
+        owners.settings.setDefaultTools(
+          expectNonEmptyString(rawWorkspaceId, "workspaceId"),
+          expectStringArray(rawEntries, "entries"),
+        ),
+      ),
+  );
+  ipcMain.handle(
+    desktopIpc.setPiBuiltinEnabled,
+    (event, rawWorkspaceId: unknown, rawName: unknown, rawEnabled: unknown) =>
+      run(event, () =>
+        owners.settings.setPiBuiltinEnabled(
+          expectNonEmptyString(rawWorkspaceId, "workspaceId"),
+          expectNonEmptyString(rawName, "name"),
           expectBoolean(rawEnabled, "enabled"),
         ),
       ),

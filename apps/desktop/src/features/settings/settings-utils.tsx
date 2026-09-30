@@ -177,7 +177,7 @@ function resolveProviderAction(
   if (provider.oauthSupported && provider.authSource === "none") {
     return {
       disabled: false,
-      label: "Login",
+      label: provider.oauthLoginLabel ?? "Login",
       onClick: () => onLoginProvider(provider.id),
     };
   }

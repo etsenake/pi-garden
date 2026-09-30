@@ -2605,6 +2605,7 @@ export class SessionSupervisor {
             toolName: event.toolName,
             callId: event.toolCallId,
             input: event.args,
+            ...(event.parentToolCallId ? { parentToolCallId: event.parentToolCallId } : {}),
           },
           record,
         );
@@ -2615,6 +2616,7 @@ export class SessionSupervisor {
             sessionRef: record.ref,
             timestamp,
             ...desktopToolProgressFromExecutionUpdate(event),
+            ...(event.parentToolCallId ? { parentToolCallId: event.parentToolCallId } : {}),
           },
           record,
         );
@@ -2627,6 +2629,7 @@ export class SessionSupervisor {
             callId: event.toolCallId,
             success: !event.isError,
             output: event.result,
+            ...(event.parentToolCallId ? { parentToolCallId: event.parentToolCallId } : {}),
           },
           record,
         );

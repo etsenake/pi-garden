@@ -16,12 +16,20 @@ const modelChecks = [
     ["sol", "luna"].map((variant) => ({
       provider,
       id: `gpt-6-${variant}`,
-      reason: "Pi 0.87.1 GPT-6 support",
+      reason: "Pi GPT-6 support",
       requireReasoning: true,
       requireImageInput: true,
       requireMaxThinking: true,
     })),
   ),
+  ...["openai", "openai-codex"].map((provider) => ({
+    provider,
+    id: "gpt-6.1-sol",
+    reason: "Pi 0.99.1 GPT-6.1 Sol support",
+    requireReasoning: true,
+    requireImageInput: true,
+    requireMaxThinking: true,
+  })),
   ...["luna", "sol", "terra"].map((variant) => ({
     provider: "openai-codex",
     id: `gpt-5.6-${variant}`,

@@ -33,6 +33,9 @@ import {
   type CustomProviderConfig,
   type CustomProviderProbeInput,
   type CustomProviderProbeResult,
+  type AddMcpServerInput,
+  type RemoveMcpServerInput,
+  type UpdateMcpServerInput,
   type ChangedFilesResult,
   type DesktopNotificationPermissionStatus,
   type WorkspaceFilePreview,
@@ -423,6 +426,31 @@ contextBridge.exposeInMainWorld("piApp", {
       desktopIpc.setExtensionEnabled,
       workspaceId,
       filePath,
+      enabled,
+    ) as Promise<DesktopAppState>,
+  addMcpServer: (workspaceId: string, input: AddMcpServerInput) =>
+    ipcRenderer.invoke(desktopIpc.addMcpServer, workspaceId, input) as Promise<DesktopAppState>,
+  removeMcpServer: (workspaceId: string, input: RemoveMcpServerInput) =>
+    ipcRenderer.invoke(desktopIpc.removeMcpServer, workspaceId, input) as Promise<DesktopAppState>,
+  updateMcpServer: (workspaceId: string, input: UpdateMcpServerInput) =>
+    ipcRenderer.invoke(desktopIpc.updateMcpServer, workspaceId, input) as Promise<DesktopAppState>,
+  setProjectTrust: (workspaceId: string, trusted: boolean) =>
+    ipcRenderer.invoke(
+      desktopIpc.setProjectTrust,
+      workspaceId,
+      trusted,
+    ) as Promise<DesktopAppState>,
+  setDefaultTools: (workspaceId: string, entries: readonly string[]) =>
+    ipcRenderer.invoke(
+      desktopIpc.setDefaultTools,
+      workspaceId,
+      entries,
+    ) as Promise<DesktopAppState>,
+  setPiBuiltinEnabled: (workspaceId: string, name: string, enabled: boolean) =>
+    ipcRenderer.invoke(
+      desktopIpc.setPiBuiltinEnabled,
+      workspaceId,
+      name,
       enabled,
     ) as Promise<DesktopAppState>,
   respondToHostUiRequest: (workspaceId: string, sessionId: string, response: HostUiResponse) =>

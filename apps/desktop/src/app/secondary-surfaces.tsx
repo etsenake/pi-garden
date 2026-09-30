@@ -12,8 +12,10 @@ import type { AppView, DesktopAppState, WorkspaceRecord } from "../../contracts/
 import { updateSnapshot } from "./desktop-app-state";
 import { getEffectiveModelRuntime } from "../features/settings/model-settings";
 import {
+  type AddMcpServerInput,
   type CustomProviderConfig,
   type DesktopNotificationPermissionStatus,
+  type UpdateMcpServerInput,
 } from "../../contracts/ipc";
 import type { DesktopExtensionViewInfo } from "../../contracts/extension-views";
 import { CustomizePage } from "../features/extensions/customize-page";
@@ -225,6 +227,80 @@ export function SecondarySurfaces({
     ).catch((error: unknown) => {
       console.error("[renderer] logoutProvider failed", error);
     });
+  };
+
+  const settingsMutationError = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
+
+  const handleAddMcpServer = async (input: AddMcpServerInput) => {
+    if (!settingsWorkspace) return "Select a workspace first.";
+    try {
+      await updateSnapshot(setSnapshot, () => api.addMcpServer(settingsWorkspace.id, input));
+      return undefined;
+    } catch (error: unknown) {
+      return settingsMutationError(error);
+    }
+  };
+
+  const handleRemoveMcpServer = async (
+    scope: "global" | "project",
+    name: string,
+  ) => {
+    if (!settingsWorkspace) return "Select a workspace first.";
+    try {
+      await updateSnapshot(setSnapshot, () =>
+        api.removeMcpServer(settingsWorkspace.id, { scope, name }),
+      );
+      return undefined;
+    } catch (error: unknown) {
+      return settingsMutationError(error);
+    }
+  };
+
+  const handleUpdateMcpServer = async (input: UpdateMcpServerInput) => {
+    if (!settingsWorkspace) return "Select a workspace first.";
+    try {
+      await updateSnapshot(setSnapshot, () => api.updateMcpServer(settingsWorkspace.id, input));
+      return undefined;
+    } catch (error: unknown) {
+      return settingsMutationError(error);
+    }
+  };
+
+  const handleSetProjectTrust = async (trusted: boolean) => {
+    if (!settingsWorkspace) return "Select a workspace first.";
+    try {
+      await updateSnapshot(setSnapshot, () =>
+        api.setProjectTrust(settingsWorkspace.id, trusted),
+      );
+      return undefined;
+    } catch (error: unknown) {
+      return settingsMutationError(error);
+    }
+  };
+
+  const handleSetDefaultTools = async (entries: readonly string[]) => {
+    if (!settingsWorkspace) return "Select a workspace first.";
+    try {
+      await updateSnapshot(setSnapshot, () =>
+        api.setDefaultTools(settingsWorkspace.id, entries),
+      );
+      return undefined;
+    } catch (error: unknown) {
+      return settingsMutationError(error);
+    }
+  };
+
+  const handleSetPiBuiltinEnabled = async (name: string, enabled: boolean) => {
+    if (!settingsWorkspace) return "Select a workspace first.";
+    try {
+      await updateSnapshot(setSnapshot, () =>
+        api.setPiBuiltinEnabled(settingsWorkspace.id, name, enabled),
+      );
+      return undefined;
+    } catch (error: unknown) {
+      return settingsMutationError(error);
+    }
   };
 
   const handleSetProviderApiKey = async (
@@ -502,13 +578,18 @@ export function SecondarySurfaces({
           runtime={
             // Providers reads the default model to flag its provider, so it needs the same
             // effective model settings as the Models page.
-            settingsSection === "models" || settingsSection === "providers"
+            settingsSection === "models" ||
+            settingsSection === "providers" ||
+            settingsSection === "mcp" ||
+            settingsSection === "tools"
               ? settingsModelRuntime
               : settingsRuntime
           }
           platform={api.platform}
           headerAccessory={
             settingsSection === "providers" ||
+            settingsSection === "mcp" ||
+            settingsSection === "tools" ||
             (settingsSection === "models" && snapshot.modelSettingsScopeMode === "per-repo")
               ? workspacePicker(settingsWorkspace, onSelectSettingsWorkspace)
               : undefined
@@ -530,6 +611,12 @@ export function SecondarySurfaces({
           onRemoveProviderApiKey={handleRemoveProviderApiKey}
           onSaveCustomProvider={handleSaveCustomProvider}
           onDeleteCustomProvider={handleDeleteCustomProvider}
+          onAddMcpServer={handleAddMcpServer}
+          onRemoveMcpServer={handleRemoveMcpServer}
+          onUpdateMcpServer={handleUpdateMcpServer}
+          onSetProjectTrust={handleSetProjectTrust}
+          onSetDefaultTools={handleSetDefaultTools}
+          onSetPiBuiltinEnabled={handleSetPiBuiltinEnabled}
           onSetModelSettingsScopeMode={handleSetModelSettingsScopeMode}
           onSetDefaultModel={handleSetDefaultModel}
           onSetNotificationPreferences={handleSetNotificationPreferences}

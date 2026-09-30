@@ -25,7 +25,12 @@ import type {
   EditorAutocompleteQuery,
   EditorAutocompleteResponse,
 } from "./desktop-editor";
-import type { RuntimeSettingsSnapshot } from "@pi-garden/session-driver/runtime-types";
+import type {
+  DesktopMcpExposure,
+  DesktopMcpScope,
+  RuntimeSettingsSnapshot,
+} from "@pi-garden/session-driver/runtime-types";
+export type { DesktopMcpExposure, DesktopMcpScope } from "@pi-garden/session-driver/runtime-types";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
@@ -95,6 +100,45 @@ export interface CustomProviderProbeInput {
 export type CustomProviderProbeResult =
   | { readonly ok: true; readonly models: readonly string[] }
   | { readonly ok: false; readonly error: string };
+
+export type DesktopMcpStdioServerConfig = {
+  readonly type?: "stdio";
+  readonly command: string;
+  readonly args?: string[];
+  readonly env?: Record<string, string>;
+  readonly cwd?: string;
+  readonly enabled?: boolean;
+  readonly exposure?: DesktopMcpExposure;
+};
+
+export type DesktopMcpHttpServerConfig = {
+  readonly type?: "http";
+  readonly url: string;
+  readonly headers?: Record<string, string>;
+  readonly oauth?: Record<string, unknown>;
+  readonly enabled?: boolean;
+  readonly exposure?: DesktopMcpExposure;
+};
+
+export type DesktopMcpServerConfig = DesktopMcpStdioServerConfig | DesktopMcpHttpServerConfig;
+
+export interface AddMcpServerInput {
+  readonly scope: DesktopMcpScope;
+  readonly name: string;
+  readonly config: DesktopMcpServerConfig;
+}
+
+export interface RemoveMcpServerInput {
+  readonly scope: DesktopMcpScope;
+  readonly name: string;
+}
+
+export interface UpdateMcpServerInput {
+  readonly scope: DesktopMcpScope;
+  readonly name: string;
+  readonly enabled?: boolean;
+  readonly exposure?: DesktopMcpExposure;
+}
 
 export const desktopIpc = {
   extensionViewOpenFile: "pi-garden:extension-view-open-file",
@@ -175,6 +219,12 @@ export const desktopIpc = {
   setScopedModelPatterns: "pi-garden:set-scoped-model-patterns",
   setSkillEnabled: "pi-garden:set-skill-enabled",
   setExtensionEnabled: "pi-garden:set-extension-enabled",
+  addMcpServer: "pi-garden:add-mcp-server",
+  removeMcpServer: "pi-garden:remove-mcp-server",
+  updateMcpServer: "pi-garden:update-mcp-server",
+  setProjectTrust: "pi-garden:set-project-trust",
+  setDefaultTools: "pi-garden:set-default-tools",
+  setPiBuiltinEnabled: "pi-garden:set-pi-builtin-enabled",
   respondToHostUiRequest: "pi-garden:respond-to-host-ui-request",
   setNotificationPreferences: "pi-garden:set-notification-preferences",
   setIntegratedTerminalShell: "pi-garden:set-integrated-terminal-shell",
@@ -777,6 +827,16 @@ export interface PiDesktopApi {
   setExtensionEnabled(
     workspaceId: string,
     filePath: string,
+    enabled: boolean,
+  ): Promise<DesktopAppState>;
+  addMcpServer(workspaceId: string, input: AddMcpServerInput): Promise<DesktopAppState>;
+  removeMcpServer(workspaceId: string, input: RemoveMcpServerInput): Promise<DesktopAppState>;
+  updateMcpServer(workspaceId: string, input: UpdateMcpServerInput): Promise<DesktopAppState>;
+  setProjectTrust(workspaceId: string, trusted: boolean): Promise<DesktopAppState>;
+  setDefaultTools(workspaceId: string, entries: readonly string[]): Promise<DesktopAppState>;
+  setPiBuiltinEnabled(
+    workspaceId: string,
+    name: string,
     enabled: boolean,
   ): Promise<DesktopAppState>;
   respondToHostUiRequest(

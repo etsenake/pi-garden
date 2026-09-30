@@ -643,7 +643,7 @@ test("switches pi-garden tools off app-wide and keeps them off after a restart",
   test.setTimeout(90_000);
   const userDataDir = await makeUserDataDir();
   const workspacePath = await makeWorkspace("pi-garden-tools-workspace");
-  const orchestrationPath = "<inline:pi-garden-thread-orchestration>";
+  const orchestrationPath = "builtin:pi-garden-thread-orchestration";
   const orchestrationEnabled = async (window: Page) => {
     const state = await getDesktopState(window);
     const workspace = state.workspaces.find((entry) => entry.path === workspacePath);

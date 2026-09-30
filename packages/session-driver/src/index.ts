@@ -61,6 +61,7 @@ export type {
   RuntimeLoginAuthInfo,
   RuntimeLoginCallbacks,
   RuntimeLoginPrompt,
+  RuntimeModelKind,
   RuntimeModelRecord,
   RuntimeProviderAuthSource,
   RuntimeProviderRecord,

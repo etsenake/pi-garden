@@ -40,6 +40,10 @@ export interface TimelineToolCall {
   readonly executionStarted?: boolean;
   /** Last streaming partial result, when Pi published one. */
   readonly partial?: unknown;
+  /** Set when another tool invoked this call (codemode / `ctx.executeTool`). */
+  readonly parentToolCallId?: string;
+  /** Indent depth under the parent chain; 0 or absent for top-level tools. */
+  readonly nestingDepth?: number;
 }
 
 export interface TimelineSummary {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type {
+  DesktopMcpServerRecord,
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
@@ -9,17 +10,21 @@ import type {
   WorkspaceRecord,
 } from "../../../contracts/desktop-state";
 import type {
+  AddMcpServerInput,
   CustomProviderConfig,
   DesktopNotificationPermissionStatus,
+  UpdateMcpServerInput,
 } from "../../../contracts/ipc";
 import type { ThemeCatalogEntry } from "../../../contracts/theme-catalog";
 import { SettingsAppearanceSection } from "./settings-appearance-section";
 import { SettingsGeneralSection } from "./settings-general-section";
+import { SettingsMcpSection } from "./settings-mcp-section";
 import { SettingsModelsSection } from "./settings-models-section";
 import { SettingsNotificationsSection } from "./settings-notifications-section";
 import { SettingsProvidersSection } from "./settings-providers-section";
 import { type SettingsSection, settingsSectionDefinition } from "./settings-sections";
 import { SettingsShortcutsSection } from "./settings-shortcuts-section";
+import { SettingsToolsSection } from "./settings-tools-section";
 
 export type { SettingsSection } from "./settings-sections";
 
@@ -53,6 +58,15 @@ interface SettingsViewProps {
   readonly onRemoveProviderApiKey: (providerId: string) => Promise<string | undefined>;
   readonly onSaveCustomProvider: (config: CustomProviderConfig) => Promise<string | undefined>;
   readonly onDeleteCustomProvider: (providerId: string) => Promise<string | undefined>;
+  readonly onAddMcpServer: (input: AddMcpServerInput) => Promise<string | undefined>;
+  readonly onRemoveMcpServer: (
+    scope: DesktopMcpServerRecord["scope"],
+    name: string,
+  ) => Promise<string | undefined>;
+  readonly onUpdateMcpServer: (input: UpdateMcpServerInput) => Promise<string | undefined>;
+  readonly onSetProjectTrust: (trusted: boolean) => Promise<string | undefined>;
+  readonly onSetDefaultTools: (entries: readonly string[]) => Promise<string | undefined>;
+  readonly onSetPiBuiltinEnabled: (name: string, enabled: boolean) => Promise<string | undefined>;
   readonly onSetNotificationPreferences: (preferences: Partial<NotificationPreferences>) => void;
   readonly onSetIntegratedTerminalShell: (shellPath: string) => void;
   readonly onRequestNotificationPermission: () => void;
@@ -89,6 +103,12 @@ export function SettingsView({
   onRemoveProviderApiKey,
   onSaveCustomProvider,
   onDeleteCustomProvider,
+  onAddMcpServer,
+  onRemoveMcpServer,
+  onUpdateMcpServer,
+  onSetProjectTrust,
+  onSetDefaultTools,
+  onSetPiBuiltinEnabled,
   onSetNotificationPreferences,
   onSetIntegratedTerminalShell,
   onRequestNotificationPermission,
@@ -120,7 +140,8 @@ export function SettingsView({
               <div className="settings-row__label">
                 <div className="settings-row__title">Select a workspace</div>
                 <div className="settings-row__description">
-                  Providers and models are set per workspace. Choose one, or open a folder first.
+                  Providers, models, MCP, and tools are set per workspace. Choose one, or open a
+                  folder first.
                 </div>
               </div>
             </div>
@@ -180,6 +201,24 @@ export function SettingsView({
               onSetDefaultModel={onSetDefaultModel}
               onSetScopedModelPatterns={onSetScopedModelPatterns}
               onSetThinkingLevel={onSetThinkingLevel}
+            />
+          ) : null}
+
+          {section === "mcp" ? (
+            <SettingsMcpSection
+              runtime={runtime}
+              onAddMcpServer={onAddMcpServer}
+              onRemoveMcpServer={onRemoveMcpServer}
+              onUpdateMcpServer={onUpdateMcpServer}
+              onSetProjectTrust={onSetProjectTrust}
+            />
+          ) : null}
+
+          {section === "tools" ? (
+            <SettingsToolsSection
+              runtime={runtime}
+              onSetDefaultTools={onSetDefaultTools}
+              onSetPiBuiltinEnabled={onSetPiBuiltinEnabled}
             />
           ) : null}
 

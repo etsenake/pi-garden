@@ -44,14 +44,38 @@ export interface SessionPlanLimits {
   readonly reportedAt: Timestamp;
 }
 
+/** One physical model's share of session cost when virtual routing (or multi-model use) applies. */
+export interface SessionModelCost {
+  readonly provider: string;
+  readonly model: string;
+  readonly cost: number;
+  readonly tokens: SessionTokenCounts;
+}
+
 /** Context, cache and usage for one session, read from pi at turn boundaries. */
 export interface SessionUsageSnapshot {
   readonly context?: SessionContextUsage;
   /** Prompt tokens of the latest reply, for the cache hit rate. */
   readonly lastTurn?: SessionTokenCounts;
   readonly cache: SessionPromptCache;
-  /** Totals for the whole session, including compaction and cache-warming requests. */
+  /**
+   * Totals for the whole session, including compaction, cache-warming, and nested
+   * tool usage Pi attributes onto tool results (via `getSessionStats`).
+   */
   readonly totals: SessionTokenCounts & { readonly cost: number };
+  /**
+   * Cost broken down by physical model when the session used more than one.
+   * Absent when every charged request used a single model (or Pi exposes none).
+   */
+  readonly costByModel?: readonly SessionModelCost[];
+  /**
+   * Under a virtual model selection, the physical model of the latest successful
+   * reply (`session.routedModel`). Absent when not virtually routed.
+   */
+  readonly routedModel?: {
+    readonly provider: string;
+    readonly model: string;
+  };
   /** True when the provider bills through a subscription, so `totals.cost` is not money spent. */
   readonly subscription: boolean;
   readonly planLimits?: SessionPlanLimits;

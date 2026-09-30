@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import {
   BellIcon,
+  ExtensionIcon,
   KeyboardIcon,
   ModelIcon,
   PlugIcon,
   SettingsIcon,
   SkillIcon,
   SunIcon,
+  TerminalIcon,
 } from "../../ui/icons";
 
 export interface SettingsSectionDefinition {
@@ -64,7 +66,7 @@ export const SETTINGS_SECTIONS = [
     title: "Providers",
     group: "Agent",
     icon: <PlugIcon />,
-    keywords: ["login", "logout", "oauth", "api key", "auth", "custom endpoint"],
+    keywords: ["login", "logout", "oauth", "api key", "auth", "custom endpoint", "chatgpt"],
     description: (workspaceName) => `Connect providers and manage auth for ${workspaceName}.`,
     needsWorkspace: true,
   },
@@ -73,8 +75,26 @@ export const SETTINGS_SECTIONS = [
     title: "Models",
     group: "Agent",
     icon: <ModelIcon />,
-    keywords: ["default model", "reasoning", "thinking", "enabled models"],
+    keywords: ["default model", "reasoning", "thinking", "enabled models", "classifier", "image", "virtual"],
     description: () => "Choose the default model and which models appear in pickers.",
+    needsWorkspace: true,
+  },
+  {
+    id: "mcp",
+    title: "MCP",
+    group: "Agent",
+    icon: <ExtensionIcon />,
+    keywords: ["mcp", "servers", "tools", "oauth", "stdio", "http", "trust"],
+    description: (workspaceName) => `Manage MCP servers for ${workspaceName}.`,
+    needsWorkspace: true,
+  },
+  {
+    id: "tools",
+    title: "Tools",
+    group: "Agent",
+    icon: <TerminalIcon />,
+    keywords: ["codemode", "default tools", "builtin", "tool search", "llama"],
+    description: () => "Enable built-in tools and set which tools load by default.",
     needsWorkspace: true,
   },
 ] as const satisfies readonly SettingsSectionDefinition[];

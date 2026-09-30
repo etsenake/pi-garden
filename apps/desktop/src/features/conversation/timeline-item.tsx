@@ -394,10 +394,15 @@ function TimelineToolCallItem({
   if (renderer && richTools && !customFailed) {
     return (
       <article
-        className={`timeline-tool timeline-tool--${item.status} timeline-tool__custom`}
+        className={`timeline-tool timeline-tool--${item.status} timeline-tool__custom${
+          item.nestingDepth ? " timeline-tool--nested" : ""
+        }`}
         data-testid="timeline-tool"
         data-tool-name={item.toolName}
         data-tool-renderer="custom"
+        data-parent-tool-call-id={item.parentToolCallId}
+        data-nesting-depth={item.nestingDepth ?? 0}
+        style={toolNestingStyle(item.nestingDepth)}
       >
         <div className="timeline-tool__header-row">
           <button

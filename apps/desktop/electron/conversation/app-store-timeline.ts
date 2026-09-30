@@ -241,6 +241,7 @@ export function applyTimelineEvent(
         event.input,
         undefined,
         { argumentsComplete: true, executionStarted: true },
+        event.parentToolCallId,
       );
       break;
     }
@@ -265,6 +266,7 @@ export function applyTimelineEvent(
             : {}),
           ...(event.partial !== undefined ? { partial: event.partial } : {}),
         },
+        event.parentToolCallId,
       );
       break;
     case "toolFinished":
@@ -278,6 +280,7 @@ export function applyTimelineEvent(
         undefined,
         event.output,
         { argumentsComplete: true, executionStarted: true },
+        event.parentToolCallId,
       );
       break;
     case "runCompleted": {
@@ -356,25 +359,35 @@ function upsertToolRow(
     readonly executionStarted?: boolean;
     readonly partial?: unknown;
   } = {},
+  parentToolCallId?: string,
 ) {
   const index = transcript.findIndex((item) => item.kind === "tool" && item.callId === callId);
   const existing = index >= 0 ? transcript[index] : undefined;
   const existingTool = existing?.kind === "tool" ? existing : undefined;
-  const next = makeToolItem(
-    callId,
-    toolName ?? existingTool?.toolName ?? "tool",
-    status ?? existingTool?.status ?? "running",
-    label ?? existingTool?.label ?? "Working",
-    {
-      detail: detail ?? existingTool?.detail,
-      metadata: existingTool?.metadata,
-      input: input ?? existingTool?.input,
-      output: output ?? existingTool?.output,
-      argumentsComplete: presentation.argumentsComplete ?? existingTool?.argumentsComplete,
-      executionStarted: presentation.executionStarted ?? existingTool?.executionStarted,
-      partial: "partial" in presentation ? presentation.partial : existingTool?.partial,
-    },
-  );
+  const resolvedParent = parentToolCallId ?? existingTool?.parentToolCallId;
+  const nestingDepth =
+    resolvedParent !== undefined
+      ? nestingDepthForParent(transcript, resolvedParent, existingTool?.nestingDepth)
+      : (existingTool?.nestingDepth ?? 0);
+  const next = {
+    ...makeToolItem(
+      callId,
+      toolName ?? existingTool?.toolName ?? "tool",
+      status ?? existingTool?.status ?? "running",
+      label ?? existingTool?.label ?? "Working",
+      {
+        detail: detail ?? existingTool?.detail,
+        metadata: existingTool?.metadata,
+        input: input ?? existingTool?.input,
+        output: output ?? existingTool?.output,
+        argumentsComplete: presentation.argumentsComplete ?? existingTool?.argumentsComplete,
+        executionStarted: presentation.executionStarted ?? existingTool?.executionStarted,
+        partial: "partial" in presentation ? presentation.partial : existingTool?.partial,
+      },
+    ),
+    ...(resolvedParent !== undefined ? { parentToolCallId: resolvedParent } : {}),
+    ...(nestingDepth > 0 ? { nestingDepth } : {}),
+  };
 
   if (index >= 0) {
     transcript[index] = {
@@ -385,6 +398,19 @@ function upsertToolRow(
   }
 
   transcript.push(next);
+}
+
+function nestingDepthForParent(
+  transcript: readonly TranscriptMessage[],
+  parentToolCallId: string,
+  existingDepth: number | undefined,
+): number {
+  if (existingDepth !== undefined && existingDepth > 0) return existingDepth;
+  const parent = transcript.find(
+    (item) => item.kind === "tool" && item.callId === parentToolCallId,
+  );
+  if (parent?.kind !== "tool") return 1;
+  return (parent.nestingDepth ?? 0) + 1;
 }
 
 function removeWorkingActivity(
@@ -415,6 +441,7 @@ function clearRunState(
 }
 
 function toolLabel(toolName: string, input: unknown): string {
+  const displayName = displayToolName(toolName);
   const detail = inputLabel(input);
   if (toolName === createChildThreadToolName) {
     return detail ? `Started child thread: ${detail}` : "Started child thread";
@@ -429,15 +456,27 @@ function toolLabel(toolName: string, input: unknown): string {
     return detail ? `Sent message to thread: ${detail}` : "Sent message to thread";
   }
   if (looksLikeSearch(toolName, input)) {
-    return detail ? `Searched ${detail}` : `Searched with ${toolName}`;
+    return detail ? `Searched ${detail}` : `Searched with ${displayName}`;
   }
   if (looksLikeFileExplore(toolName, input)) {
     if (toolName.toLowerCase() === "read") {
       return detail ? `Read ${detail}` : "Read a file";
     }
-    return detail ? `Explored ${detail}` : `Explored files with ${toolName}`;
+    return detail ? `Explored ${detail}` : `Explored files with ${displayName}`;
   }
-  return detail ? `Ran ${toolName}: ${detail}` : `Ran ${toolName}`;
+  return detail ? `Ran ${displayName}: ${detail}` : `Ran ${displayName}`;
+}
+
+/** MCP tools arrive as `mcp__server__tool`; Pi titles them `server/tool`. */
+export function displayToolName(toolName: string): string {
+  if (!toolName.startsWith("mcp__")) return toolName;
+  const rest = toolName.slice("mcp__".length);
+  const separator = rest.indexOf("__");
+  if (separator <= 0 || separator >= rest.length - 1) return toolName;
+  const server = rest.slice(0, separator);
+  const tool = rest.slice(separator + 2);
+  if (!server || !tool || tool.includes("__")) return toolName;
+  return `${server}/${tool}`;
 }
 
 function progressLabel(progress: number | undefined): string | undefined {

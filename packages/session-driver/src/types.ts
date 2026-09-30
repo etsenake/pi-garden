@@ -202,6 +202,8 @@ export interface ToolStartedEvent extends SessionEventBase {
   readonly toolName: string;
   readonly callId: string;
   readonly input?: unknown;
+  /** Set when another tool invoked this call through `ctx.executeTool()`. */
+  readonly parentToolCallId?: string;
 }
 
 export interface ToolUpdatedEvent extends SessionEventBase {
@@ -217,6 +219,8 @@ export interface ToolUpdatedEvent extends SessionEventBase {
   readonly executionStarted?: boolean;
   /** Structured or textual partial result from Pi's tool update. */
   readonly partial?: unknown;
+  /** Set when another tool invoked this call through `ctx.executeTool()`. */
+  readonly parentToolCallId?: string;
 }
 
 export interface ToolFinishedEvent extends SessionEventBase {
@@ -224,6 +228,8 @@ export interface ToolFinishedEvent extends SessionEventBase {
   readonly callId: string;
   readonly success: boolean;
   readonly output?: unknown;
+  /** Set when another tool invoked this call through `ctx.executeTool()`. */
+  readonly parentToolCallId?: string;
 }
 
 export interface RunCompletedEvent extends SessionEventBase {

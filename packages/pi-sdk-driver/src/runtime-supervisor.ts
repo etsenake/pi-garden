@@ -168,7 +168,10 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     const context = await this.ensureContext(workspace);
     const provider = context.modelRuntime.getProvider(providerId);
     const authType: LoginAuthType = provider?.auth.oauth ? "oauth" : "api_key";
-    await context.modelRuntime.login(providerId, authType, toAuthInteraction(callbacks));
+    await context.modelRuntime.login(providerId, authType, toAuthInteraction(callbacks), {
+      // ChatGPT-on-OpenAI (and peers) need a stable install id; Pi stores it in settings.
+      getDeviceId: () => context.settingsManager.getOrCreateDeviceId(),
+    });
     await this.reloadResources(context);
     await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
     return this.buildSnapshot(context);
@@ -881,33 +884,58 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
   private async buildModelRecords(context: RuntimeContext): Promise<readonly RuntimeModelRecord[]> {
     const runtime = context.modelRuntime;
     const availableKeys = new Set(
-      (await runtime.getAvailable()).map((model) => `${model.provider}:${model.id}`),
+      (await runtime.getAllAvailable()).map(
+        (model) => `${modelTypeKey(model)}:${model.provider}:${model.id}`,
+      ),
     );
     const providers = new Map(
       (await this.buildProviderRecords(context)).map((provider) => [provider.id, provider]),
     );
 
-    return runtime
-      .getModels()
-      .map<RuntimeModelRecord>((model) => {
-        const provider = providers.get(model.provider);
-        return {
-          providerId: model.provider,
-          providerName: provider?.name ?? model.provider,
-          modelId: model.id,
-          label: model.name,
-          available: availableKeys.has(`${model.provider}:${model.id}`),
-          authType: provider?.authType ?? "none",
-          reasoning: Boolean(model.reasoning),
-          supportsImages: model.input.includes("image"),
-          kind: model.type ?? "chat",
-        };
-      })
-      .sort((left, right) =>
-        left.providerId === right.providerId
-          ? left.modelId.localeCompare(right.modelId)
-          : left.providerId.localeCompare(right.providerId),
-      );
+    const toRecord = (
+      model: {
+        readonly id: string;
+        readonly name: string;
+        readonly provider: string;
+        readonly input: readonly ("text" | "image")[];
+        readonly type?: string;
+        readonly api?: string;
+        readonly reasoning?: boolean;
+      },
+      kind: RuntimeModelRecord["kind"],
+    ): RuntimeModelRecord => {
+      const provider = providers.get(model.provider);
+      return {
+        providerId: model.provider,
+        providerName: provider?.name ?? model.provider,
+        modelId: model.id,
+        label: model.name,
+        available: availableKeys.has(`${kind}:${model.provider}:${model.id}`),
+        authType: provider?.authType ?? "none",
+        reasoning: Boolean(model.reasoning),
+        supportsImages: model.input.includes("image"),
+        kind,
+      };
+    };
+
+    // getModels() is the chat catalog (includes virtual). Image/classifier live only on
+    // getModelsOfType — same upstream id can exist as both chat and image.
+    const chatAndVirtual = runtime.getModels().map((model) =>
+      toRecord(model, isVirtualCatalogModel(model) ? "virtual" : "chat"),
+    );
+    const image = runtime.getModelsOfType("image").map((model) => toRecord(model, "image"));
+    const classifier = runtime
+      .getModelsOfType("classifier")
+      .map((model) => toRecord(model, "classifier"));
+
+    return [...chatAndVirtual, ...image, ...classifier].sort((left, right) => {
+      const kindCompare = left.kind.localeCompare(right.kind);
+      if (kindCompare !== 0) return kindCompare;
+      if (left.providerId === right.providerId) {
+        return left.modelId.localeCompare(right.modelId);
+      }
+      return left.providerId.localeCompare(right.providerId);
+    });
   }
 
   private async autoEnableModelsForAuthenticatedProviders(
@@ -939,7 +967,12 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     const nextPatterns = mergeEnabledModelPatterns(
       currentPatterns,
       models
-        .filter((model) => model.available && candidateProviderSet.has(model.providerId))
+        .filter(
+          (model) =>
+            (model.kind === "chat" || model.kind === "virtual") &&
+            model.available &&
+            candidateProviderSet.has(model.providerId),
+        )
         .map((model) => `${model.providerId}/${model.modelId}`),
     );
     if (nextPatterns.length === currentPatterns.length) {
@@ -1491,4 +1524,14 @@ function firstNonEmptyLine(value: string): string | undefined {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .find(Boolean);
+}
+
+/** Pi virtual catalog entries use api `pi-virtual` (not exported as a helper from the SDK). */
+function isVirtualCatalogModel(model: { readonly api?: string }): boolean {
+  return model.api === "pi-virtual";
+}
+
+function modelTypeKey(model: { readonly type?: string; readonly api?: string }): string {
+  if (isVirtualCatalogModel(model)) return "virtual";
+  return model.type ?? "chat";
 }
