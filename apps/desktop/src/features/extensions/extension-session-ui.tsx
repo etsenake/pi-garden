@@ -5,6 +5,7 @@ import {
   ansiStyleClassNames,
   hasAnsiStyle,
   parseAnsiText,
+  plainText,
   type AnsiTextSegment,
 } from "../../lib/ansi-text";
 import type {
@@ -28,10 +29,6 @@ export interface ExtensionWidgetView {
 export interface ExtensionStatusView {
   readonly key: string;
   readonly segments: readonly AnsiTextSegment[];
-}
-
-export function plainText(segments: readonly AnsiTextSegment[]): string {
-  return segments.map((segment) => segment.text).join("");
 }
 
 export function widgetsForPlacement(

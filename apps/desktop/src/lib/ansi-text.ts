@@ -104,10 +104,13 @@ export function parseAnsiText(input: string): readonly AnsiTextSegment[] {
 }
 
 /** Plain text with every escape sequence and control byte removed. */
+/** Text of a segment run without its styling. */
+export function plainText(segments: readonly AnsiTextSegment[]): string {
+  return segments.map((segment) => segment.text).join("");
+}
+
 export function stripAnsiText(input: string): string {
-  return parseAnsiText(input)
-    .map((segment) => segment.text)
-    .join("");
+  return plainText(parseAnsiText(input));
 }
 
 export function hasAnsiStyle(style: AnsiTextStyle): boolean {

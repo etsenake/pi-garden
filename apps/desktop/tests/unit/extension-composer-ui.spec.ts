@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { SessionExtensionUiStateRecord } from "../../contracts/desktop-state";
+import { plainText } from "../../src/lib/ansi-text";
 import {
   MAX_WIDGET_LINES,
-  plainText,
   statusesForDisplay,
   widgetsForPlacement,
 } from "../../src/features/extensions/extension-session-ui";
