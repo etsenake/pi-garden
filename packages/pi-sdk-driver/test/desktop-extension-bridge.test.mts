@@ -180,3 +180,88 @@ export default function extension(pi) {
     assert.equal(invalidated[1]!.generation, newest.generation);
   },
 );
+
+await test(
+  "many rich-surface discover listeners do not emit MaxListenersExceededWarning",
+  { timeout: 15_000 },
+  async (t) => {
+    const root = await mkdtemp(join(tmpdir(), "pi-desktop-bridge-max-"));
+    const agentDir = join(root, "agent");
+    const cwd = join(root, "workspace");
+    const extensionDirectory = join(cwd, ".pi", "extensions", "many-surfaces");
+    await mkdir(agentDir);
+    await mkdir(extensionDirectory, { recursive: true });
+    new ProjectTrustStore(agentDir).set(cwd, true);
+    await writeFile(join(agentDir, "auth.json"), "{}");
+    await writeFile(
+      join(agentDir, "settings.json"),
+      JSON.stringify({ packages: [], cacheWarming: "off" }),
+    );
+    await writeFile(
+      join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          "bridge-test": {
+            baseUrl: "http://127.0.0.1:9/never-contact",
+            apiKey: "LOCAL_TEST_CANARY",
+            api: "openai-completions",
+            models: [{ id: "scripted", contextWindow: 8192, maxTokens: 1024 }],
+          },
+        },
+      }),
+    );
+    const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+    process.env.PI_CODING_AGENT_DIR = agentDir;
+    t.after(() => {
+      if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+      else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+    });
+    const helperPath = fileURLToPath(import.meta.resolve("@pi-garden/extension-ui"));
+    const extensionPath = join(extensionDirectory, "index.ts");
+    await writeFile(
+      extensionPath,
+      `
+import { registerRichSurface } from ${JSON.stringify(helperPath)};
+export default function extension(pi) {
+  for (let i = 0; i < 20; i++) {
+    registerRichSurface(pi, {
+      id: "surface-" + i,
+      surface: "composer-after",
+      source: import.meta.url,
+      frontend: new URL("./missing-" + i + ".js", import.meta.url),
+      backend: () => ({ setup() {} }),
+      order: i,
+    });
+  }
+}
+`,
+    );
+    const warnings: string[] = [];
+    const onWarning = (warning: Error) => {
+      warnings.push(warning.name + ": " + warning.message);
+    };
+    process.on("warning", onWarning);
+    t.after(() => process.off("warning", onWarning));
+
+    const driver = new PiSdkDriver({
+      agentDir,
+      catalogFilePath: join(root, "catalogs.json"),
+      desktopExtensions: {
+        onChanged() {},
+        onInvalidated() {},
+      },
+    });
+    const { ref } = await driver.createSession(
+      { workspaceId: "bridge-max", path: cwd },
+      { initialModel: { provider: "bridge-test", modelId: "scripted" } },
+    );
+    t.after(() => driver.closeSession(ref));
+    await driver.reloadSession(ref);
+    await driver.reloadSession(ref);
+    assert.equal(
+      warnings.some((entry) => entry.includes("MaxListenersExceededWarning")),
+      false,
+      warnings.join("\n"),
+    );
+  },
+);

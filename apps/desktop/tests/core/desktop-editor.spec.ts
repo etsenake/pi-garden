@@ -163,6 +163,15 @@ test("a custom editor replaces only the textarea and routes host menus, submit, 
     await expect(frame.locator("#host-updates")).toHaveText("3");
     await expect(field).toBeFocused();
 
+    // Slash and @ mention contexts suppress extension autocomplete.
+    await typeDraft(window, "");
+    await typeDraft(window, "/model");
+    await expect(menu).toHaveCount(0);
+    await typeDraft(window, "");
+    await typeDraft(window, "hello @jo");
+    await expect(menu).toHaveCount(0);
+    await expect(editor).toHaveAttribute("data-draft", "hello @jo");
+
     // Live theme change reaches the mounted frontend without a remount.
     const mountToken = await frame.locator("#mount").innerText();
     const connection = await connectionOf(window);

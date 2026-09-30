@@ -1,7 +1,7 @@
+import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import {
-  createEventBus,
   type CreateAgentSessionServicesOptions,
   type ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
@@ -98,7 +98,11 @@ export function createDesktopExtensionBridge(options: {
     explicit: readonly ExtensionActionRecord[],
   ): readonly ExtensionActionRecord[];
 }): DesktopExtensionActionBridge {
-  const eventBus = createEventBus();
+  // Pi's createEventBus uses EventEmitter's default MaxListeners (10). Each
+  // registerRichSurface / registerAction / … keeps one discover listener for the
+  // session lifetime; realistic extension counts exceed that and warn even when
+  // dispose is correct. Raise the ceiling; shutdown still removes listeners.
+  const eventBus = createDiscoveryEventBus();
   const declarations = new Set<DesktopViewDeclaration>();
   const richSurfaces = new Set<RichSurfaceDeclaration>();
   const editors = new Set<DesktopEditorDeclaration>();
@@ -376,4 +380,38 @@ function isRegistration(value: unknown): value is DesktopViewRegistrationEvent {
     typeof declaration.backend === "function" &&
     (!("accept" in value) || value.accept === undefined || typeof value.accept === "function")
   );
+}
+
+/**
+ * Same shape as Pi's `createEventBus`, with MaxListeners raised so discovery
+ * channels can hold one listener per registration without false leak warnings.
+ */
+function createDiscoveryEventBus(): {
+  emit(channel: string, data: unknown): void;
+  on(channel: string, handler: (data: unknown) => void | Promise<void>): () => void;
+  clear(): void;
+} {
+  const emitter = new EventEmitter();
+  emitter.setMaxListeners(0);
+  return {
+    emit(channel, data) {
+      emitter.emit(channel, data);
+    },
+    on(channel, handler) {
+      const safeHandler = async (data: unknown) => {
+        try {
+          await handler(data);
+        } catch (error) {
+          console.error(`Event handler error (${channel}):`, error);
+        }
+      };
+      emitter.on(channel, safeHandler);
+      return () => {
+        emitter.off(channel, safeHandler);
+      };
+    },
+    clear() {
+      emitter.removeAllListeners();
+    },
+  };
 }

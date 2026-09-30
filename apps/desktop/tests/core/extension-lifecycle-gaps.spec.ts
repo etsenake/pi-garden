@@ -1,5 +1,5 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   createNamedThread,
@@ -9,6 +9,7 @@ import {
   launchDesktop,
   makeUserDataDir,
   makeWorkspace,
+  openWindowViaShortcut,
   seedAgentDir,
   selectSession,
   waitForSessionByTitle,
@@ -237,6 +238,94 @@ test("theme changes update rich surfaces and tool renderers without remounting",
       .toBe("tokyo-night");
     await expect(toolFrame.locator("#mount")).toHaveText(toolMount);
     expect(fixtures.projectExtensionPath).toBeTruthy();
+  } finally {
+    await harness.close();
+  }
+});
+
+test("two windows on different workspaces isolate drafts and survive closing one", async () => {
+  test.setTimeout(180_000);
+  const userDataDir = await makeUserDataDir();
+  const agentDir = join(userDataDir, "agent");
+  await seedAgentDir(agentDir);
+  const alphaPath = await makeWorkspace("lifecycle-alpha");
+  const betaPath = await makeWorkspace("lifecycle-beta");
+  await writeProjectExtension(
+    alphaPath,
+    "alpha-only.ts",
+    `export default function extension(pi) {
+  pi.registerCommand("alpha-only", { description: "alpha", handler: async () => {} });
+  pi.on("session_start", async (_event, ctx) => {
+    ctx.ui.setStatus("alpha-status", "alpha-ready");
+  });
+}
+`,
+  );
+  await writeProjectExtension(
+    betaPath,
+    "beta-only.ts",
+    `export default function extension(pi) {
+  pi.registerCommand("beta-only", { description: "beta", handler: async () => {} });
+  pi.on("session_start", async (_event, ctx) => {
+    ctx.ui.setStatus("beta-status", "beta-ready");
+  });
+}
+`,
+  );
+
+  const harness = await launchDesktop(userDataDir, {
+    agentDir,
+    initialWorkspaces: [alphaPath, betaPath],
+    testMode: "background",
+  });
+  try {
+    const first = await harness.firstWindow();
+    await waitForWorkspaceByPath(first, alphaPath);
+    await waitForWorkspaceByPath(first, betaPath);
+    await createNamedThread(first, "Alpha isolate", { workspaceName: basename(alphaPath) });
+    await createNamedThread(first, "Beta isolate", { workspaceName: basename(betaPath) });
+    await selectSession(first, "Alpha isolate");
+    await first.getByTestId("composer").fill("alpha draft");
+    await expect(first.getByTestId("composer")).toHaveValue("alpha draft");
+    await expect(first.locator("[data-status-key='alpha-status']")).toHaveText("alpha-ready", {
+      timeout: 20_000,
+    });
+
+    const second = await openWindowViaShortcut(harness, first);
+    await selectSession(second, "Beta isolate");
+    await second.getByTestId("composer").fill("beta draft");
+    await expect(second.getByTestId("composer")).toHaveValue("beta draft");
+    await expect(first.getByTestId("composer")).toHaveValue("alpha draft");
+    await expect(second.locator("[data-status-key='beta-status']")).toHaveText("beta-ready", {
+      timeout: 20_000,
+    });
+    await expect(second.locator("[data-status-key='alpha-status']")).toHaveCount(0);
+    await expect(first.locator("[data-status-key='beta-status']")).toHaveCount(0);
+
+    const alphaWorkspace = await waitForWorkspaceByPath(first, alphaPath);
+    const betaWorkspace = await waitForWorkspaceByPath(second, betaPath);
+    const alpha = await waitForSessionByTitle(first, alphaWorkspace.id, "Alpha isolate");
+    const beta = await waitForSessionByTitle(second, betaWorkspace.id, "Beta isolate");
+    await expect
+      .poll(async () => commandNames(first, `${alphaWorkspace.id}:${alpha.id}`))
+      .toContain("alpha-only");
+    await expect
+      .poll(async () => commandNames(second, `${betaWorkspace.id}:${beta.id}`))
+      .toContain("beta-only");
+    expect(await commandNames(first, `${alphaWorkspace.id}:${alpha.id}`)).not.toContain(
+      "beta-only",
+    );
+    expect(await commandNames(second, `${betaWorkspace.id}:${beta.id}`)).not.toContain(
+      "alpha-only",
+    );
+
+    await first.close();
+    await expect.poll(() => harness.electronApp.windows().length).toBe(1);
+    await expect(second.getByTestId("composer")).toHaveValue("beta draft");
+    await expect(second.locator("[data-status-key='beta-status']")).toHaveText("beta-ready");
+    await expect
+      .poll(async () => commandNames(second, `${betaWorkspace.id}:${beta.id}`))
+      .toContain("beta-only");
   } finally {
     await harness.close();
   }
