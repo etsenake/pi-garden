@@ -63,50 +63,48 @@ Never do these:
 
 ## Procedure
 
-1. **Read the target.** Open the entry file and every relative import it
-   reaches. Note each terminal-only call, what state it presents, and where
-   that state lives. Identify the extension factory function and how it wires
-   `session_start`, commands and tools.
-2. **Check for existing desktop registrations.** If the extension already
-   imports `@pi-garden/extension-ui`, extend those files and ids; do not add a
-   duplicate registration or a second helper copy. A second run of this skill
-   must leave an already-adapted extension unchanged apart from real gaps.
-3. **Write the plan** as a short list: terminal API → desktop target → files
-   you will add or edit. Prefer host-rendered targets (`registerAction`,
-   surface contributions) over browser code when the semantics allow it.
-4. **Vendor the helper.** The `@pi-garden/extension-ui` package directory is
-   named in the request (`package.json` plus `dist/`). Copy it, unchanged, to
-   `<extension directory>/node_modules/@pi-garden/extension-ui/`. Its main
-   entry has no runtime dependencies, so Node resolution from the extension
-   file finds it in both pi-garden and ordinary Pi, and the terminal still
-   loads the extension. Do not edit the copy. If a copy is already there,
-   replace it with the current one. Add `node_modules/` to the extension's
-   ignore file when the directory is under version control.
+The writer is `apply.ts` beside this file. Do not hand-write a parallel set of
+registrations. From the pi-garden repository, with the entry path and the
+helper package directory from the request:
+
+```sh
+pnpm exec jiti apps/desktop/resources/skills/adapt-for-desktop/apply.ts "<entry>" "<helper package dir>"
+```
+
+It vendors `@pi-garden/extension-ui` (package.json plus dist, unchanged) into
+`<extension directory>/node_modules/@pi-garden/extension-ui/`, writes
+`pi-garden-desktop.ts`, plain `.js` frontends under `pi-garden-desktop/`, and
+`desktop-adaptation.json` beside the entry, and inserts one import plus one
+`registerDesktopAdaptations(pi)` call into the extension factory. Terminal
+calls stay. `source` is the entry file's URL, not the sibling module's
+`import.meta.url`. A second run prints `unchanged` and does not add another
+import, call, or registration.
+
+`desktop-adaptation.json` is the pairing record: each terminal capability names
+the api, id, surface and tool of the registration that adapted it. A rich
+surface that merely exists does not adapt anything. Do not add a second
+registration for a capability already listed there.
+
+1. **Read the target** and the findings in the request. Note each terminal-only
+   call and the extension factory (`export default function name(pi)`).
+2. **Run the writer** with the exact entry and the named helper directory.
    Package-installed, npm or git extensions are never edited in place: adapt
-   from their source checkout instead.
-5. **Make the smallest additive edits** in the entry file:
-   - `import { registerRichSurface, registerAction, ... } from "@pi-garden/extension-ui";`
-   - Register inside the extension factory. Registrations replay on
-     discovery and dispose on `session_shutdown` by themselves.
-   - `source: import.meta.url` (the entry file) and
-     `frontend: new URL("./<name>.desktop/<surface>.js", import.meta.url)`.
-     The frontend must live below the entry file's directory. Never name a
-     frontend `index.js`; Pi would discover it as another extension.
-   - Rich-surface, tool-renderer and desktop-editor ids are lowercase
-     identifiers (`/^[a-z][a-z0-9._-]{0,63}$/`). Action ids follow the
-     helper's `EXTENSION_ACTION_ID_PATTERN`.
-   - Keep the terminal calls where they are. In pi-garden they are inert; in
-     the terminal they still run.
-6. **Write the browser frontends** as plain ES modules (`.js`) that export
-   `mount(root, host)` and return a disposer. Do not import anything: the
-   frame cannot resolve bare specifiers and the app does not bundle for you.
-   Use `host.theme` / `host.subscribeTheme` for colors, `host.signal` to stop
-   work, `host.tool` / `host.subscribeTool` in a tool renderer, and the
-   `DesktopEditorContext` (`getText`, `setText`, `subscribeText`, `submit`,
-   `autocomplete`) in a desktop editor. Build only what the surface shows.
-   When the extension already has a bundler (`build.mjs`, esbuild), keep using
-   it and rebuild after editing.
-7. **Move live data through Chord without importing Chord.** A rich surface
+   from their source checkout instead. Add `node_modules/` to the extension's
+   ignore file when the directory is under version control.
+3. **Review the diff** against the mapping table. The writer keeps the terminal
+   calls and uses one registration per family (`onTerminalInput` → action
+   `terminal-input`; component widget → `composer-before` `widget`; header →
+   `app-header` `header`; footer → `app-footer` `footer`; `custom` → overlay
+   `custom`; editor component → desktop editor `editor`; each tool's
+   `renderCall` and `renderResult` share one `registerDesktopToolRenderer`;
+   a pi-tui import → workbench `tui`). Frontends are plain ES modules that
+   export `mount(root)` and import nothing.
+4. **Live data, only inside those files.** If a surface needs the extension's
+   state, move it through Chord in the generated backend and frontend without
+   changing the paired id, surface or tool name and without adding another
+   `register*` call. Re-running the writer restores the canonical generated
+   files, so do that only for a capability that is still listed as adaptable.
+5. **Move live data through Chord without importing Chord.** A rich surface
    `backend` is a plain facet object; the host supplies `env`:
 
    ```ts
@@ -115,8 +113,8 @@ Never do these:
      id: "status",
      surface: "composer-before",
      title: "My status",
-     source: import.meta.url,
-     frontend: new URL("./my-extension.desktop/status.js", import.meta.url),
+     source: new URL("./index.ts", import.meta.url).href,
+     frontend: new URL("./pi-garden-desktop/status.js", import.meta.url),
      backend: () => ({
        id: "my-extension.status.backend",
        setup(env) {
@@ -163,7 +161,7 @@ Never do these:
    Keep service method calls minimal and never pass shell text or paths from
    the browser.
 
-8. **Validate.** Run the extension's own typecheck/lint/build if it has them.
+6. **Validate.** Run the extension's own typecheck/lint/build if it has them.
    Then prove terminal Pi still loads it with the bundled Pi 0.87.1 from
    pi-garden's checkout or an installed Pi:
 
@@ -177,17 +175,16 @@ Never do these:
    registrations returned `available === false` (no desktop host). Any load
    error means the adaptation is not done.
 
-9. **Reload pi-garden** so the new generation registers: use Extensions →
-   Refresh, or `/reload` in an idle thread. Then confirm the desktop
-   registrations appear (the rich surface, action, editor or tool renderer is
-   listed for the session) and that the Extensions detail page's
-   Desktop compatibility section now shows the new `desktop-native` findings
-   with runtime evidence while the adapted terminal-only findings remain
-   listed as adaptable (their terminal calls still exist by design).
-10. **Report** what was adapted (terminal API → desktop registration → file),
-    what was left alone and why (already native, directly supported,
-    unsupported in this version), and any remaining gaps. Do not commit the
-    user's extension unless the user asks.
+7. **Reload pi-garden** so the new generation registers: use Extensions →
+   Refresh, or `/reload` in an idle thread. Confirm the generated surface is
+   visible and the Extensions detail page shows each paired terminal finding
+   as **Adapted**, naming the registration in `desktop-adaptation.json`.
+   Findings that are still **Adaptable** were not paired. Run the writer a
+   second time; it must print `unchanged`.
+8. **Report** what was adapted (terminal API → desktop registration → file),
+   what was left alone and why (already paired, directly supported,
+   unsupported in this version), and any remaining gaps. Do not commit the
+   user's extension unless the user asks.
 
 ## Boundaries
 

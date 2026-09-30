@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentSessionRuntime } from "@earendil-works/pi-coding-agent";
+import { ProjectTrustStore, type AgentSessionRuntime } from "@earendil-works/pi-coding-agent";
 import { PiSdkDriver } from "../dist/pi-sdk-driver.js";
 import { createAgentSessionRuntimeWithNpmFallback } from "../dist/npm-package-fallback.js";
 
@@ -65,6 +65,7 @@ async function makeWorkspaceDir(root: string, name: string, source: string): Pro
   const path = join(root, name);
   await mkdir(join(path, ".pi", "extensions"), { recursive: true });
   await writeFile(join(path, ".pi", "extensions", "provider.ts"), source);
+  new ProjectTrustStore(join(root, "agent")).set(path, true);
   return path;
 }
 

@@ -2232,6 +2232,39 @@ button.host-contribution {
   pointer-events: none;
 }
 
+.settings-textarea {
+  width: min(100%, 28rem);
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 6rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.settings-row__control--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.settings-row__meta {
+  color: var(--muted-soft);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.settings-error {
+  margin: 0;
+  color: var(--error, #c44);
+  font-size: 13px;
+}
+
 .settings-keys {
   display: inline-flex;
   gap: 4px;
@@ -3566,6 +3599,7 @@ mark.thread-find-active {
   color: var(--accent);
 }
 
+.extension-compat__status--adapted,
 .extension-compat__status--desktop-native {
   border-color: var(--success);
   color: var(--success);

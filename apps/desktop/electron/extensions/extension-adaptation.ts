@@ -107,6 +107,7 @@ export function buildAdaptForDesktopPrompt(input: {
     }`,
     "",
     "Compatibility findings (source = referenced in code, runtime = observed live in pi-garden):",
+    ...adaptedSection(grouped.adapted),
     ...section("Adapt (terminal-specific, has a desktop target)", grouped.adaptable, true),
     ...section("Leave untouched (unsupported in this version)", grouped.unsupported, false),
     ...section("Already desktop-native (do not duplicate)", grouped.native, false),
@@ -118,12 +119,28 @@ export function buildAdaptForDesktopPrompt(input: {
 
 function groupFindings(findings: readonly ExtensionCompatibilityFinding[]) {
   return {
+    adapted: findings.filter((finding) => finding.status === "adapted"),
     adaptable: findings.filter((finding) => finding.status === "adaptable"),
     unsupported: findings.filter((finding) => finding.status === "unsupported"),
     native: findings.filter((finding) => finding.status === "desktop-native"),
     supported: findings.filter((finding) => finding.status === "supported"),
     unknown: findings.filter((finding) => finding.status === "unknown"),
   };
+}
+
+function adaptedSection(findings: readonly ExtensionCompatibilityFinding[]): readonly string[] {
+  if (findings.length === 0) return [];
+  return [
+    "",
+    "Already adapted (paired, do not duplicate):",
+    ...findings.map((finding) => {
+      const link = finding.adaptedBy;
+      const target = link
+        ? `${link.api}${link.surface ? ` ${link.surface}` : ""} ${link.id}`
+        : "its desktop registration";
+      return `- ${finding.capability} (${finding.label}) paired with ${target}; ${describeEvidence(finding)}`;
+    }),
+  ];
 }
 
 function section(

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
@@ -58,6 +58,44 @@ test("an adapted extension loads under ordinary Pi with the vendored helper and 
   expect([...loaded!.tools.keys()]).toEqual([]);
 
   // The vendored copy is what resolved the bare import: without it, ordinary Pi cannot load.
+  await rm(path.join(path.dirname(entry), "node_modules"), { recursive: true, force: true });
+  await loader.reload();
+  const broken = loader.getExtensions();
+  expect(broken.errors.map((error) => error.path)).toEqual([entry]);
+  expect(String(broken.errors[0]!.error)).toMatch(/@pi-garden\/extension-ui/);
+});
+
+test("the Adapt writer output loads under ordinary Pi and a second run does not duplicate it", async () => {
+  const { agentDir, workspacePath } = await dirs();
+  const entry = await writeCompatibilityFixture("terminal-heavy", path.join(workspacePath, "ext"));
+  const helper = path.dirname(path.dirname(require.resolve("@pi-garden/extension-ui")));
+  const { applyDesktopAdaptation } = await jiti.import<
+    typeof import("../../electron/extensions/apply-desktop-adaptation")
+  >("../../electron/extensions/apply-desktop-adaptation.ts");
+  const first = await applyDesktopAdaptation(entry, helper);
+  expect(first.changed).toBe(true);
+
+  const loader = new pi.DefaultResourceLoader({
+    cwd: workspacePath,
+    agentDir,
+    settingsManager: pi.SettingsManager.inMemory(),
+    additionalExtensionPaths: [entry],
+  });
+  await loader.reload();
+  const { extensions, errors } = loader.getExtensions();
+  expect(errors.map((error) => `${error.path}: ${error.error}`)).toEqual([]);
+  const loaded = extensions.find((extension) => extension.path === entry)!;
+  expect([...loaded.commands.keys()]).toEqual(["fixture-terminal-heavy-pick"]);
+  expect([...loaded.tools.keys()]).toEqual(["fixture-terminal-heavy_tool"]);
+
+  const second = await applyDesktopAdaptation(entry, helper);
+  expect(second.changed).toBe(false);
+  const entrySource = await readFile(entry, "utf8");
+  const desktop = await readFile(path.join(path.dirname(entry), "pi-garden-desktop.ts"), "utf8");
+  expect(entrySource.match(/registerDesktopAdaptations\(/g)).toHaveLength(1);
+  expect(desktop.match(/registerRichSurface\(/g)).toHaveLength(4);
+  expect(desktop.match(/registerDesktopToolRenderer\(/g)).toHaveLength(1);
+
   await rm(path.join(path.dirname(entry), "node_modules"), { recursive: true, force: true });
   await loader.reload();
   const broken = loader.getExtensions();

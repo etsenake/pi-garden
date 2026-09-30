@@ -47,7 +47,7 @@ await test("a switched-off built-in contributes no tools, and comes back on the 
   const demoTools = () =>
     loader
       .getExtensions()
-      .extensions.filter((extension) => extension.path === "<inline:pi-garden-demo>")
+      .extensions.filter((extension) => extension.path === "builtin:pi-garden-demo")
       .flatMap((extension) => [...extension.tools.keys()]);
 
   await loader.reload();
@@ -71,7 +71,7 @@ await test("Settings lists a switched-off built-in with its tools and name", asy
     const snapshot = refresh
       ? await supervisor.refreshRuntime(workspace)
       : await supervisor.getRuntimeSnapshot(workspace);
-    const record = snapshot.extensions.find((entry) => entry.path === "<inline:pi-garden-demo>");
+    const record = snapshot.extensions.find((entry) => entry.path === "builtin:pi-garden-demo");
     return record && { name: record.displayName, enabled: record.enabled, tools: record.tools };
   };
 
@@ -88,7 +88,7 @@ await test("Settings lists a switched-off built-in with its tools and name", asy
     tools: ["demo_tool"],
   });
 
-  assert.equal(supervisor.builtinExtensionName("<inline:pi-garden-demo>"), "pi-garden-demo");
+  assert.equal(supervisor.builtinExtensionName("builtin:pi-garden-demo"), "pi-garden-demo");
   assert.equal(supervisor.builtinExtensionName(join(workspacePath, "ext.ts")), undefined);
 });
 

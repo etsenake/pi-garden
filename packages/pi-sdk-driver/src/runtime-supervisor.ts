@@ -4,8 +4,10 @@ import {
   CredentialSynchronizationError,
   DefaultPackageManager,
   DefaultResourceLoader,
+  hasTrustRequiringProjectResources,
   ModelRuntime,
   type PackageSource,
+  ProjectTrustStore,
   SettingsManager,
   parseFrontmatter,
   stripFrontmatter,
@@ -15,6 +17,7 @@ import {
   type ResolvedResource,
 } from "@earendil-works/pi-coding-agent";
 import type {
+  DesktopMcpServerRecord,
   RuntimeLoginCallbacks,
   RuntimeExtensionDiagnostic,
   RuntimeExtensionRecord,
@@ -25,6 +28,7 @@ import type {
   RuntimeSkillRecord,
   RuntimeSourceInfo,
   RuntimeSnapshot,
+  RuntimeToolsSettings,
 } from "@pi-garden/session-driver/runtime-types";
 import type { WorkspaceRef } from "@pi-garden/session-driver";
 import { createRuntimeDependencies } from "./runtime-deps.js";
@@ -45,6 +49,22 @@ import {
   type CustomProviderInput,
 } from "./custom-provider-store.js";
 import { savePiProjectSettings } from "./compat/pi-project-settings.js";
+import {
+  addMcpServer as writeMcpServer,
+  desktopMcpConfigPath,
+  loadDesktopMcpConfig,
+  removeMcpServer as deleteMcpServer,
+  updateMcpServer as patchMcpServer,
+  type DesktopMcpConfigPatch,
+  type DesktopMcpScope,
+  type DesktopMcpServerConfig,
+} from "./mcp-config.js";
+import {
+  getToolsSettings as readToolsSettings,
+  setDefaultTools as writeDefaultTools,
+  setPiBuiltinEnabled as writePiBuiltinEnabled,
+} from "./tools-settings.js";
+import { projectTrustReloadOptions } from "./project-trust.js";
 
 export {
   BUILT_IN_PROVIDER_IDS,
@@ -413,14 +433,146 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     return this.buildSnapshot(context);
   }
 
+  async listMcpServers(workspace: WorkspaceRef): Promise<readonly DesktopMcpServerRecord[]> {
+    return loadDesktopMcpConfig({
+      agentDir: this.agentDir,
+      cwd: workspace.path,
+      projectTrusted: this.readProjectTrusted(workspace.path),
+    }).servers;
+  }
+
+  async addMcpServer(
+    workspace: WorkspaceRef,
+    input: {
+      readonly scope: DesktopMcpScope;
+      readonly name: string;
+      readonly config: DesktopMcpServerConfig;
+    },
+  ): Promise<RuntimeSnapshot> {
+    const projectTrusted = this.readProjectTrusted(workspace.path);
+    if (input.scope === "project" && !projectTrusted) {
+      throw new Error("Project is not trusted; refusing to write project MCP config.");
+    }
+    writeMcpServer(
+      desktopMcpConfigPath(this.agentDir, workspace.path, input.scope),
+      input.name,
+      input.config,
+    );
+    const context = await this.ensureContext(workspace);
+    await this.reloadResources(context);
+    return this.buildSnapshot(context);
+  }
+
+  async removeMcpServer(
+    workspace: WorkspaceRef,
+    input: {
+      readonly scope: DesktopMcpScope;
+      readonly name: string;
+    },
+  ): Promise<RuntimeSnapshot> {
+    const projectTrusted = this.readProjectTrusted(workspace.path);
+    if (input.scope === "project" && !projectTrusted) {
+      throw new Error("Project is not trusted; refusing to write project MCP config.");
+    }
+    const removed = deleteMcpServer(
+      desktopMcpConfigPath(this.agentDir, workspace.path, input.scope),
+      input.name,
+    );
+    if (!removed) {
+      throw new Error(`MCP server "${input.name}" not found in ${input.scope} mcp.json.`);
+    }
+    const context = await this.ensureContext(workspace);
+    await this.reloadResources(context);
+    return this.buildSnapshot(context);
+  }
+
+  async updateMcpServer(
+    workspace: WorkspaceRef,
+    input: {
+      readonly scope: DesktopMcpScope;
+      readonly name: string;
+    } & DesktopMcpConfigPatch,
+  ): Promise<RuntimeSnapshot> {
+    const projectTrusted = this.readProjectTrusted(workspace.path);
+    if (input.scope === "project" && !projectTrusted) {
+      throw new Error("Project is not trusted; refusing to write project MCP config.");
+    }
+    const { scope, name, ...patch } = input;
+    patchMcpServer(desktopMcpConfigPath(this.agentDir, workspace.path, scope), name, patch);
+    const context = await this.ensureContext(workspace);
+    await this.reloadResources(context);
+    return this.buildSnapshot(context);
+  }
+
+  getProjectTrust(workspace: WorkspaceRef): {
+    readonly projectTrusted: boolean;
+    readonly projectTrustRequired: boolean;
+  } {
+    const projectTrustRequired = hasTrustRequiringProjectResources(workspace.path);
+    return {
+      projectTrusted: this.readProjectTrusted(workspace.path),
+      projectTrustRequired,
+    };
+  }
+
+  async setProjectTrust(workspace: WorkspaceRef, trusted: boolean): Promise<RuntimeSnapshot> {
+    new ProjectTrustStore(this.agentDir).set(workspace.path, trusted);
+    this.contexts.delete(workspace.workspaceId);
+    const context = await this.ensureContext(workspace);
+    return this.buildSnapshot(context);
+  }
+
+  async getToolsSettings(workspace: WorkspaceRef): Promise<RuntimeToolsSettings> {
+    const context = await this.ensureContext(workspace);
+    return readToolsSettings(context.settingsManager);
+  }
+
+  async setDefaultTools(
+    workspace: WorkspaceRef,
+    entries: readonly string[],
+  ): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    writeDefaultTools(context.settingsManager, [...entries]);
+    await context.settingsManager.flush();
+    await this.reloadResources(context);
+    return this.buildSnapshot(context);
+  }
+
+  async setPiBuiltinEnabled(
+    workspace: WorkspaceRef,
+    name: string,
+    enabled: boolean,
+  ): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    writePiBuiltinEnabled(context.settingsManager, name, enabled);
+    await context.settingsManager.flush();
+    await this.reloadResources(context);
+    return this.buildSnapshot(context);
+  }
+
   /** The built-in's name when `path` is a pi-garden built-in extension, which Settings toggles app-wide. */
   builtinExtensionName(path: string): string | undefined {
     return findBuiltinExtension(this.builtinExtensions, path)?.name;
   }
 
+  private readProjectTrusted(workspacePath: string): boolean {
+    if (!hasTrustRequiringProjectResources(workspacePath)) return true;
+    try {
+      return new ProjectTrustStore(this.agentDir).get(workspacePath) === true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[trust] project trust could not be read for ${workspacePath}: ${message}`);
+      return false;
+    }
+  }
+
   /** Every built-in loads ungated here so Settings can list a switched-off one with its tools. */
   private inventoryExtensionFactories(): InlineExtension[] {
-    return this.builtinExtensions.map(({ name, factory }) => ({ name, factory }));
+    return this.builtinExtensions.map(({ name, factory }) => ({
+      name,
+      factory,
+      builtin: true,
+    }));
   }
 
   private async ensureContext(workspace: WorkspaceRef): Promise<RuntimeContext> {
@@ -443,7 +595,9 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       additionalSkillPaths: [...this.builtinSkillPaths],
     });
     try {
-      await resourceLoader.reload();
+      await resourceLoader.reload(
+        projectTrustReloadOptions(this.agentDir, workspace.path, settingsManager),
+      );
     } catch (error) {
       if (!isGlobalNpmLookupError(error)) {
         throw error;
@@ -473,7 +627,9 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
         extensionFactories: this.inventoryExtensionFactories(),
         additionalSkillPaths: [...this.builtinSkillPaths],
       });
-      await resourceLoader.reload();
+      await resourceLoader.reload(
+        projectTrustReloadOptions(this.agentDir, workspace.path, settingsManager),
+      );
     }
 
     const applied = await this.applyExtensionProviders(resourceLoader);
@@ -502,7 +658,9 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
   }
 
   private async reloadResources(context: RuntimeContext): Promise<void> {
-    await context.resourceLoader.reload();
+    await context.resourceLoader.reload(
+      projectTrustReloadOptions(this.agentDir, context.workspace.path, context.settingsManager),
+    );
     const applied = await this.applyExtensionProviders(context.resourceLoader);
     context.extensionProviders = applied.accepted;
     context.nativeProviders = applied.acceptedNative;
@@ -623,6 +781,12 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       enableSkillCommands: context.settingsManager.getEnableSkillCommands(),
       enabledModelPatterns: context.settingsManager.getEnabledModels() ?? [],
     };
+    const projectTrusted = this.readProjectTrusted(context.workspace.path);
+    const mcpServers = loadDesktopMcpConfig({
+      agentDir: this.agentDir,
+      cwd: context.workspace.path,
+      projectTrusted,
+    }).servers;
 
     return {
       workspace: context.workspace,
@@ -631,6 +795,10 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       skills,
       extensions,
       settings,
+      mcpServers,
+      toolsSettings: readToolsSettings(context.settingsManager),
+      projectTrusted,
+      projectTrustRequired: hasTrustRequiringProjectResources(context.workspace.path),
     };
   }
 
@@ -700,6 +868,12 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
           authSource: inferProviderAuthSource(storedType, providerAuthStatus, apiKeySetupSupported),
           oauthSupported: Boolean(oauthProvider),
           apiKeySetupSupported,
+          ...(oauthProvider?.auth.oauth?.loginLabel
+            ? { oauthLoginLabel: oauthProvider.auth.oauth.loginLabel }
+            : {}),
+          ...(oauthProvider?.auth.oauth?.isSubscription
+            ? { oauthIsSubscription: true }
+            : {}),
         };
       });
   }
@@ -726,6 +900,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
           authType: provider?.authType ?? "none",
           reasoning: Boolean(model.reasoning),
           supportsImages: model.input.includes("image"),
+          kind: model.type ?? "chat",
         };
       })
       .sort((left, right) =>
@@ -874,7 +1049,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     const inlineRecords = loadedResult.extensions
       .filter(
         (extension) =>
-          extension.path.startsWith("<inline:") &&
+          extension.path.startsWith("builtin:") &&
           !resolvedRecordPaths.has(resolve(extension.path)),
       )
       .map((extension) => this.buildInlineExtensionRecord(extension));

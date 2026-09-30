@@ -2,10 +2,13 @@ import { readFile, stat } from "node:fs/promises";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { parse, type Node } from "acorn";
-import type {
-  ExtensionCapabilityId,
-  ExtensionSourceEvidence,
-  ExtensionSourceInspection,
+import {
+  DESKTOP_REGISTRATION_APIS,
+  type DesktopRegistrationApi,
+  type ExtensionCapabilityId,
+  type ExtensionSourceEvidence,
+  type ExtensionSourceInspection,
+  type ExtensionSourceRegistration,
 } from "../../contracts/extension-compatibility";
 
 /**
@@ -450,7 +453,9 @@ function inspectNode(
     if (callee.type === "Identifier") {
       const gardenName = context.gardenLocals.get(callee.name as string);
       const capability = gardenName ? GARDEN_EXPORTS[gardenName] : undefined;
-      if (capability) record(evidence, capability, makeEvidence(context, callee, false));
+      if (capability && gardenName) {
+        record(evidence, capability, gardenCallEvidence(context, node, gardenName));
+      }
       return;
     }
     if (callee.type !== "MemberExpression" || callee.computed === true) return;
@@ -460,7 +465,7 @@ function inspectNode(
 
     if (receiver.type === "Identifier" && context.gardenNamespaces.has(receiver.name as string)) {
       const capability = GARDEN_EXPORTS[property];
-      if (capability) record(evidence, capability, makeEvidence(context, callee, false));
+      if (capability) record(evidence, capability, gardenCallEvidence(context, node, property));
       return;
     }
 
@@ -565,23 +570,62 @@ function inspectToolDefinition(
 ): void {
   const definition = (call.arguments as readonly EstreeNode[])[0];
   if (!definition || definition.type !== "ObjectExpression") return;
+  const toolName = objectStringField(definition, "name");
+  const namedTool = toolName && DESKTOP_TOOL_NAME_PATTERN.test(toolName) ? toolName : undefined;
   for (const property of definition.properties as readonly EstreeNode[]) {
     if (property.type !== "Property" || property.computed === true) continue;
     const key = memberName(property.key as EstreeNode);
-    if (key === "renderCall") {
-      record(
-        evidence,
-        "tool.renderCall",
-        makeEvidence(context, property.key as EstreeNode, partial),
-      );
-    } else if (key === "renderResult") {
-      record(
-        evidence,
-        "tool.renderResult",
-        makeEvidence(context, property.key as EstreeNode, partial),
-      );
-    }
+    if (key !== "renderCall" && key !== "renderResult") continue;
+    const item = makeEvidence(context, property.key as EstreeNode, partial);
+    record(
+      evidence,
+      key === "renderCall" ? "tool.renderCall" : "tool.renderResult",
+      namedTool ? { ...item, toolName: namedTool } : item,
+    );
   }
+}
+
+const DESKTOP_TOOL_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
+const REGISTRATION_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
+
+function gardenCallEvidence(
+  context: FileContext,
+  call: EstreeNode,
+  apiName: string,
+): ExtensionSourceEvidence {
+  const evidence = makeEvidence(context, call.callee as EstreeNode, false);
+  const registration = readRegistration(call, apiName);
+  return registration ? { ...evidence, registration } : evidence;
+}
+
+function readRegistration(
+  call: EstreeNode,
+  apiName: string,
+): ExtensionSourceRegistration | undefined {
+  if (!(DESKTOP_REGISTRATION_APIS as readonly string[]).includes(apiName)) return undefined;
+  const argument = (call.arguments as readonly EstreeNode[]).find(
+    (item) => item.type === "ObjectExpression",
+  );
+  if (!argument) return undefined;
+  const id = objectStringField(argument, "id");
+  if (!id || !REGISTRATION_ID_PATTERN.test(id)) return undefined;
+  const surface = objectStringField(argument, "surface");
+  const toolName = objectStringField(argument, "toolName");
+  return {
+    api: apiName as DesktopRegistrationApi,
+    id,
+    ...(surface ? { surface } : {}),
+    ...(toolName ? { toolName } : {}),
+  };
+}
+
+function objectStringField(object: EstreeNode, name: string): string | undefined {
+  for (const property of object.properties as readonly EstreeNode[]) {
+    if (property.type !== "Property" || property.computed === true) continue;
+    if (memberName(property.key as EstreeNode) !== name) continue;
+    return literalString(property.value as EstreeNode);
+  }
+  return undefined;
 }
 
 function memberName(node: EstreeNode | undefined): string | undefined {

@@ -1,4 +1,4 @@
-import { realpath, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PiDesktopExtensionRuntime } from "@pi-garden/pi-sdk-driver";
@@ -9,9 +9,12 @@ import {
 } from "@pi-garden/session-driver";
 import type { RuntimeExtensionRecord } from "@pi-garden/session-driver/runtime-types";
 import {
+  DESKTOP_ADAPTATION_METADATA_NAME,
   adaptableFindings,
   buildCompatibilityFinding,
   compareCompatibilityFindings,
+  linkAdaptedFindings,
+  parseDesktopAdaptationMetadata,
   type ExtensionAdaptationAvailability,
   type ExtensionCapabilityId,
   type ExtensionCompatibilityEvidence,
@@ -250,9 +253,14 @@ export class ExtensionCompatibilityOwner {
         evidence.set(capability, [...(evidence.get(capability) ?? []), ...items]);
       }
     }
-    const findings: ExtensionCompatibilityFinding[] = [...evidence.entries()]
-      .map(([capability, items]) => buildCompatibilityFinding(capability, items))
-      .sort(compareCompatibilityFindings);
+    const findings = (
+      await this.pairAdaptations(
+        extension.path,
+        [...evidence.entries()].map(([capability, items]) =>
+          buildCompatibilityFinding(capability, items),
+        ),
+      )
+    ).sort(compareCompatibilityFindings);
     const adaptation = await this.adaptationAvailability(workspace, extension, findings);
     return {
       extensionPath: extension.path,
@@ -263,6 +271,26 @@ export class ExtensionCompatibilityOwner {
       findings,
       adaptation,
     };
+  }
+
+  /**
+   * A terminal finding becomes adapted only when `desktop-adaptation.json` names
+   * it and source contains that registration. A rich surface on its own does not.
+   */
+  private async pairAdaptations(
+    extensionPath: string,
+    findings: readonly ExtensionCompatibilityFinding[],
+  ): Promise<ExtensionCompatibilityFinding[]> {
+    if (!path.isAbsolute(extensionPath)) return [...findings];
+    const metadataFile = path.join(path.dirname(extensionPath), DESKTOP_ADAPTATION_METADATA_NAME);
+    try {
+      const metadata = parseDesktopAdaptationMetadata(
+        JSON.parse(await readFile(metadataFile, "utf8")),
+      );
+      return linkAdaptedFindings(findings, metadata, metadataFile);
+    } catch {
+      return [...findings];
+    }
   }
 
   /** Gating shared by the inventory and the Adapt action; the action re-checks it. */

@@ -9,8 +9,10 @@ import {
   type CreateAgentSessionOptions,
   type CreateAgentSessionServicesOptions,
   type CreateAgentSessionRuntimeResult,
+  type LoadExtensionsResult,
   type ModelRuntime,
 } from "@earendil-works/pi-coding-agent";
+import { projectTrustReloadOptions } from "./project-trust.js";
 
 export type PiResourceLoaderOptions = NonNullable<
   CreateAgentSessionServicesOptions["resourceLoaderOptions"]
@@ -19,8 +21,13 @@ export type PiResourceLoaderOptions = NonNullable<
 /** `ModelInfo` is not exported from the package, so derive it from the session options. */
 export type PiModelInfo = NonNullable<CreateAgentSessionOptions["model"]>;
 
+export type PiResourceLoaderReloadOptions = {
+  resolveProjectTrust?: (input: { extensionsResult: LoadExtensionsResult }) => Promise<boolean>;
+};
+
 export interface PiCreateAgentSessionOptions extends CreateAgentSessionOptions {
   readonly resourceLoaderOptions?: PiResourceLoaderOptions;
+  readonly resourceLoaderReloadOptions?: PiResourceLoaderReloadOptions;
   /**
    * Pick the initial model against the cwd-bound runtime the services just built.
    *
@@ -74,7 +81,7 @@ async function createAgentSessionServicesWithNpmFallback(
   agentDir: string,
   options?: Pick<
     PiCreateAgentSessionOptions,
-    "settingsManager" | "modelRuntime" | "resourceLoaderOptions"
+    "settingsManager" | "modelRuntime" | "resourceLoaderOptions" | "resourceLoaderReloadOptions"
   >,
 ) {
   try {
@@ -85,6 +92,9 @@ async function createAgentSessionServicesWithNpmFallback(
       ...(options?.modelRuntime ? { modelRuntime: options.modelRuntime } : {}),
       ...(options?.resourceLoaderOptions
         ? { resourceLoaderOptions: options.resourceLoaderOptions }
+        : {}),
+      ...(options?.resourceLoaderReloadOptions
+        ? { resourceLoaderReloadOptions: options.resourceLoaderReloadOptions }
         : {}),
     });
   } catch (error) {
@@ -112,6 +122,9 @@ async function createAgentSessionServicesWithNpmFallback(
       ...(options?.modelRuntime ? { modelRuntime: options.modelRuntime } : {}),
       ...(options?.resourceLoaderOptions
         ? { resourceLoaderOptions: options.resourceLoaderOptions }
+        : {}),
+      ...(options?.resourceLoaderReloadOptions
+        ? { resourceLoaderReloadOptions: options.resourceLoaderReloadOptions }
         : {}),
     });
   }
@@ -153,6 +166,7 @@ export async function createAgentSessionRuntimeWithNpmFallback(
     sessionManager: _optionSessionManager,
     sessionStartEvent: _optionSessionStartEvent,
     resourceLoaderOptions: stableResourceLoaderOptions,
+    resourceLoaderReloadOptions: callerReloadOptions,
     model: initialModel,
     resolveInitialModel: initialModelResolver,
     thinkingLevel: initialThinkingLevel,
@@ -168,6 +182,10 @@ export async function createAgentSessionRuntimeWithNpmFallback(
         ...(stableResourceLoaderOptions
           ? { resourceLoaderOptions: stableResourceLoaderOptions }
           : {}),
+        resourceLoaderReloadOptions: {
+          ...callerReloadOptions,
+          ...projectTrustReloadOptions(runtimeAgentDir, runtimeCwd),
+        },
         cwd: runtimeCwd,
         agentDir: runtimeAgentDir,
         sessionManager,

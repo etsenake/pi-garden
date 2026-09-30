@@ -22,7 +22,13 @@ export interface RuntimeProviderRecord {
   readonly authSource: RuntimeProviderAuthSource;
   readonly oauthSupported: boolean;
   readonly apiKeySetupSupported: boolean;
+  /** OAuth button label from Pi, e.g. "Sign in with ChatGPT". */
+  readonly oauthLoginLabel?: string;
+  /** True when OAuth is a subscription login (ChatGPT, Claude Pro, …). */
+  readonly oauthIsSubscription?: boolean;
 }
+
+export type RuntimeModelKind = "chat" | "image" | "classifier" | "virtual";
 
 export interface RuntimeModelRecord {
   readonly providerId: string;
@@ -33,6 +39,8 @@ export interface RuntimeModelRecord {
   readonly authType: RuntimeAuthType;
   readonly reasoning: boolean;
   readonly supportsImages: boolean;
+  /** Model operation kind; chat is the default for ordinary threads. */
+  readonly kind: RuntimeModelKind;
 }
 
 export interface RuntimeSkillRecord {
@@ -104,6 +112,34 @@ export interface ModelSettingsSnapshot {
   readonly enabledModelPatterns: readonly string[];
 }
 
+/** Browser-safe MCP server list row for Settings; Node-only config CRUD stays in the driver. */
+export type DesktopMcpScope = "global" | "project";
+export type DesktopMcpExposure =
+  | "codemode"
+  | "codemode-deferred"
+  | "deferred"
+  | "direct"
+  | "hidden";
+
+export interface DesktopMcpServerRecord {
+  readonly name: string;
+  readonly scope: DesktopMcpScope;
+  readonly enabled: boolean;
+  readonly exposure: DesktopMcpExposure;
+  /** Short transport summary, e.g. `stdio npx -y …` or `http https://…`. */
+  readonly transport: string;
+  readonly sourcePath: string;
+}
+
+export interface RuntimeToolsSettings {
+  /** Raw `defaultTools` entries from effective settings, when set. */
+  readonly defaultTools: readonly string[] | undefined;
+  /** Resolved tool names after applying defaults and `+`/`-` modifiers. */
+  readonly resolvedDefaultTools: readonly string[];
+  /** Pi built-in extension names disabled via `-builtin:<name>` (effective). */
+  readonly disabledBuiltins: readonly string[];
+}
+
 export interface RuntimeSnapshot {
   readonly workspace: WorkspaceRef;
   readonly providers: readonly RuntimeProviderRecord[];
@@ -111,6 +147,10 @@ export interface RuntimeSnapshot {
   readonly skills: readonly RuntimeSkillRecord[];
   readonly extensions: readonly RuntimeExtensionRecord[];
   readonly settings: RuntimeSettingsSnapshot;
+  readonly mcpServers?: readonly DesktopMcpServerRecord[];
+  readonly toolsSettings?: RuntimeToolsSettings;
+  readonly projectTrusted: boolean;
+  readonly projectTrustRequired: boolean;
 }
 
 export interface RuntimeLoginAuthInfo {

@@ -33,3 +33,29 @@ export type {
   PiDesktopExtensionObserver,
   PiDesktopExtensionRuntime,
 } from "./desktop-extension-bridge.js";
+export {
+  addMcpServer,
+  desktopMcpConfigPath,
+  loadDesktopMcpConfig,
+  removeMcpServer,
+  updateMcpServer,
+  validateDesktopMcpServerConfig,
+} from "./mcp-config.js";
+export type {
+  DesktopMcpConfigPatch,
+  DesktopMcpExposure,
+  DesktopMcpScope,
+  DesktopMcpServerConfig,
+  DesktopMcpServerRecord,
+  LoadedDesktopMcpConfig,
+} from "./mcp-config.js";
+export {
+  DEFAULT_TOOL_NAMES,
+  getToolsSettings,
+  isPiToggleableBuiltinName,
+  PI_TOGGLEABLE_BUILTIN_NAMES,
+  resolveDefaultTools,
+  setDefaultTools,
+  setPiBuiltinEnabled,
+} from "./tools-settings.js";
+export type { PiToggleableBuiltinName } from "./tools-settings.js";

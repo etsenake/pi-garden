@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -16,10 +16,12 @@ const jiti = createJiti(__filename);
 type Analyzer = typeof import("../../electron/extensions/extension-compatibility-analyzer");
 type OwnerModule = typeof import("../../electron/extensions/extension-compatibility-owner");
 type AdaptationModule = typeof import("../../electron/extensions/extension-adaptation");
+type Applier = typeof import("../../electron/extensions/apply-desktop-adaptation");
 let analyzeExtensionSource: Analyzer["analyzeExtensionSource"];
 let ExtensionCompatibilityOwner: OwnerModule["ExtensionCompatibilityOwner"];
 let ExtensionCompatibilityService: AdaptationModule["ExtensionCompatibilityService"];
 let buildAdaptForDesktopPrompt: AdaptationModule["buildAdaptForDesktopPrompt"];
+let applyDesktopAdaptation: Applier["applyDesktopAdaptation"];
 
 test.beforeAll(async () => {
   ({ analyzeExtensionSource } = await jiti.import<Analyzer>(
@@ -30,6 +32,9 @@ test.beforeAll(async () => {
   ));
   ({ ExtensionCompatibilityService, buildAdaptForDesktopPrompt } =
     await jiti.import<AdaptationModule>("../../electron/extensions/extension-adaptation.ts"));
+  ({ applyDesktopAdaptation } = await jiti.import<Applier>(
+    "../../electron/extensions/apply-desktop-adaptation.ts",
+  ));
 });
 
 const directories: string[] = [];
@@ -125,6 +130,8 @@ test.describe("source analyzer", () => {
     const source = await import("node:fs/promises").then((fs) => fs.readFile(entry, "utf8"));
     const header = evidence.get("ui.setHeader")![0]!;
     expect(source.split("\n")[header.line - 1]).toContain("setHeader");
+    expect(evidence.get("tool.renderCall")?.[0]?.toolName).toBe("fixture-terminal-heavy_tool");
+    expect(evidence.get("tool.renderResult")?.[0]?.toolName).toBe("fixture-terminal-heavy_tool");
   });
 
   test("fixture C recognizes garden registrations from the vendored bare import", async () => {
@@ -133,8 +140,15 @@ test.describe("source analyzer", () => {
     expect(inspection.status).toBe("complete");
     // node_modules is never walked.
     expect(inspection.files.some((file) => file.includes("node_modules"))).toBe(false);
-    expect(evidence.has("garden.registerRichSurface")).toBe(true);
-    expect(evidence.has("garden.registerAction")).toBe(true);
+    expect(evidence.get("garden.registerRichSurface")?.[0]?.registration).toEqual({
+      api: "registerRichSurface",
+      id: "status",
+      surface: "composer-before",
+    });
+    expect(evidence.get("garden.registerAction")?.[0]?.registration).toMatchObject({
+      api: "registerAction",
+      id: "fixture-garden-aware.tick",
+    });
     expect(evidence.has("ui.widget.component")).toBe(true);
   });
 
@@ -204,6 +218,76 @@ test.describe("compatibility owner", () => {
       new Set(["supported"]),
     );
     expect(inventory.adaptation).toMatchObject({ available: false, reason: "nothing-to-adapt" });
+  });
+
+  test("a rich surface does not adapt a terminal finding unless metadata names that registration", async () => {
+    const { entry } = await fixture("garden-aware");
+    const compat = owner();
+    const extension = record(entry);
+    const before = await compat.inventory({ workspace, extension });
+    expect(statuses(before)["ui.widget.component"]).toBe("adaptable");
+    await writeFile(
+      path.join(path.dirname(entry), "desktop-adaptation.json"),
+      `${JSON.stringify(
+        {
+          version: 1,
+          pairs: [
+            {
+              capability: "ui.widget.component",
+              api: "registerRichSurface",
+              id: "header",
+              surface: "app-header",
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const missed = await compat.inventory({ workspace, extension });
+    expect(statuses(missed)["ui.widget.component"]).toBe("adaptable");
+    expect(missed.adaptation).toMatchObject({ available: true });
+  });
+
+  test("the writer pairs terminal capabilities with the registrations it generates", async () => {
+    const { entry } = await fixture("terminal-heavy");
+    const helper = path.dirname(path.dirname(require.resolve("@pi-garden/extension-ui")));
+    const first = await applyDesktopAdaptation(entry, helper);
+    expect(first.changed).toBe(true);
+    const inventory = await owner().inventory({ workspace, extension: record(entry) });
+    expect(statuses(inventory)).toMatchObject({
+      "ui.onTerminalInput": "adapted",
+      "ui.widget.component": "adapted",
+      "ui.setHeader": "adapted",
+      "ui.setFooter": "adapted",
+      "ui.custom": "adapted",
+      "ui.setEditorComponent": "adapted",
+      "tool.renderCall": "adapted",
+      "tool.renderResult": "adapted",
+      "ui.status": "supported",
+    });
+    expect(
+      inventory.findings.find((finding) => finding.capability === "ui.setHeader")?.adaptedBy,
+    ).toMatchObject({
+      api: "registerRichSurface",
+      id: "header",
+      surface: "app-header",
+    });
+    expect(
+      inventory.findings.find((finding) => finding.capability === "tool.renderCall")?.adaptedBy,
+    ).toMatchObject({
+      api: "registerDesktopToolRenderer",
+      id: "tool-fixture-terminal-heavy_tool",
+      toolName: "fixture-terminal-heavy_tool",
+    });
+    expect(inventory.adaptation).toMatchObject({ available: false, reason: "nothing-to-adapt" });
+    const second = await applyDesktopAdaptation(entry, helper);
+    expect(second.changed).toBe(false);
+    const desktop = await readFile(path.join(path.dirname(entry), "pi-garden-desktop.ts"), "utf8");
+    expect(desktop.match(/registerRichSurface\(/g)).toHaveLength(4);
+    expect(desktop.match(/registerDesktopToolRenderer\(/g)).toHaveLength(1);
+    expect(desktop.match(/export function registerDesktopAdaptations/g)).toHaveLength(1);
+    expect((await readFile(entry, "utf8")).match(/registerDesktopAdaptations\(/g)).toHaveLength(1);
   });
 
   test("fixture B: adaptable findings first, Adapt available for a user extension", async () => {

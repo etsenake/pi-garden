@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { RuntimeSupervisor } from "../dist/runtime-supervisor.js";
 
 const EXTENSION_PROVIDER = "ext-test-provider";
@@ -50,6 +51,7 @@ async function createProjectWorkspace(
   const extensionPath = join(path, ".pi", "extensions", "provider.ts");
   await mkdir(join(path, ".pi", "extensions"), { recursive: true });
   await writeFile(extensionPath, extensionSource(providerId, modelId, baseUrl));
+  new ProjectTrustStore(join(root, "agent")).set(path, true);
   return { workspace: { workspaceId, path }, extensionPath };
 }
 

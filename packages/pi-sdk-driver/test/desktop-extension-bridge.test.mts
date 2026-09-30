@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { PiSdkDriver } from "../dist/pi-sdk-driver.js";
 import type { PiDesktopExtensionRuntime } from "../dist/desktop-extension-bridge.js";
 
@@ -17,6 +18,7 @@ await test(
     const extensionDirectory = join(cwd, ".pi", "extensions", "counter");
     await mkdir(agentDir);
     await mkdir(extensionDirectory, { recursive: true });
+    new ProjectTrustStore(agentDir).set(cwd, true);
     await writeFile(join(agentDir, "auth.json"), "{}");
     await writeFile(
       join(agentDir, "settings.json"),

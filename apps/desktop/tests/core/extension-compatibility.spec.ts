@@ -1,5 +1,9 @@
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { access, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   createSessionViaIpc,
@@ -17,6 +21,27 @@ import {
   COMPATIBILITY_FIXTURE_NAMES,
   writeCompatibilityFixture,
 } from "../helpers/compatibility-fixtures";
+
+const nodeRequire = createRequire(__filename);
+const execFileAsync = promisify(execFile);
+const repoRoot = join(__dirname, "../../../..");
+const applyScript = join(repoRoot, "apps/desktop/resources/skills/adapt-for-desktop/apply.ts");
+const helperPackageDir = dirname(dirname(nodeRequire.resolve("@pi-garden/extension-ui")));
+
+async function runApplier(entry: string): Promise<string> {
+  const { stdout } = await execFileAsync(
+    "pnpm",
+    ["exec", "jiti", applyScript, entry, helperPackageDir],
+    { cwd: repoRoot },
+  );
+  return stdout.trim();
+}
+
+async function fileHash(file: string): Promise<string> {
+  return createHash("sha256")
+    .update(await readFile(file))
+    .digest("hex");
+}
 
 /**
  * Phase 9 on the real Electron surface: the Extensions detail page inventories
@@ -270,15 +295,21 @@ test("inventories source and runtime evidence per extension and gates Adapt for 
   }
 });
 
-test("project-local extensions in an untrusted project are inventoried but not adaptable", async () => {
-  test.setTimeout(90_000);
+test("Adapt for Desktop writes a paired adaptation Pi Garden loads, and a second run does not duplicate it", async () => {
+  test.setTimeout(180_000);
   const userDataDir = await makeUserDataDir();
   const agentDir = join(userDataDir, "agent");
   await seedAgentDir(agentDir);
-  const workspacePath = await makeWorkspace("extension-compatibility-untrusted");
-  await writeCompatibilityFixture("terminal-heavy", join(workspacePath, ".pi", "extensions"), {
-    singleFile: true,
-  });
+  const workspacePath = await makeWorkspace("extension-compatibility-adapted");
+  const entry = await writeCompatibilityFixture("terminal-heavy", join(agentDir, "extensions"));
+  expect(await runApplier(entry)).toBe("adapted");
+  const desktopFile = join(dirname(entry), "pi-garden-desktop.ts");
+  const metadataFile = join(dirname(entry), "desktop-adaptation.json");
+  const before = {
+    entry: await fileHash(entry),
+    desktop: await fileHash(desktopFile),
+    metadata: await fileHash(metadataFile),
+  };
 
   const harness = await launchDesktop(userDataDir, {
     agentDir,
@@ -287,19 +318,126 @@ test("project-local extensions in an untrusted project are inventoried but not a
   });
   try {
     const window = await harness.firstWindow();
-    await waitForWorkspaceByPath(window, workspacePath);
+    const workspace = await waitForWorkspaceByPath(window, workspacePath);
+    await createSessionViaIpc(window, workspacePath, "Adapted session");
+    await selectSession(window, "Adapted session");
+    const session = await waitForSessionByTitle(window, workspace.id, "Adapted session");
+    const sessionKey = `${workspace.id}:${session.id}`;
+    await expect
+      .poll(
+        async () =>
+          (await getDesktopState(window)).sessionCommandsBySession[sessionKey]?.map(
+            (command) => command.name,
+          ) ?? [],
+        { timeout: 20_000 },
+      )
+      .toContain("fixture-terminal-heavy-pick");
+    await expect(
+      window
+        .getByTestId("rich-surface-composer-before")
+        .frameLocator('[data-testid="rich-surface-frame"]')
+        .locator('[data-capability="ui.widget.component"]'),
+    ).toHaveText("adapted ui.widget.component", { timeout: 20_000 });
+
     const section = await openExtensionDetail(window, /fixture-terminal-heavy/i);
-    await expect(finding(section, "ui.setHeader")).toHaveAttribute("data-status", "adaptable");
+    await expect(finding(section, "ui.setHeader")).toHaveAttribute("data-status", "adapted");
+    await expect(finding(section, "ui.setHeader")).toHaveAttribute(
+      "data-adapted-by",
+      "registerRichSurface:header",
+    );
+    await expect(finding(section, "ui.onTerminalInput")).toHaveAttribute(
+      "data-adapted-by",
+      "registerAction:terminal-input",
+    );
+    await expect(finding(section, "tool.renderCall")).toHaveAttribute(
+      "data-adapted-by",
+      "registerDesktopToolRenderer:tool-fixture-terminal-heavy_tool",
+    );
     await expect(section.getByTestId("adapt-for-desktop")).toBeDisabled();
     await expect(section.getByTestId("adapt-for-desktop-unavailable")).toHaveAttribute(
       "data-reason",
-      "untrusted-project",
+      "nothing-to-adapt",
     );
-    // Re-inspect is a source re-read; the runtime side stays empty with no session open.
-    await section.getByRole("button", { name: "Re-inspect" }).click();
-    await expect(section.getByTestId("extension-compatibility-summary")).toContainText(
-      "no runtime evidence yet",
-    );
+  } finally {
+    await harness.close();
+  }
+
+  expect(await runApplier(entry)).toBe("unchanged");
+  expect(await fileHash(entry)).toBe(before.entry);
+  expect(await fileHash(desktopFile)).toBe(before.desktop);
+  expect(await fileHash(metadataFile)).toBe(before.metadata);
+  const desktop = await readFile(desktopFile, "utf8");
+  expect(desktop.match(/registerRichSurface\(/g)).toHaveLength(4);
+  expect((await readFile(entry, "utf8")).match(/registerDesktopAdaptations\(/g)).toHaveLength(1);
+});
+
+test("an untrusted project does not execute project-local extensions", async () => {
+  test.setTimeout(90_000);
+  const userDataDir = await makeUserDataDir();
+  const agentDir = join(userDataDir, "agent");
+  await seedAgentDir(agentDir);
+  const workspacePath = await makeWorkspace("extension-compatibility-untrusted");
+  const marker = join(workspacePath, "project-extension-executed");
+  await mkdir(join(workspacePath, ".pi", "extensions"), { recursive: true });
+  await writeFile(
+    join(workspacePath, ".pi", "extensions", "probe.ts"),
+    `import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "executed");
+export default function probe(pi) {
+  pi.registerCommand("untrusted-probe", { description: "must not load", handler: async () => {} });
+}
+`,
+  );
+  await writeCompatibilityFixture("native-only", join(agentDir, "extensions"));
+
+  const harness = await launchDesktop(userDataDir, {
+    agentDir,
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+    trustInitialWorkspaces: false,
+  });
+  try {
+    const window = await harness.firstWindow();
+    const workspace = await waitForWorkspaceByPath(window, workspacePath);
+    const list = window.getByTestId("extensions-list");
+    await window.getByRole("button", { name: "Extensions", exact: true }).click();
+    await expect(list.getByRole("button", { name: /fixture-native-only/i })).toBeVisible();
+    await expect(list.getByRole("button", { name: /^probe$/i })).toHaveCount(0);
+    await expect
+      .poll(async () =>
+        access(marker).then(
+          () => "ran",
+          () => "absent",
+        ),
+      )
+      .toBe("absent");
+
+    await createSessionViaIpc(window, workspacePath, "Untrusted session");
+    await selectSession(window, "Untrusted session");
+    const session = await waitForSessionByTitle(window, workspace.id, "Untrusted session");
+    const sessionKey = `${workspace.id}:${session.id}`;
+    await expect
+      .poll(
+        async () =>
+          (await getDesktopState(window)).sessionCommandsBySession[sessionKey]?.map(
+            (command) => command.name,
+          ) ?? [],
+        { timeout: 20_000 },
+      )
+      .toContain("fixture-native-only");
+    const names =
+      (await getDesktopState(window)).sessionCommandsBySession[sessionKey]?.map(
+        (command) => command.name,
+      ) ?? [];
+    expect(names).not.toContain("untrusted-probe");
+    await expect
+      .poll(async () =>
+        access(marker).then(
+          () => "ran",
+          () => "absent",
+        ),
+      )
+      .toBe("absent");
   } finally {
     await harness.close();
   }

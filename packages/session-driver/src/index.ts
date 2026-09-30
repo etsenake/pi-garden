@@ -50,6 +50,9 @@ export type {
   WorkspaceRef,
 } from "./types.js";
 export type {
+  DesktopMcpExposure,
+  DesktopMcpScope,
+  DesktopMcpServerRecord,
   RuntimeAuthType,
   RuntimeCommandRecord,
   RuntimeCommandSource,
@@ -68,6 +71,7 @@ export type {
   RuntimeSourceOrigin,
   RuntimeSourceScope,
   RuntimeSnapshot,
+  RuntimeToolsSettings,
 } from "./runtime-types.js";
 
 export type {
@@ -89,6 +93,7 @@ export type {
 } from "./turn-capture.js";
 export type {
   SessionContextUsage,
+  SessionModelCost,
   SessionPlanLimit,
   SessionPlanLimits,
   SessionPromptCache,

@@ -118,6 +118,7 @@ export function ExtensionDesktopCompatibility({
 
 const STATUS_LABEL: Readonly<Record<ExtensionCompatibilityStatus, string>> = {
   adaptable: "Adaptable",
+  adapted: "Adapted",
   unsupported: "Unsupported",
   unknown: "Unknown",
   "desktop-native": "Desktop-native",
@@ -126,6 +127,8 @@ const STATUS_LABEL: Readonly<Record<ExtensionCompatibilityStatus, string>> = {
 
 const STATUS_DESCRIPTION: Readonly<Record<ExtensionCompatibilityStatus, string>> = {
   adaptable: "Terminal-specific. Adapt for Desktop maps it to the target shown.",
+  adapted:
+    "The terminal call remains for ordinary Pi and is paired with this desktop registration.",
   unsupported: "Not served or adapted in this version.",
   unknown: "Seen in source, but the shape could not be classified.",
   "desktop-native": "A pi-garden presentation this extension already supplies.",
@@ -250,7 +253,9 @@ function summaryText(
   for (const finding of inventory.findings) {
     counts.set(finding.status, (counts.get(finding.status) ?? 0) + 1);
   }
-  const parts = (["adaptable", "unsupported", "unknown", "desktop-native", "supported"] as const)
+  const parts = (
+    ["adaptable", "adapted", "unsupported", "unknown", "desktop-native", "supported"] as const
+  )
     .filter((status) => (counts.get(status) ?? 0) > 0)
     .map((status) => `${counts.get(status)} ${STATUS_LABEL[status].toLowerCase()}`);
   const source =
@@ -284,6 +289,9 @@ function FindingRow({
   return (
     <li
       className={`extension-compat__finding extension-compat__finding--${finding.status}`}
+      data-adapted-by={
+        finding.adaptedBy ? `${finding.adaptedBy.api}:${finding.adaptedBy.id}` : undefined
+      }
       data-capability={finding.capability}
       data-status={finding.status}
       data-testid="extension-compatibility-finding"
@@ -297,6 +305,19 @@ function FindingRow({
       </div>
       <div className="extension-compat__finding-body">
         <span>{STATUS_DESCRIPTION[finding.status]}</span>
+        {finding.adaptedBy ? (
+          <span>
+            {" "}
+            Paired with <code>{finding.adaptedBy.api}</code>
+            {finding.adaptedBy.surface ? (
+              <>
+                {" "}
+                <code>{finding.adaptedBy.surface}</code>
+              </>
+            ) : null}{" "}
+            <code>{finding.adaptedBy.id}</code>
+          </span>
+        ) : null}
         {finding.adaptationTarget ? (
           <span>
             {" "}

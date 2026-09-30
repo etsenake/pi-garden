@@ -57,11 +57,58 @@ export type ExtensionCapabilityId =
  * - `supported`: Pi API that pi-garden serves directly.
  * - `desktop-native`: a pi-garden presentation the extension already supplies.
  * - `adaptable`: terminal-specific, with an existing desktop target to adapt to.
+ * - `adapted`: that terminal capability is paired, in generated metadata, with one
+ *   registration the source actually contains. A rich surface that exists on its
+ *   own does not make a terminal finding adapted.
  * - `unsupported`: intentionally not served or adapted in this version.
  * - `unknown`: seen, but the analyzer could not decide.
  */
 export type ExtensionCompatibilityStatus =
-  "supported" | "desktop-native" | "adaptable" | "unsupported" | "unknown";
+  "supported" | "desktop-native" | "adaptable" | "adapted" | "unsupported" | "unknown";
+
+/** Desktop registration APIs a generated adaptation may name. */
+export const DESKTOP_REGISTRATION_APIS = [
+  "registerRichSurface",
+  "registerAction",
+  "registerDesktopView",
+  "registerDesktopToolRenderer",
+  "registerDesktopEditor",
+] as const;
+
+export type DesktopRegistrationApi = (typeof DESKTOP_REGISTRATION_APIS)[number];
+
+/** Identity of one `register*` call, taken from its object-literal argument. */
+export interface ExtensionSourceRegistration {
+  readonly api: DesktopRegistrationApi;
+  readonly id: string;
+  readonly surface?: string;
+  readonly toolName?: string;
+}
+
+/** `desktop-adaptation.json`, written beside the extension entry by Adapt for Desktop. */
+export const DESKTOP_ADAPTATION_METADATA_NAME = "desktop-adaptation.json";
+
+export interface DesktopAdaptationPair {
+  readonly capability: ExtensionCapabilityId;
+  readonly api: DesktopRegistrationApi;
+  readonly id: string;
+  readonly surface?: string;
+  readonly toolName?: string;
+}
+
+export interface DesktopAdaptationMetadata {
+  readonly version: 1;
+  readonly pairs: readonly DesktopAdaptationPair[];
+}
+
+/** The registration a terminal finding is paired with. */
+export interface ExtensionAdaptationLink {
+  readonly api: DesktopRegistrationApi;
+  readonly id: string;
+  readonly surface?: string;
+  readonly toolName?: string;
+  readonly metadataFile: string;
+}
 
 export interface ExtensionSourceEvidence {
   readonly kind: "source";
@@ -72,6 +119,10 @@ export interface ExtensionSourceEvidence {
   readonly snippet: string;
   /** True when the analyzer saw the shape but could not fully classify it. */
   readonly partial?: boolean;
+  /** Set on a garden `register*` call whose id (and surface or tool, when present) is a literal. */
+  readonly registration?: ExtensionSourceRegistration;
+  /** Pi tool `name` literal on a `renderCall` / `renderResult` property. */
+  readonly toolName?: string;
 }
 
 /**
@@ -102,6 +153,8 @@ export interface ExtensionCompatibilityFinding {
   readonly adaptationTarget?: string;
   /** Why the capability is unsupported in this version. */
   readonly unsupportedReason?: string;
+  /** Present only when status is `adapted`. */
+  readonly adaptedBy?: ExtensionAdaptationLink;
   readonly evidence: readonly ExtensionCompatibilityEvidence[];
 }
 
@@ -350,10 +403,11 @@ export function buildCompatibilityFinding(
 
 const STATUS_ORDER: Readonly<Record<ExtensionCompatibilityStatus, number>> = {
   adaptable: 0,
-  unsupported: 1,
-  unknown: 2,
-  "desktop-native": 3,
-  supported: 4,
+  adapted: 1,
+  unsupported: 2,
+  unknown: 3,
+  "desktop-native": 4,
+  supported: 5,
 };
 
 /** Adaptable first so the detail page leads with what the action would change. */
@@ -371,4 +425,93 @@ export function adaptableFindings(
   findings: readonly ExtensionCompatibilityFinding[],
 ): readonly ExtensionCompatibilityFinding[] {
   return findings.filter((finding) => finding.status === "adaptable");
+}
+
+const REGISTRATION_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
+
+function isDesktopRegistrationApi(value: unknown): value is DesktopRegistrationApi {
+  return (
+    typeof value === "string" && (DESKTOP_REGISTRATION_APIS as readonly string[]).includes(value)
+  );
+}
+
+function optionalLiteral(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+/** Reads generated adaptation metadata. A bad file is ignored, not treated as adapted. */
+export function parseDesktopAdaptationMetadata(
+  value: unknown,
+): DesktopAdaptationMetadata | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as { version?: unknown; pairs?: unknown };
+  if (record.version !== 1 || !Array.isArray(record.pairs)) return undefined;
+  const pairs: DesktopAdaptationPair[] = [];
+  for (const item of record.pairs) {
+    if (!item || typeof item !== "object") continue;
+    const pair = item as {
+      capability?: unknown;
+      api?: unknown;
+      id?: unknown;
+      surface?: unknown;
+      toolName?: unknown;
+    };
+    if (!isExtensionCapabilityId(pair.capability) || !isDesktopRegistrationApi(pair.api)) continue;
+    if (typeof pair.id !== "string" || !REGISTRATION_ID_PATTERN.test(pair.id)) continue;
+    const surface = optionalLiteral(pair.surface);
+    const toolName = optionalLiteral(pair.toolName);
+    pairs.push({
+      capability: pair.capability,
+      api: pair.api,
+      id: pair.id,
+      ...(surface ? { surface } : {}),
+      ...(toolName ? { toolName } : {}),
+    });
+  }
+  return { version: 1, pairs };
+}
+
+function registrationMatches(
+  evidence: ExtensionCompatibilityEvidence,
+  pair: DesktopAdaptationPair,
+): boolean {
+  if (evidence.kind !== "source" || evidence.partial || !evidence.registration) return false;
+  const registration = evidence.registration;
+  if (registration.api !== pair.api || registration.id !== pair.id) return false;
+  if (pair.surface !== undefined && registration.surface !== pair.surface) return false;
+  if (pair.toolName !== undefined && registration.toolName !== pair.toolName) return false;
+  return true;
+}
+
+/**
+ * Upgrades an adaptable finding to `adapted` only when metadata names that
+ * capability and some source registration has the same api, id, surface and
+ * tool. Runtime evidence and an unrelated registration do not count.
+ */
+export function linkAdaptedFindings(
+  findings: readonly ExtensionCompatibilityFinding[],
+  metadata: DesktopAdaptationMetadata | undefined,
+  metadataFile: string,
+): ExtensionCompatibilityFinding[] {
+  if (!metadata) return [...findings];
+  return findings.map((finding) => {
+    if (finding.status !== "adaptable") return finding;
+    const pair = metadata.pairs.find((item) => item.capability === finding.capability);
+    if (!pair) return finding;
+    const matched = findings.some((candidate) =>
+      candidate.evidence.some((item) => registrationMatches(item, pair)),
+    );
+    if (!matched) return finding;
+    return {
+      ...finding,
+      status: "adapted",
+      adaptedBy: {
+        api: pair.api,
+        id: pair.id,
+        ...(pair.surface ? { surface: pair.surface } : {}),
+        ...(pair.toolName ? { toolName: pair.toolName } : {}),
+        metadataFile,
+      },
+    };
+  });
 }

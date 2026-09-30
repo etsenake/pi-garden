@@ -82,6 +82,12 @@ export interface LaunchDesktopOptions {
   readonly inheritParentEnv?: boolean;
   readonly recordVideoDir?: string;
   readonly recordVideoSize?: { readonly width: number; readonly height: number };
+  /**
+   * When true (the default), initial workspaces are stored as trusted before
+   * launch so project extensions load. Set false to prove an untrusted project
+   * does not execute them.
+   */
+  readonly trustInitialWorkspaces?: boolean;
 }
 
 export interface SeedAgentDirOptions {
@@ -406,6 +412,7 @@ async function prepareAgentDir(
   }
 
   if (options.agentDir) {
+    await trustInitialWorkspaces(options.agentDir, options);
     return options.agentDir;
   }
 
@@ -413,11 +420,25 @@ async function prepareAgentDir(
   if (options.realAuthSourceDir) {
     await seedAgentDirFromRealAuth(agentDir, options.realAuthSourceDir);
     await writeAgentEnabledModels(agentDir, options.enabledModels);
+    await trustInitialWorkspaces(agentDir, options);
     return agentDir;
   }
 
   await seedAgentDir(agentDir, { enabledModels: options.enabledModels });
+  await trustInitialWorkspaces(agentDir, options);
   return agentDir;
+}
+
+async function trustInitialWorkspaces(
+  agentDir: string,
+  options: LaunchDesktopOptions,
+): Promise<void> {
+  if (options.trustInitialWorkspaces === false) return;
+  const workspaces = options.initialWorkspaces;
+  if (!workspaces || workspaces.length === 0) return;
+  const { ProjectTrustStore } = await import("@earendil-works/pi-coding-agent");
+  const store = new ProjectTrustStore(agentDir);
+  for (const workspace of workspaces) store.set(workspace, true);
 }
 
 async function seedAgentDirFromRealAuth(agentDir: string, sourceDir: string): Promise<void> {
