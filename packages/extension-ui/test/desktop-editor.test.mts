@@ -9,7 +9,7 @@ import {
   type DesktopExtensionAPI,
 } from "../dist/index.js";
 
-test("registerDesktopEditor replays one declaration and is not a rich surface", () => {
+await test("registerDesktopEditor replays one declaration and is not a rich surface", () => {
   assert.equal(RICH_SURFACES.includes("editor" as never), false);
   const listeners = new Map<string, Set<(value: unknown) => void>>();
   const shutdown: (() => void)[] = [];

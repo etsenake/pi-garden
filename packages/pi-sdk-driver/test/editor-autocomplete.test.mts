@@ -32,7 +32,7 @@ function provider(trigger: string, prefix: string, replacement: string): Autocom
   };
 }
 
-test("cursor coordinates survive a multiline draft", () => {
+await test("cursor coordinates survive a multiline draft", () => {
   const text = "one\ntwo\nthree";
   const cursor = text.indexOf("three") + 2;
   const position = cursorToLineCol(text, cursor);
@@ -41,7 +41,7 @@ test("cursor coordinates survive a multiline draft", () => {
   assert.equal(lineColToCursor(position.lines, position.line, position.col), cursor);
 });
 
-test("providers wrap in registration order and union trigger characters", () => {
+await test("providers wrap in registration order and union trigger characters", () => {
   const base = provider(":", ":", "base");
   const chain = composeAutocompleteProviders(base, [
     (current) => {
@@ -63,7 +63,7 @@ test("providers wrap in registration order and union trigger characters", () => 
   assert.deepEqual(chain.errors, ["broken provider"]);
 });
 
-test("completion uses the provider prefix and returned cursor", async () => {
+await test("completion uses the provider prefix and returned cursor", async () => {
   const active = provider("@", "@jo", "josh");
   const applied = runAutocompleteApply(active, {
     text: "hello @jo",
@@ -74,7 +74,7 @@ test("completion uses the provider prefix and returned cursor", async () => {
   assert.deepEqual(applied, { text: "hello josh", cursor: "hello josh".length });
 });
 
-test("an aborted query does not return suggestions", async () => {
+await test("an aborted query does not return suggestions", async () => {
   const controller = new AbortController();
   controller.abort();
   const result = await runAutocompleteQuery(

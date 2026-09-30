@@ -56,10 +56,10 @@ let builtinCommands: Promise<readonly BuiltinCommand[]> | undefined;
 async function loadBuiltinCommands(): Promise<readonly BuiltinCommand[]> {
   builtinCommands ??= (async () => {
     const entry = import.meta.resolve("@earendil-works/pi-coding-agent");
-    const mod = (await import(new URL("./core/slash-commands.js", entry).href)) as {
-      BUILTIN_SLASH_COMMANDS?: readonly BuiltinCommand[];
-    };
-    return Array.isArray(mod.BUILTIN_SLASH_COMMANDS) ? mod.BUILTIN_SLASH_COMMANDS : [];
+    const mod: unknown = await import(new URL("./core/slash-commands.js", entry).href);
+    const commands =
+      mod && typeof mod === "object" ? (mod as Record<string, unknown>).BUILTIN_SLASH_COMMANDS : [];
+    return Array.isArray(commands) ? (commands as readonly BuiltinCommand[]) : [];
   })();
   return builtinCommands;
 }
