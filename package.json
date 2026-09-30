@@ -13,7 +13,7 @@
     "typecheck": "pnpm check:workspaces && pnpm build:shared && pnpm -r --if-present typecheck && pnpm typecheck:extension-examples",
     "package:win": "pnpm --filter @pi-garden/desktop run package:win",
     "package:win:dir": "pnpm --filter @pi-garden/desktop run package:win:dir",
-    "lint": "pnpm build:shared && eslint . --max-warnings 0",
+    "lint": "pnpm build:shared && node --max-old-space-size=4096 node_modules/eslint/bin/eslint.js . --max-warnings 0",
     "test": "pnpm build:shared && pnpm -r --if-present test",
     "e2e": "pnpm --filter @pi-garden/desktop run test:e2e:core",
     "test:homebrew-tap": "node scripts/test-update-homebrew-tap.mjs",
