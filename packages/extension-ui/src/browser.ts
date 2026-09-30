@@ -82,6 +82,77 @@ export interface DesktopViewContext {
   };
 }
 
+export interface DesktopEditorHostState {
+  readonly status: "idle" | "running";
+}
+
+export interface DesktopEditorAutocompleteQuery {
+  readonly text: string;
+  readonly cursor: number;
+  readonly force?: boolean;
+}
+
+export interface DesktopEditorAutocompleteItem {
+  readonly label: string;
+  readonly value: string;
+  readonly description?: string;
+}
+
+export interface DesktopEditorAutocompleteResult {
+  readonly items: readonly DesktopEditorAutocompleteItem[];
+  readonly prefix: string;
+}
+
+export interface DesktopEditorCompletion {
+  readonly text: string;
+  readonly cursor: number;
+}
+
+export interface DesktopEditorSubmitIntent {
+  readonly shift?: boolean;
+  readonly meta?: boolean;
+  readonly ctrl?: boolean;
+  readonly composing?: boolean;
+}
+
+/**
+ * Capabilities of the prompt editor region.
+ * The host owns the draft, submission, attachments, and autocomplete providers.
+ */
+export interface DesktopEditorContext {
+  getText(): string;
+  setText(text: string, cursor?: number): void;
+  subscribeText(listener: (text: string) => void): () => void;
+  getCursor(): number;
+  subscribeCursor(listener: (cursor: number) => void): () => void;
+  readonly state: DesktopEditorHostState;
+  subscribeState(listener: (state: DesktopEditorHostState) => void): () => void;
+  requestFocus(): void;
+  /** Asks the host to submit. Shift, IME composition, steer, and follow-up stay host decisions. */
+  submit(intent?: DesktopEditorSubmitIntent): void;
+  autocomplete: {
+    request(
+      query: DesktopEditorAutocompleteQuery,
+      signal?: AbortSignal,
+    ): Promise<DesktopEditorAutocompleteResult>;
+    apply(input: {
+      readonly text: string;
+      readonly cursor: number;
+      readonly prefix: string;
+      readonly item: DesktopEditorAutocompleteItem;
+    }): Promise<DesktopEditorCompletion>;
+  };
+  readonly theme: DesktopViewContext["theme"];
+  subscribeTheme(listener: (theme: DesktopViewContext["theme"]) => void): () => void;
+  readonly signal: AbortSignal;
+  readonly services: RemoteServiceSource;
+}
+
+export type DesktopEditorMount = (
+  root: HTMLElement,
+  host: DesktopEditorContext,
+) => (() => void | Promise<void>) | Promise<() => void | Promise<void>>;
+
 export type DesktopViewMount = (
   root: HTMLElement,
   host: DesktopViewContext,

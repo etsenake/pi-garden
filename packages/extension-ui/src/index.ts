@@ -116,6 +116,15 @@ export type {
   RichSurfaceRegistrationEvent,
   SingletonRichSurface,
 } from "./rich-surfaces.js";
+export {
+  DESKTOP_EDITOR_DISCOVER,
+  DESKTOP_EDITOR_ID_PATTERN,
+  DESKTOP_EDITOR_REGISTER,
+  DESKTOP_EDITOR_UNREGISTER,
+  registerDesktopEditor,
+  validateDesktopEditorDeclaration,
+} from "./desktop-editor.js";
+export type { DesktopEditorDeclaration, DesktopEditorRegistrationEvent } from "./desktop-editor.js";
 
 /** Registers and replays the same declaration without re-running its backend factory. */
 export function registerDesktopView(
