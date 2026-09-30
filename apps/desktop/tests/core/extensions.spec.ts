@@ -95,12 +95,6 @@ export default function packageNamedExtension(pi) {
 }
 `;
 
-async function expandDock(window: Page) {
-  const toggle = window.getByTestId("extension-dock-toggle");
-  await toggle.click();
-  return window.getByTestId("extension-dock-body");
-}
-
 async function writePackageBackedExtension(
   packagePath: string,
   options: {
@@ -487,16 +481,12 @@ test("manages extensions and prefers runtime commands over colliding host action
     await expect(window.getByTestId("composer")).toBeVisible();
 
     await expect(window.locator(".chat-header__title")).toHaveText("Extension Surface");
-    await expect(window.getByTestId("extension-dock")).toBeVisible();
-    await expect(window.getByTestId("extension-dock-summary")).toHaveText("Demo ready");
-    await expect(window.getByTestId("extension-status-strip")).toHaveCount(0);
-    await expect(window.getByTestId("extension-widget-rail")).toHaveCount(0);
-    const dockBody = await expandDock(window);
-    await expect(dockBody).toContainText("demo-status: Demo ready");
-    await expect(dockBody).toContainText("demo-widget:");
-    await expect(dockBody).toContainText("Demo widget line");
-    await expect(dockBody).toContainText("demo-widget-below:");
-    await expect(dockBody).toContainText("Below widget line");
+    await expect(window.locator("[data-status-key='demo-status']")).toHaveText("Demo ready");
+    await expect(window.locator("[data-widget-key='demo-widget']")).toHaveText("Demo widget line");
+    await expect(window.locator("[data-widget-key='demo-widget-below']")).toHaveText(
+      "Below widget line",
+    );
+    await expect(window.getByTestId("extension-dock")).toHaveCount(0);
 
     await window.getByRole("button", { name: "Extensions", exact: true }).click();
     await expect(window.getByTestId("extensions-surface")).toBeVisible();
@@ -513,7 +503,9 @@ test("manages extensions and prefers runtime commands over colliding host action
     await expect(enabledSwitch).not.toBeChecked();
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
     await expect(window.locator(".chat-header__title")).toHaveText("Inspect extension surface");
-    await expect(window.getByTestId("extension-dock")).toHaveCount(0);
+    await expect(window.getByTestId("extension-widgets-above")).toHaveCount(0);
+    await expect(window.getByTestId("extension-widgets-below")).toHaveCount(0);
+    await expect(window.getByTestId("extension-status-line")).toHaveCount(0);
     const composer = window.getByTestId("composer");
     await window.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(window.getByTestId("settings-surface")).toBeVisible();
@@ -526,8 +518,8 @@ test("manages extensions and prefers runtime commands over colliding host action
     await expect(enabledSwitch).toBeChecked();
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
     await expect(window.locator(".chat-header__title")).toHaveText("Extension Surface");
-    await expect(window.getByTestId("extension-dock-summary")).toHaveText("Demo ready");
-    await expect(window.getByTestId("extension-dock-body")).toHaveCount(0);
+    await expect(window.locator("[data-status-key='demo-status']")).toHaveText("Demo ready");
+    await expect(window.locator("[data-widget-key='demo-widget']")).toHaveCount(1);
     await expect
       .poll(async () => {
         const state = await getDesktopState(window);

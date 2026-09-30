@@ -11,6 +11,7 @@ import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type {
   ComposerAttachment,
   QueuedComposerMessage,
+  SessionExtensionUiStateRecord,
   SessionRecord,
 } from "../../../contracts/desktop-state";
 import type { MentionOption } from "./hooks/use-mention-menu";
@@ -31,7 +32,6 @@ import type {
 } from "../settings/model-onboarding";
 import { ContextMeter } from "./context-meter";
 import { ModelSelector } from "./model-selector";
-import type { ExtensionDockModel } from "../extensions/extension-session-ui";
 
 interface ComposerPanelProps {
   readonly preparingTaskDraft?: boolean;
@@ -82,9 +82,7 @@ interface ComposerPanelProps {
   readonly onEnableMentionExtension: (
     option: Extract<MentionOption, { kind: "extension" }>,
   ) => void;
-  readonly extensionDock?: ExtensionDockModel;
-  readonly extensionDockExpanded: boolean;
-  readonly onToggleExtensionDock: () => void;
+  readonly extensionUi?: SessionExtensionUiStateRecord;
   readonly annotations: TranscriptAnnotations;
 }
 
@@ -135,9 +133,7 @@ export function ComposerPanel({
   selectedMentionIndex,
   onSelectMention,
   onEnableMentionExtension,
-  extensionDock,
-  extensionDockExpanded,
-  onToggleExtensionDock,
+  extensionUi,
   annotations,
 }: ComposerPanelProps) {
   const hasComposerInput =
@@ -189,9 +185,7 @@ export function ComposerPanel({
           textareaLabel="Composer"
           textareaTestId="composer"
           textareaPlaceholder="Ask pi to inspect the repo, run a fix, or continue the current thread..."
-          extensionDock={extensionDock}
-          extensionDockExpanded={extensionDockExpanded}
-          onToggleExtensionDock={onToggleExtensionDock}
+          extensionUi={extensionUi}
           annotationChip={
             <AnnotationChip annotations={annotations.list} onRemove={annotations.remove} />
           }

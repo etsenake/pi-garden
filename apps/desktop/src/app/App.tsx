@@ -75,11 +75,7 @@ import { useWorkspaceMenu } from "../features/threads/hooks/use-workspace-menu";
 import { useThreadActions } from "../features/threads/hooks/use-thread-actions";
 import { ThreadActionsMenu } from "../features/threads/thread-actions";
 import { useNewThreadController } from "../features/threads/hooks/use-new-thread-controller";
-import {
-  buildExtensionDockModel,
-  ExtensionDialog,
-  hasExtensionDockContent,
-} from "../features/extensions/extension-session-ui";
+import { ExtensionDialog } from "../features/extensions/extension-session-ui";
 import { TreeModal } from "../features/conversation/tree-modal";
 import { ForkModal } from "../features/conversation/fork-modal";
 import { getEffectiveModelRuntime } from "../features/settings/model-settings";
@@ -102,7 +98,6 @@ export default function App() {
   const [extensionsWorkspaceId, setExtensionsWorkspaceId] = useState("");
   // Unknown until main answers; until then the theme from the last launch stays.
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark" | null>(null);
-  const [dockExpandedBySession, setDockExpandedBySession] = useState<Record<string, string>>({});
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const timelinePaneRef = useRef<HTMLDivElement | null>(null);
   const [dismissedSchemaSkewSessionKeys, setDismissedSchemaSkewSessionKeys] = useState<
@@ -330,17 +325,8 @@ export default function App() {
       snapshot?.workspaces,
     ],
   );
-  const selectedExtensionDock = useMemo(
-    () => buildExtensionDockModel(selectedExtensionUi),
-    [selectedExtensionUi],
-  );
   const displayedSessionTitle = selectedExtensionUi?.title ?? selectedSession?.title ?? "";
   const activeExtensionDialog = selectedExtensionUi?.pendingDialogs[0];
-  const selectedExtensionUiInstance =
-    snapshot?.sessionExtensionUiBySession[selectedSessionKey]?.instanceId;
-  const isSelectedExtensionDockExpanded =
-    selectedExtensionUiInstance !== undefined &&
-    dockExpandedBySession[selectedSessionKey] === selectedExtensionUiInstance;
   const threadSidebarModel = useMemo(
     () => (snapshot ? buildThreadSidebarModel(snapshot) : undefined),
     [snapshot],
@@ -584,31 +570,6 @@ export default function App() {
   });
 
   useEffect(() => {
-    const sessionExtensionUiBySession = snapshot?.sessionExtensionUiBySession;
-    if (!sessionExtensionUiBySession) {
-      setDockExpandedBySession((current) => (Object.keys(current).length > 0 ? {} : current));
-      return;
-    }
-
-    setDockExpandedBySession((current) => {
-      let next: Record<string, string> | undefined;
-      for (const [sessionKey, instanceId] of Object.entries(current)) {
-        if (
-          sessionExtensionUiBySession[sessionKey]?.instanceId === instanceId &&
-          hasExtensionDockContent(sessionExtensionUiBySession[sessionKey])
-        ) {
-          continue;
-        }
-        if (!next) {
-          next = { ...current };
-        }
-        delete next[sessionKey];
-      }
-      return next ?? current;
-    });
-  }, [snapshot?.sessionExtensionUiBySession]);
-
-  useEffect(() => {
     if (rootWorkspaceOptions.length === 0) {
       setSettingsWorkspaceId("");
       setSkillsWorkspaceId("");
@@ -816,20 +777,6 @@ export default function App() {
       .catch((error: unknown) => {
         console.error("[renderer] updateSnapshot failed", error);
       });
-  };
-
-  const handleToggleExtensionDock = () => {
-    if (!selectedExtensionDock || !selectedExtensionUiInstance) {
-      return;
-    }
-
-    setDockExpandedBySession((current) => {
-      const next = { ...current };
-      if (current[selectedSessionKey] === selectedExtensionUiInstance)
-        delete next[selectedSessionKey];
-      else next[selectedSessionKey] = selectedExtensionUiInstance;
-      return next;
-    });
   };
 
   const handleCreateScheduledTaskWithPi = () => {
@@ -1231,9 +1178,7 @@ export default function App() {
                 selectedMentionIndex={mentionMenu.selectedIndex}
                 onSelectMention={mentionMenu.insertMention}
                 onEnableMentionExtension={mentionMenu.enableMentionExtension}
-                extensionDock={selectedExtensionDock}
-                extensionDockExpanded={isSelectedExtensionDockExpanded}
-                onToggleExtensionDock={handleToggleExtensionDock}
+                extensionUi={selectedExtensionUi}
                 annotations={transcriptAnnotations}
               />
               {activeExtensionDialog ? (

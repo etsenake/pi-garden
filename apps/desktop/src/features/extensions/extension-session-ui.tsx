@@ -1,96 +1,110 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { HostUiResponse } from "@pi-garden/session-driver";
 import { trapDialogFocus } from "../../ui/dialog-focus";
-import { ChevronDownIcon, ChevronRightIcon } from "../../ui/icons";
 import type {
   SessionExtensionDialogRecord,
   SessionExtensionUiStateRecord,
+  SessionExtensionWidgetRecord,
 } from "../../../contracts/desktop-state";
 
 const ANSI_ESCAPE_PATTERN = /\u001B\[[0-?]*[ -/]*[@-~]/g;
-const DOCK_SEGMENT_SEPARATOR = "--------------------";
-const GENERIC_ACTIVE_LABEL = "Extension UI active";
 
-interface ExtensionDockBlock {
+export interface ExtensionWidgetView {
   readonly key: string;
   readonly lines: readonly string[];
 }
 
-export interface ExtensionDockModel {
-  readonly summaryText: string;
-  readonly bodyText: string;
+export interface ExtensionStatusView {
+  readonly key: string;
+  readonly text: string;
 }
 
-export function hasExtensionDockContent(uiState?: SessionExtensionUiStateRecord): boolean {
+export function widgetsForPlacement(
+  uiState: SessionExtensionUiStateRecord | undefined,
+  placement: SessionExtensionWidgetRecord["placement"],
+): readonly ExtensionWidgetView[] {
   if (!uiState) {
-    return false;
+    return [];
   }
 
-  return uiState.statuses.length > 0 || uiState.widgets.length > 0;
+  return uiState.widgets.flatMap((widget) => {
+    if (widget.placement !== placement) {
+      return [];
+    }
+    const lines = visibleWidgetLines(widget.lines);
+    return lines ? [{ key: widget.key, lines }] : [];
+  });
 }
 
-export function buildExtensionDockModel(
-  uiState?: SessionExtensionUiStateRecord,
-): ExtensionDockModel | undefined {
-  if (!hasExtensionDockContent(uiState)) {
-    return undefined;
+export function statusesForDisplay(
+  uiState: SessionExtensionUiStateRecord | undefined,
+): readonly ExtensionStatusView[] {
+  if (!uiState) {
+    return [];
   }
 
-  const statuses = (uiState?.statuses ?? [])
+  return uiState.statuses
     .map((status) => ({
       key: status.key,
-      text: sanitizeDockText(status.text),
+      text: sanitizeStatusText(status.text),
     }))
-    .filter((status) => status.text.trim().length > 0);
-  const primaryBlocks = buildWidgetBlocks(uiState?.widgets ?? [], "aboveComposer");
-  const secondaryBlocks = buildWidgetBlocks(uiState?.widgets ?? [], "belowComposer");
-  const summaryText = resolveDockSummaryText(statuses, primaryBlocks, secondaryBlocks);
-
-  return {
-    summaryText,
-    bodyText: buildDockBodyText(statuses, primaryBlocks, secondaryBlocks),
-  };
+    .filter((status) => status.text.length > 0)
+    .sort((left, right) => left.key.localeCompare(right.key));
 }
 
-export function ExtensionDock({
-  dock,
-  expanded,
-  onToggle,
+export function ExtensionWidgets({
+  placement,
+  widgets,
 }: {
-  readonly dock: ExtensionDockModel;
-  readonly expanded: boolean;
-  readonly onToggle: () => void;
+  readonly placement: "above" | "below";
+  readonly widgets: readonly ExtensionWidgetView[];
 }) {
+  if (widgets.length === 0) {
+    return null;
+  }
+
+  const piPlacement = placement === "above" ? "aboveEditor" : "belowEditor";
+
   return (
     <div
-      className={`extension-dock ${expanded ? "extension-dock--expanded" : ""}`}
-      data-testid="extension-dock"
+      aria-label={
+        placement === "above"
+          ? "Extension widgets above the editor"
+          : "Extension widgets below the editor"
+      }
+      className={`extension-widgets extension-widgets--${placement}`}
+      data-placement={piPlacement}
+      data-testid={`extension-widgets-${placement}`}
     >
-      <button
-        aria-controls="extension-dock-body"
-        aria-expanded={expanded}
-        className="extension-dock__toggle"
-        data-testid="extension-dock-toggle"
-        title={dock.summaryText}
-        type="button"
-        onClick={onToggle}
-      >
-        <span className="extension-dock__summary" data-testid="extension-dock-summary">
-          {dock.summaryText}
-        </span>
-        <span className="extension-dock__chevron" aria-hidden="true">
-          {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-        </span>
-      </button>
-      {expanded ? (
-        <pre
-          className="extension-dock__body"
-          data-testid="extension-dock-body"
-          id="extension-dock-body"
-        >
-          {dock.bodyText}
+      {widgets.map((widget) => (
+        <pre className="extension-widgets__item" data-widget-key={widget.key} key={widget.key}>
+          {widget.lines.join("\n")}
         </pre>
-      ) : null}
+      ))}
+    </div>
+  );
+}
+
+export function ExtensionStatusLine({
+  statuses,
+}: {
+  readonly statuses: readonly ExtensionStatusView[];
+}) {
+  if (statuses.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      aria-label="Extension status"
+      className="extension-status-line"
+      data-testid="extension-status-line"
+    >
+      {statuses.map((status) => (
+        <span className="extension-status-line__item" data-status-key={status.key} key={status.key}>
+          {status.text}
+        </span>
+      ))}
     </div>
   );
 }
@@ -251,86 +265,21 @@ export function ExtensionDialog({
   );
 }
 
-function buildWidgetBlocks(
-  widgets: SessionExtensionUiStateRecord["widgets"],
-  placement: "aboveComposer" | "belowComposer",
-): ExtensionDockBlock[] {
-  return widgets
-    .filter((widget) => widget.placement === placement)
-    .map((widget) => ({
-      key: widget.key,
-      lines: widget.lines.map((line) => sanitizeDockText(line)),
-    }))
-    .filter((widget) => widget.lines.some((line) => line.trim().length > 0));
-}
-
-function resolveDockSummaryText(
-  statuses: readonly { readonly key: string; readonly text: string }[],
-  primaryBlocks: readonly ExtensionDockBlock[],
-  secondaryBlocks: readonly ExtensionDockBlock[],
-): string {
-  for (const status of statuses) {
-    if (status.text.trim().length > 0) {
-      return status.text;
-    }
+function visibleWidgetLines(lines: readonly string[]): readonly string[] | undefined {
+  const sanitized = lines.map((line) => stripAnsi(line));
+  if (!sanitized.some((line) => line.trim().length > 0)) {
+    return undefined;
   }
-
-  for (const block of [...primaryBlocks, ...secondaryBlocks]) {
-    const summaryLine = block.lines.find((line) => line.trim().length > 0);
-    if (summaryLine) {
-      return summaryLine;
-    }
-  }
-
-  return GENERIC_ACTIVE_LABEL;
+  return sanitized;
 }
 
-function buildDockBodyText(
-  statuses: readonly { readonly key: string; readonly text: string }[],
-  primaryBlocks: readonly ExtensionDockBlock[],
-  secondaryBlocks: readonly ExtensionDockBlock[],
-): string {
-  const totalBlocks = statuses.length + primaryBlocks.length + secondaryBlocks.length;
-  const needsLabels = totalBlocks > 1;
-  const primaryLines = [
-    ...statuses.flatMap((status, index) => renderStatusBlock(status, needsLabels, index > 0)),
-    ...primaryBlocks.flatMap((block, index) =>
-      renderWidgetBlock(block, needsLabels, statuses.length + index > 0),
-    ),
-  ];
-  const secondaryLines = secondaryBlocks.flatMap((block, index) =>
-    renderWidgetBlock(block, needsLabels, index > 0),
-  );
-
-  if (secondaryLines.length === 0) {
-    return primaryLines.join("\n");
-  }
-
-  if (primaryLines.length === 0) {
-    return secondaryLines.join("\n");
-  }
-
-  return [...primaryLines, "", DOCK_SEGMENT_SEPARATOR, "", ...secondaryLines].join("\n");
+function sanitizeStatusText(text: string): string {
+  return stripAnsi(text)
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/ +/g, " ")
+    .trim();
 }
 
-function renderStatusBlock(
-  status: { readonly key: string; readonly text: string },
-  needsLabel: boolean,
-  addLeadingGap: boolean,
-): string[] {
-  const lines = [`${needsLabel ? `${status.key}: ` : ""}${status.text}`];
-  return addLeadingGap ? ["", ...lines] : lines;
-}
-
-function renderWidgetBlock(
-  block: ExtensionDockBlock,
-  needsLabel: boolean,
-  addLeadingGap: boolean,
-): string[] {
-  const lines = needsLabel ? [`${block.key}:`, ...block.lines] : [...block.lines];
-  return addLeadingGap ? ["", ...lines] : lines;
-}
-
-function sanitizeDockText(text: string): string {
+function stripAnsi(text: string): string {
   return text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replace(ANSI_ESCAPE_PATTERN, "");
 }

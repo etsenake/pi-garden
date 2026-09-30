@@ -2685,67 +2685,36 @@
   overflow-wrap: anywhere;
 }
 
-.extension-dock {
-  margin-bottom: 10px;
-}
-
-.extension-dock--expanded {
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.extension-dock__toggle {
-  width: 100%;
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--line);
-  background: var(--surface-muted);
-  color: var(--muted-strong);
-  text-align: left;
-}
-
-.extension-dock__toggle:hover {
-  background: var(--overlay-hover);
-}
-
-.extension-dock__summary {
+.extension-widgets {
+  display: grid;
+  gap: 4px;
   min-width: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 560;
-  letter-spacing: -0.01em;
-}
-
-.extension-dock__chevron {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  color: var(--muted-soft);
-}
-
-.extension-dock__chevron svg {
-  width: 16px;
-  height: 16px;
-}
-
-.extension-dock__body {
-  margin: 8px 0 0;
-  padding: 10px 12px 0;
-  max-height: min(220px, 28vh);
-  overflow: auto;
   color: var(--muted-strong);
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
+}
+
+.extension-widgets__item {
+  margin: 0;
+  max-height: min(160px, 22vh);
+  overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.extension-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--muted-soft);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.extension-status-line__item {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .extension-dialog-backdrop {

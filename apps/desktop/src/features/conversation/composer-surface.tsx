@@ -7,7 +7,10 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import type { ComposerAttachment } from "../../../contracts/desktop-state";
+import type {
+  ComposerAttachment,
+  SessionExtensionUiStateRecord,
+} from "../../../contracts/desktop-state";
 import type { MentionOption } from "./hooks/use-mention-menu";
 import type {
   ComposerSlashCommand,
@@ -16,7 +19,12 @@ import type {
   ComposerSlashOptionEmptyState,
 } from "./composer-commands";
 import { hasFilesInDataTransfer } from "./composer-attachments";
-import { ExtensionDock, type ExtensionDockModel } from "../extensions/extension-session-ui";
+import {
+  ExtensionStatusLine,
+  ExtensionWidgets,
+  statusesForDisplay,
+  widgetsForPlacement,
+} from "../extensions/extension-session-ui";
 import {
   ExtensionIcon,
   FileIcon,
@@ -71,9 +79,7 @@ interface ComposerSurfaceProps {
   readonly textareaTestId: string;
   readonly textareaPlaceholder: string;
   readonly textareaClassName?: string;
-  readonly extensionDock?: ExtensionDockModel;
-  readonly extensionDockExpanded?: boolean;
-  readonly onToggleExtensionDock?: () => void;
+  readonly extensionUi?: SessionExtensionUiStateRecord;
   readonly footer: ReactNode;
   /** Transcript annotations waiting to go with the next message. */
   readonly annotationChip?: ReactNode;
@@ -117,9 +123,7 @@ export function ComposerSurface({
   textareaTestId,
   textareaPlaceholder,
   textareaClassName,
-  extensionDock,
-  extensionDockExpanded = false,
-  onToggleExtensionDock,
+  extensionUi,
   footer,
   annotationChip,
 }: ComposerSurfaceProps) {
@@ -244,13 +248,6 @@ export function ComposerSurface({
           ))}
         </div>
       ) : null}
-      {extensionDock && onToggleExtensionDock ? (
-        <ExtensionDock
-          dock={extensionDock}
-          expanded={extensionDockExpanded}
-          onToggle={onToggleExtensionDock}
-        />
-      ) : null}
       {lastError ? (
         <div className="composer__error error-banner" data-testid="composer-error-banner">
           {lastError}
@@ -372,6 +369,10 @@ export function ComposerSurface({
             ) : null}
           </div>
         ) : null}
+        <ExtensionWidgets
+          placement="above"
+          widgets={widgetsForPlacement(extensionUi, "aboveComposer")}
+        />
         <textarea
           aria-label={textareaLabel}
           className={textareaClassName}
@@ -384,7 +385,12 @@ export function ComposerSurface({
           onKeyDown={onComposerKeyDown}
           placeholder={textareaPlaceholder}
         />
+        <ExtensionWidgets
+          placement="below"
+          widgets={widgetsForPlacement(extensionUi, "belowComposer")}
+        />
         <div className="composer__bar">{footer}</div>
+        <ExtensionStatusLine statuses={statusesForDisplay(extensionUi)} />
       </div>
     </div>
   );

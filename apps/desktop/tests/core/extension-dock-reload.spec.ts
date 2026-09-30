@@ -1,6 +1,7 @@
 import {
   writeProjectExtension,
   createNamedThread,
+  getDesktopState,
   launchDesktop,
   makeUserDataDir,
   makeWorkspace,
@@ -41,7 +42,7 @@ export default function reloadDockExtension(pi) {
 }
 `;
 
-test("resets dock expansion on /reload and extension enable or disable transitions", async () => {
+test("reloads extension widgets and status without keeping stale copies", async () => {
   test.setTimeout(60_000);
   const userDataDir = await makeUserDataDir();
   const workspacePath = await makeWorkspace("extension-dock-reload-workspace");
@@ -57,18 +58,34 @@ test("resets dock expansion on /reload and extension enable or disable transitio
     await createNamedThread(window, "Reload session");
 
     const composer = window.getByTestId("composer");
-    const dockSummary = window.getByTestId("extension-dock-summary");
-    const dockToggle = window.getByTestId("extension-dock-toggle");
-    const dockBody = window.getByTestId("extension-dock-body");
+    const status = window.locator("[data-status-key='reload-status']");
+    const widget = window.locator("[data-widget-key='reload-widget']");
 
-    await expect(dockSummary).toHaveText("Session ready");
-    await dockToggle.click();
-    await expect(dockBody).toContainText("Initial widget line");
+    await expect(status).toHaveText("Session ready");
+    await expect(widget).toHaveText("Initial widget line");
+    await expect(widget).toHaveCount(1);
+    await expect
+      .poll(async () => {
+        const nextState = await getDesktopState(window);
+        const sessionKey = `${nextState.selectedWorkspaceId}:${nextState.selectedSessionId}`;
+        return (nextState.sessionCommandsBySession[sessionKey] ?? []).map(
+          (command) => command.name,
+        );
+      })
+      .toEqual(expect.arrayContaining(["mark-alt"]));
+
+    await composer.fill("/mark-alt ");
+    await composer.press("Enter");
+    await expect(status).toHaveText("Alternate status");
+    await expect(widget).toHaveText("Alternate widget line");
+    await expect(widget).toHaveCount(1);
 
     await composer.fill("/reload ");
     await composer.press("Enter");
-    await expect(dockSummary).toHaveText("Session ready");
-    await expect(dockBody).toHaveCount(0);
+    await expect(status).toHaveText("Session ready");
+    await expect(widget).toHaveText("Initial widget line");
+    await expect(widget).toHaveCount(1);
+    await expect(window.getByText("Alternate widget line")).toHaveCount(0);
 
     await window.getByRole("button", { name: "Extensions", exact: true }).click();
     const extensionCard = window
@@ -78,21 +95,23 @@ test("resets dock expansion on /reload and extension enable or disable transitio
     await window.getByRole("switch", { name: "Enabled", exact: true }).click();
     await expect(window.getByRole("switch", { name: "Enabled", exact: true })).not.toBeChecked();
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
-    await expect(window.getByTestId("extension-dock")).toHaveCount(0);
+    await expect(window.getByTestId("extension-widgets-above")).toHaveCount(0);
+    await expect(window.getByTestId("extension-status-line")).toHaveCount(0);
 
     await window.getByRole("button", { name: "Extensions", exact: true }).click();
     await extensionCard.click();
     await window.getByRole("switch", { name: "Enabled", exact: true }).click();
     await expect(window.getByRole("switch", { name: "Enabled", exact: true })).toBeChecked();
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
-    await expect(dockSummary).toHaveText("Session ready");
-    await expect(dockBody).toHaveCount(0);
+    await expect(status).toHaveText("Session ready");
+    await expect(widget).toHaveText("Initial widget line");
+    await expect(widget).toHaveCount(1);
   } finally {
     await harness.close();
   }
 });
 
-test("refreshes runtime with new extension output and keeps the dock collapsed after rebuild", async () => {
+test("replaces extension widgets and status after the extension source is refreshed", async () => {
   test.setTimeout(60_000);
   const userDataDir = await makeUserDataDir();
   const workspacePath = await makeWorkspace("extension-dock-refresh-workspace");
@@ -107,13 +126,11 @@ test("refreshes runtime with new extension output and keeps the dock collapsed a
     const window = await harness.firstWindow();
     await createNamedThread(window, "Refresh session");
 
-    const dockSummary = window.getByTestId("extension-dock-summary");
-    const dockToggle = window.getByTestId("extension-dock-toggle");
-    const dockBody = window.getByTestId("extension-dock-body");
+    const status = window.locator("[data-status-key='reload-status']");
+    const widget = window.locator("[data-widget-key='reload-widget']");
 
-    await expect(dockSummary).toHaveText("Session ready");
-    await dockToggle.click();
-    await expect(dockBody).toContainText("Initial widget line");
+    await expect(status).toHaveText("Session ready");
+    await expect(widget).toHaveText("Initial widget line");
 
     await writeProjectExtension(
       workspacePath,
@@ -124,10 +141,10 @@ test("refreshes runtime with new extension output and keeps the dock collapsed a
     await window.getByRole("button", { name: "Refresh", exact: true }).click();
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
 
-    await expect(dockSummary).toHaveText("Refreshed session ready");
-    await expect(dockBody).toHaveCount(0);
-    await dockToggle.click();
-    await expect(dockBody).toContainText("Refreshed widget line");
+    await expect(status).toHaveText("Refreshed session ready");
+    await expect(widget).toHaveText("Refreshed widget line");
+    await expect(widget).toHaveCount(1);
+    await expect(window.getByText("Initial widget line")).toHaveCount(0);
   } finally {
     await harness.close();
   }
