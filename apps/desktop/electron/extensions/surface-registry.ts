@@ -1,25 +1,29 @@
-import { isHeaderBadgeDeclaration } from "@pi-garden/extension-ui";
+import {
+  compareSurfaceContributions,
+  normalizeSurfaceContribution,
+  surfaceContributionKey,
+} from "@pi-garden/extension-ui";
 import { sessionKey, type SessionRef } from "@pi-garden/session-driver";
-import type { HeaderBadgePresentation } from "../../contracts/header-badges";
+import type { SurfaceContributionPresentation } from "../../contracts/surface-contributions";
 
-export interface HeaderBadgeRuntimeInput {
+export interface SurfaceRegistryRuntimeInput {
   readonly target: SessionRef;
   readonly generation: string;
-  readonly badges: readonly unknown[];
+  readonly contributions: readonly unknown[];
 }
 
-interface SessionBadges {
+interface SessionContributions {
   readonly generation: string;
   readonly target: SessionRef;
-  readonly badges: readonly HeaderBadgePresentation[];
+  readonly contributions: readonly SurfaceContributionPresentation[];
 }
 
 /**
- * Presents header badges for one Pi extension runtime generation.
+ * Presents host-rendered surface contributions for one Pi extension runtime generation.
  * A generation that has already been replaced or invalidated cannot publish again.
  */
-export class HeaderBadgeOwner {
-  private readonly sessions = new Map<string, SessionBadges>();
+export class SurfaceRegistry {
+  private readonly sessions = new Map<string, SessionContributions>();
   private readonly retired = new Map<string, Set<string>>();
   private readonly listeners = new Set<(target: SessionRef) => void>();
 
@@ -30,12 +34,12 @@ export class HeaderBadgeOwner {
     };
   }
 
-  list(target: SessionRef): readonly HeaderBadgePresentation[] {
+  list(target: SessionRef): readonly SurfaceContributionPresentation[] {
     const current = this.sessions.get(sessionKey(target));
-    return current ? current.badges.map((badge) => ({ ...badge })) : [];
+    return current ? current.contributions.map((contribution) => ({ ...contribution })) : [];
   }
 
-  replaceRuntime(input: HeaderBadgeRuntimeInput): void {
+  replaceRuntime(input: SurfaceRegistryRuntimeInput): void {
     const key = sessionKey(input.target);
     if (this.isRetired(key, input.generation)) return;
     const current = this.sessions.get(key);
@@ -45,7 +49,7 @@ export class HeaderBadgeOwner {
     this.sessions.set(key, {
       generation: input.generation,
       target: { workspaceId: input.target.workspaceId, sessionId: input.target.sessionId },
-      badges: presentHeaderBadges(input.badges),
+      contributions: presentContributions(input.contributions),
     });
     this.publish(input.target);
   }
@@ -74,17 +78,14 @@ export class HeaderBadgeOwner {
   }
 }
 
-function presentHeaderBadges(badges: readonly unknown[]): readonly HeaderBadgePresentation[] {
-  const byId = new Map<string, HeaderBadgePresentation>();
-  for (const badge of badges) {
-    if (!isHeaderBadgeDeclaration(badge)) continue;
-    byId.set(badge.id, {
-      id: badge.id,
-      text: badge.text,
-      tone: badge.tone ?? "default",
-    });
+function presentContributions(
+  contributions: readonly unknown[],
+): readonly SurfaceContributionPresentation[] {
+  const byKey = new Map<string, SurfaceContributionPresentation>();
+  for (const contribution of contributions) {
+    const normalized = normalizeSurfaceContribution(contribution);
+    if (!normalized) continue;
+    byKey.set(surfaceContributionKey(normalized), normalized);
   }
-  return [...byId.values()].sort((left, right) =>
-    left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
-  );
+  return [...byKey.values()].sort(compareSurfaceContributions);
 }

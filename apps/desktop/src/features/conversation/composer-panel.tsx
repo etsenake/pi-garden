@@ -32,6 +32,11 @@ import type {
 } from "../settings/model-onboarding";
 import { ContextMeter } from "./context-meter";
 import { ModelSelector } from "./model-selector";
+import type { SurfaceContributionPresentation } from "../../../contracts/surface-contributions";
+import {
+  ComposerAfterContributions,
+  ComposerBeforeContributions,
+} from "../extensions/host-contributions";
 
 interface ComposerPanelProps {
   readonly preparingTaskDraft?: boolean;
@@ -84,6 +89,8 @@ interface ComposerPanelProps {
   ) => void;
   readonly extensionUi?: SessionExtensionUiStateRecord;
   readonly annotations: TranscriptAnnotations;
+  readonly composerBefore?: readonly SurfaceContributionPresentation[];
+  readonly composerAfter?: readonly SurfaceContributionPresentation[];
 }
 
 export function ComposerPanel({
@@ -135,6 +142,8 @@ export function ComposerPanel({
   onEnableMentionExtension,
   extensionUi,
   annotations,
+  composerBefore = [],
+  composerAfter = [],
 }: ComposerPanelProps) {
   const hasComposerInput =
     composerDraft.trim().length > 0 || attachments.length > 0 || annotations.list.length > 0;
@@ -142,6 +151,7 @@ export function ComposerPanel({
 
   return (
     <footer className="composer" aria-busy={preparingTaskDraft}>
+      <ComposerBeforeContributions contributions={composerBefore} />
       <div className="conversation conversation--composer" inert={preparingTaskDraft}>
         <ComposerSurface
           lastError={lastError}
@@ -234,6 +244,7 @@ export function ComposerPanel({
           }
         />
       </div>
+      <ComposerAfterContributions contributions={composerAfter} />
       {preparingTaskDraft ? (
         <div className="composer__footer-row">
           <p className="composer__hint" role="status" data-testid="composer-prepare-task-status">

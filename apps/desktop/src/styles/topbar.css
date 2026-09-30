@@ -114,6 +114,11 @@
   flex: none;
 }
 
+.status-chrome {
+  flex-wrap: nowrap;
+  max-width: 28em;
+}
+
 .topbar__actions,
 .topbar__actions * {
   -webkit-app-region: no-drag;

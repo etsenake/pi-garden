@@ -1,6 +1,10 @@
-import type { HeaderBadgePresentation } from "../../../contracts/header-badges";
+import type { SurfaceContributionPresentation } from "../../../contracts/surface-contributions";
 
-export function HeaderBadges({ badges }: { readonly badges: readonly HeaderBadgePresentation[] }) {
+export function HeaderBadges({
+  badges,
+}: {
+  readonly badges: readonly SurfaceContributionPresentation[];
+}) {
   if (badges.length === 0) return null;
 
   return (
@@ -9,6 +13,7 @@ export function HeaderBadges({ badges }: { readonly badges: readonly HeaderBadge
         <span
           className="header-badge"
           data-badge-id={badge.id}
+          data-order={badge.order}
           data-tone={badge.tone}
           key={badge.id}
           title={badge.text}

@@ -4,14 +4,21 @@ import {
   DESKTOP_VIEW_DISCOVER,
   DESKTOP_VIEW_REGISTER,
   DESKTOP_VIEW_UNREGISTER,
-  HEADER_BADGE_DISCOVER,
-  HEADER_BADGE_REGISTER,
-  HEADER_BADGE_UNREGISTER,
+  SURFACE_CONTRIBUTION_DISCOVER,
+  SURFACE_CONTRIBUTION_REGISTER,
+  SURFACE_CONTRIBUTION_UNREGISTER,
+  normalizeSurfaceContribution,
+  registerComposerAfter,
+  registerComposerBefore,
   registerDesktopView,
   registerHeaderBadge,
+  registerSidebarFooter,
+  registerSidebarSection,
+  registerStatusChrome,
   type DesktopExtensionAPI,
   type DesktopViewRegistrationEvent,
-  type HeaderBadgeRegistrationEvent,
+  type SurfaceContribution,
+  type SurfaceContributionRegistrationEvent,
 } from "../dist/index.js";
 import { parseDesktopHostAction } from "../dist/browser.js";
 
@@ -135,36 +142,41 @@ function createExtensionApi(): DesktopExtensionAPI & {
   };
 }
 
-await test("header badge discovery replays one declaration and shutdown removes it", () => {
+const gardenContribution = {
+  id: "garden",
+  surface: "conversation-header",
+  text: "Garden",
+  tone: "default",
+  order: 0,
+} as const;
+
+await test("header badge discovery replays one contribution and shutdown removes it", () => {
   const pi = createExtensionApi();
   const registration = registerHeaderBadge(pi, { id: "garden", text: "  Garden  " });
   assert.equal(registration.available, false);
   const discovered: unknown[] = [];
   const removed: unknown[] = [];
-  pi.events.on(HEADER_BADGE_REGISTER, (value) => {
-    const event = value as HeaderBadgeRegistrationEvent;
-    discovered.push(event.badge);
+  pi.events.on(SURFACE_CONTRIBUTION_REGISTER, (value) => {
+    const event = value as SurfaceContributionRegistrationEvent;
+    discovered.push(event.contribution);
     event.accept?.();
   });
-  pi.events.on(HEADER_BADGE_UNREGISTER, (value) => {
+  pi.events.on(SURFACE_CONTRIBUTION_UNREGISTER, (value) => {
     removed.push(value);
   });
-  pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
-  pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
+  pi.events.emit(SURFACE_CONTRIBUTION_DISCOVER, undefined);
+  pi.events.emit(SURFACE_CONTRIBUTION_DISCOVER, undefined);
   assert.equal(registration.available, true);
-  assert.deepEqual(discovered, [
-    { id: "garden", text: "Garden", tone: "default" },
-    { id: "garden", text: "Garden", tone: "default" },
-  ]);
+  assert.deepEqual(discovered, [gardenContribution, gardenContribution]);
   assert.equal(discovered[0], discovered[1]);
   pi.shutdown();
-  pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
+  pi.events.emit(SURFACE_CONTRIBUTION_DISCOVER, undefined);
   assert.equal(registration.available, false);
-  assert.deepEqual(removed, [{ id: "garden", text: "Garden", tone: "default" }]);
+  assert.deepEqual(removed, [gardenContribution]);
   assert.equal(discovered.length, 2);
 });
 
-await test("header badge registration rejects identifiers and text the host cannot render", () => {
+await test("contribution registration rejects values the host cannot render", () => {
   const pi = createExtensionApi();
   for (const badge of [
     { id: "Garden", text: "Garden" },
@@ -177,29 +189,149 @@ await test("header badge registration rejects identifiers and text the host cann
     { id: "garden", text: "Garden", tone: "" },
     { id: "garden", text: "Garden", color: "#ff0000" },
     { id: "garden", text: "Garden", className: "danger" },
+    { id: "garden", text: "Garden", order: 1.5 },
+    { id: "garden", text: "Garden", order: Number.NaN },
+    { id: "garden", text: "Garden", order: Number.POSITIVE_INFINITY },
+    { id: "garden", text: "Garden", order: "1" },
+    { id: "garden", text: "Garden", surface: "sidebar-footer" },
+    { id: "garden", text: "Garden", html: "<b>Garden</b>" },
   ]) {
     assert.throws(() => registerHeaderBadge(pi, badge as { id: string; text: string }));
+    assert.throws(() => registerSidebarFooter(pi, badge as { id: string; text: string }));
+    assert.throws(() => registerSidebarSection(pi, badge as { id: string; text: string }));
+    assert.throws(() => registerComposerBefore(pi, badge as { id: string; text: string }));
+    assert.throws(() => registerComposerAfter(pi, badge as { id: string; text: string }));
+    assert.throws(() => registerStatusChrome(pi, badge as { id: string; text: string }));
   }
 });
 
-await test("header badge tones are a closed set and a later id replaces text and tone", () => {
+await test("both surfaces share ordering and keep same ids independent", () => {
   const pi = createExtensionApi();
-  const discovered: { readonly id: string; readonly text: string; readonly tone?: string }[] = [];
-  pi.events.on(HEADER_BADGE_REGISTER, (value) => {
-    const event = value as HeaderBadgeRegistrationEvent;
-    discovered.push(event.badge);
+  const discovered: SurfaceContribution[] = [];
+  pi.events.on(SURFACE_CONTRIBUTION_REGISTER, (value) => {
+    const event = value as SurfaceContributionRegistrationEvent;
+    discovered.push(event.contribution);
     event.accept?.();
   });
   for (const tone of ["default", "accent", "success", "warning", "error", "muted"] as const) {
     registerHeaderBadge(pi, { id: tone, text: tone, tone });
   }
-  const replaced = registerHeaderBadge(pi, { id: "ready", text: "Ready", tone: "success" });
-  registerHeaderBadge(pi, { id: "ready", text: "Failed", tone: "error" });
-  pi.events.emit(HEADER_BADGE_DISCOVER, undefined);
-  const byId = new Map<string, { readonly text: string; readonly tone?: string }>();
-  for (const badge of discovered) byId.set(badge.id, badge);
-  assert.equal(byId.get("ready")?.text, "Failed");
-  assert.equal(byId.get("ready")?.tone, "error");
-  assert.equal(byId.size, 7);
+  const replaced = registerHeaderBadge(pi, {
+    id: "ready",
+    text: "Ready",
+    tone: "success",
+    order: 3,
+  });
+  registerHeaderBadge(pi, { id: "ready", text: "Failed", tone: "error", order: 1 });
+  const footer = registerSidebarFooter(pi, { id: "ready", text: "Foot", order: 4 });
+  registerSidebarFooter(pi, { id: "ready", text: "Side", tone: "muted" });
+  pi.events.emit(SURFACE_CONTRIBUTION_DISCOVER, undefined);
+  const byKey = new Map<string, SurfaceContribution>();
+  for (const contribution of discovered) {
+    byKey.set(`${contribution.surface}\0${contribution.id}`, contribution);
+  }
+  assert.equal(byKey.get("conversation-header\0ready")?.text, "Failed");
+  assert.equal(byKey.get("conversation-header\0ready")?.tone, "error");
+  assert.equal(byKey.get("conversation-header\0ready")?.order, 1);
+  assert.equal(byKey.get("sidebar-footer\0ready")?.text, "Side");
+  assert.equal(byKey.get("sidebar-footer\0ready")?.tone, "muted");
+  assert.equal(byKey.get("sidebar-footer\0ready")?.order, 0);
+  assert.equal(byKey.size, 8);
   assert.equal(replaced.available, true);
+  assert.equal(footer.available, true);
+});
+
+await test("convenience APIs assign a surface without taking one from the author", () => {
+  const pi = createExtensionApi();
+  const discovered: SurfaceContribution[] = [];
+  pi.events.on(SURFACE_CONTRIBUTION_REGISTER, (value) => {
+    const event = value as SurfaceContributionRegistrationEvent;
+    discovered.push(event.contribution);
+  });
+  registerComposerBefore(pi, { id: "garden", text: "Before", tone: "accent", order: 2 });
+  registerComposerAfter(pi, { id: "garden", text: "After" });
+  registerSidebarSection(pi, { id: "garden", text: "Lane", tone: "success", order: 1 });
+  registerSidebarFooter(pi, { id: "garden", text: "Root", tone: "muted", order: 3 });
+  registerStatusChrome(pi, { id: "garden", text: "Live", tone: "warning", order: -1 });
+  assert.deepEqual(
+    discovered.map((contribution) => ({
+      id: contribution.id,
+      surface: contribution.surface,
+      text: contribution.text,
+      tone: contribution.tone,
+      order: contribution.order,
+    })),
+    [
+      {
+        id: "garden",
+        surface: "composer-before",
+        text: "Before",
+        tone: "accent",
+        order: 2,
+      },
+      { id: "garden", surface: "composer-after", text: "After", tone: "default", order: 0 },
+      {
+        id: "garden",
+        surface: "sidebar-section",
+        text: "Lane",
+        tone: "success",
+        order: 1,
+      },
+      { id: "garden", surface: "sidebar-footer", text: "Root", tone: "muted", order: 3 },
+      {
+        id: "garden",
+        surface: "status-chrome",
+        text: "Live",
+        tone: "warning",
+        order: -1,
+      },
+    ],
+  );
+});
+
+await test("the desktop boundary normalizes omitted fields and rejects unknown contributions", () => {
+  assert.deepEqual(
+    normalizeSurfaceContribution({
+      id: "garden",
+      surface: "sidebar-footer",
+      text: "Garden",
+    }),
+    {
+      id: "garden",
+      surface: "sidebar-footer",
+      text: "Garden",
+      tone: "default",
+      order: 0,
+    },
+  );
+  assert.deepEqual(
+    normalizeSurfaceContribution({
+      id: "garden",
+      surface: "conversation-header",
+      text: "Garden",
+      tone: "success",
+      order: -2,
+    }),
+    {
+      id: "garden",
+      surface: "conversation-header",
+      text: "Garden",
+      tone: "success",
+      order: -2,
+    },
+  );
+  for (const value of [
+    { id: "Garden", surface: "conversation-header", text: "Garden" },
+    { id: "garden", surface: "conversation-header", text: "" },
+    { id: "garden", surface: "conversation-header", text: "line\nbreak" },
+    { id: "garden", surface: "conversation-header", text: "x".repeat(33) },
+    { id: "garden", surface: "status-bar", text: "Garden" },
+    { id: "garden", surface: "conversation-header", text: "Garden", tone: "purple" },
+    { id: "garden", surface: "conversation-header", text: "Garden", order: 1.5 },
+    { id: "garden", surface: "conversation-header", text: "Garden", color: "#ff0000" },
+    { id: "garden", text: "Garden" },
+    null,
+  ]) {
+    assert.equal(normalizeSurfaceContribution(value), undefined);
+  }
 });

@@ -8,14 +8,16 @@ import {
   DESKTOP_VIEW_DISCOVER,
   DESKTOP_VIEW_REGISTER,
   DESKTOP_VIEW_UNREGISTER,
-  HEADER_BADGE_DISCOVER,
-  HEADER_BADGE_REGISTER,
-  HEADER_BADGE_UNREGISTER,
-  isHeaderBadgeDeclaration,
+  SURFACE_CONTRIBUTION_DISCOVER,
+  SURFACE_CONTRIBUTION_REGISTER,
+  SURFACE_CONTRIBUTION_UNREGISTER,
+  canonicalSurfaceContribution,
+  compareSurfaceContributions,
+  surfaceContributionKey,
   type DesktopViewDeclaration,
   type DesktopViewRegistrationEvent,
-  type HeaderBadgeDeclaration,
-  type HeaderBadgeRegistrationEvent,
+  type SurfaceContribution,
+  type SurfaceContributionRegistrationEvent,
 } from "@pi-garden/extension-ui";
 import type { SessionRef, WorkspaceRef } from "@pi-garden/session-driver";
 
@@ -28,8 +30,8 @@ export interface PiDesktopExtensionRuntime {
   readonly generation: string;
   readonly extensions: readonly { readonly resolvedPath: string }[];
   readonly declarations: readonly DesktopViewDeclaration[];
-  /** Data-only header badges from the extensions loaded in this runtime. */
-  readonly badges: readonly HeaderBadgeDeclaration[];
+  /** Data-only host contributions from the extensions loaded in this runtime. */
+  readonly contributions: readonly SurfaceContribution[];
 }
 
 export interface PiDesktopExtensionObserver {
@@ -51,7 +53,7 @@ export function createDesktopExtensionBridge(options: {
 } {
   const eventBus = createEventBus();
   const declarations = new Set<DesktopViewDeclaration>();
-  const badges = new Map<string, HeaderBadgeDeclaration>();
+  const contributions = new Map<string, SurfaceContribution>();
   let loadedExtensions: readonly { readonly resolvedPath: string }[] = [];
   let active: { readonly target: SessionRef; readonly generation: string } | undefined;
   let discovering = false;
@@ -73,9 +75,7 @@ export function createDesktopExtensionBridge(options: {
       ...epoch,
       extensions: loadedExtensions.map((extension) => ({ ...extension })),
       declarations: [...declarations],
-      badges: [...badges.values()].sort((left, right) =>
-        left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
-      ),
+      contributions: [...contributions.values()].sort(compareSurfaceContributions),
     };
     notify(() => options.observer.onChanged(snapshot));
   };
@@ -90,16 +90,18 @@ export function createDesktopExtensionBridge(options: {
     if (!declarations.delete(value as DesktopViewDeclaration)) return;
     publish();
   });
-  eventBus.on(HEADER_BADGE_REGISTER, (value) => {
-    if (!isHeaderBadgeRegistration(value)) return;
-    badges.set(value.badge.id, value.badge);
+  eventBus.on(SURFACE_CONTRIBUTION_REGISTER, (value) => {
+    if (!isContributionRegistration(value)) return;
+    contributions.set(surfaceContributionKey(value.contribution), value.contribution);
     value.accept?.();
     publish();
   });
-  eventBus.on(HEADER_BADGE_UNREGISTER, (value) => {
-    if (!isHeaderBadgeDeclaration(value)) return;
-    if (badges.get(value.id) !== value) return;
-    badges.delete(value.id);
+  eventBus.on(SURFACE_CONTRIBUTION_UNREGISTER, (value) => {
+    const contribution = canonicalSurfaceContribution(value);
+    if (!contribution) return;
+    const key = surfaceContributionKey(contribution);
+    if (contributions.get(key) !== contribution) return;
+    contributions.delete(key);
     publish();
   });
 
@@ -114,11 +116,11 @@ export function createDesktopExtensionBridge(options: {
       };
       // Only live Pi extension instances answer; registration does not execute their factory again.
       declarations.clear();
-      badges.clear();
+      contributions.clear();
       discovering = true;
       try {
         eventBus.emit(DESKTOP_VIEW_DISCOVER, {});
-        eventBus.emit(HEADER_BADGE_DISCOVER, {});
+        eventBus.emit(SURFACE_CONTRIBUTION_DISCOVER, {});
       } finally {
         discovering = false;
       }
@@ -128,7 +130,7 @@ export function createDesktopExtensionBridge(options: {
       const epoch = active;
       active = undefined;
       declarations.clear();
-      badges.clear();
+      contributions.clear();
       if (!epoch) return;
       notify(() => options.observer.onInvalidated(epoch));
     });
@@ -153,9 +155,11 @@ export function createDesktopExtensionBridge(options: {
   };
 }
 
-function isHeaderBadgeRegistration(value: unknown): value is HeaderBadgeRegistrationEvent {
-  if (typeof value !== "object" || value === null || !("badge" in value)) return false;
-  if (!isHeaderBadgeDeclaration(value.badge)) return false;
+function isContributionRegistration(
+  value: unknown,
+): value is SurfaceContributionRegistrationEvent {
+  if (typeof value !== "object" || value === null || !("contribution" in value)) return false;
+  if (!canonicalSurfaceContribution(value.contribution)) return false;
   return !("accept" in value) || value.accept === undefined || typeof value.accept === "function";
 }
 

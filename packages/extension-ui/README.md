@@ -26,6 +26,25 @@ export default function extension(pi) {
 }
 ```
 
+## Host-rendered surfaces
+
+`registerHeaderBadge`, `registerSidebarSection`, `registerSidebarFooter`,
+`registerComposerBefore`, `registerComposerAfter`, and `registerStatusChrome`
+contribute a label to the conversation header, a section in the primary sidebar
+body, the sidebar footer, the area before the composer, the area after the
+composer, or the topbar status chrome. Each takes a stable `id`,
+visible `text`, an optional semantic `tone` (`default`, `accent`, `success`,
+`warning`, `error`, or `muted`), and an optional integer `order`. Omitted tone
+is `default`. Omitted order is `0`. Lower orders render first, and equal orders
+use the id. The same id on different surfaces is independent. A later
+registration with the same id on the same surface replaces text, tone, and
+order.
+
+The extension supplies no HTML, CSS, class names, or colors. Pi Garden renders
+the contribution and maps the tone onto the active theme. Discovery replays the
+registration. Session shutdown removes it. Terminal Pi reports
+`available === false`.
+
 `registerDesktopView` returns an object with `available` and `dispose()`. Terminal
 Pi reports `available === false`. Availability acknowledges discovery; the desktop
 validates the loaded extension source and browser assets before activating the

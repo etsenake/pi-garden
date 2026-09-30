@@ -1,11 +1,11 @@
 import { desktopIpc } from "../../contracts/ipc";
-import type { HeaderBadgeOwner } from "../extensions/header-badge-owner";
+import type { SurfaceRegistry } from "../extensions/surface-registry";
 import type { MainFrameHandler } from "./main-frame-ipc";
 import { expectSessionTarget } from "./request-validation";
 
-export function registerHeaderBadgeRequests(
+export function registerSurfaceContributionRequests(
   handle: MainFrameHandler,
-  owner: HeaderBadgeOwner,
+  registry: SurfaceRegistry,
 ): void {
   const senders = new Map<number, Electron.WebContents>();
   const track = (contents: Electron.WebContents) => {
@@ -17,15 +17,16 @@ export function registerHeaderBadgeRequests(
     }
     return contents;
   };
-  owner.subscribe((target) => {
-    const badges = owner.list(target);
+  registry.subscribe((target) => {
+    const contributions = registry.list(target);
     for (const contents of senders.values()) {
-      if (!contents.isDestroyed())
-        contents.send(desktopIpc.headerBadgesChanged, { target, badges });
+      if (!contents.isDestroyed()) {
+        contents.send(desktopIpc.surfaceContributionsChanged, { target, contributions });
+      }
     }
   });
-  handle(desktopIpc.listHeaderBadges, expectSessionTarget, (target, request) => {
+  handle(desktopIpc.listSurfaceContributions, expectSessionTarget, (target, request) => {
     track(request.contents);
-    return owner.list(target);
+    return registry.list(target);
   });
 }

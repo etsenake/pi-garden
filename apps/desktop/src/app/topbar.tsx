@@ -1,14 +1,16 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
-import type { HeaderBadgePresentation } from "../../contracts/header-badges";
+import type { SurfaceContributionPresentation } from "../../contracts/surface-contributions";
 import type { AppView, WorkspaceRecord, WorktreeRecord } from "../../contracts/desktop-state";
 import { HeaderBadges } from "../features/extensions/header-badges";
+import { StatusChromeContributions } from "../features/extensions/host-contributions";
 import { getSidePanelToggleShortcutLabel, type PiDesktopApi } from "../../contracts/ipc";
 import { SidePanelIcon } from "../ui/icons";
 
 interface TopbarProps {
   readonly activeView: AppView;
   readonly sessionTitle?: string;
-  readonly headerBadges?: readonly HeaderBadgePresentation[];
+  readonly headerBadges?: readonly SurfaceContributionPresentation[];
+  readonly statusContributions?: readonly SurfaceContributionPresentation[];
   readonly children?: ReactNode;
   readonly rootWorkspace: WorkspaceRecord | undefined;
   readonly selectedWorkspace: WorkspaceRecord | undefined;
@@ -23,6 +25,7 @@ export function Topbar({
   activeView,
   sessionTitle,
   headerBadges = [],
+  statusContributions = [],
   children,
   rootWorkspace,
   selectedWorkspace,
@@ -74,6 +77,7 @@ export function Topbar({
         ) : null}
       </div>
       <div className="topbar__actions">
+        <StatusChromeContributions contributions={statusContributions} />
         {children}
         {!panelVisible ? (
           <div className="shortcut-tooltip-wrap topbar__tooltip-wrap">

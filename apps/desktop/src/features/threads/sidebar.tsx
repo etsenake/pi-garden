@@ -29,6 +29,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import type { SurfaceContributionPresentation } from "../../../contracts/surface-contributions";
 import type {
   AppView,
   SessionRecord,
@@ -36,6 +37,8 @@ import type {
   WorkspaceRecord,
   WorktreeRecord,
 } from "../../../contracts/desktop-state";
+import { SidebarSectionContributions } from "../extensions/host-contributions";
+import { SidebarFooter } from "../extensions/sidebar-footer";
 import {
   ArchiveIcon,
   CheckIcon,
@@ -108,6 +111,8 @@ interface SidebarProps {
   ) => void;
   readonly onUnarchiveSession: (target: { workspaceId: string; sessionId: string }) => void;
   readonly threadShortcutOrderRef: MutableRefObject<readonly ThreadListEntry[] | null>;
+  readonly sidebarFooter?: readonly SurfaceContributionPresentation[];
+  readonly sidebarSection?: readonly SurfaceContributionPresentation[];
 }
 
 const SIDEBAR_WIDTH_RANGE = { min: 200, max: 520 } as const;
@@ -154,6 +159,8 @@ export function Sidebar(props: SidebarProps) {
     onSetSessionPinned,
     onUnarchiveSession,
     threadShortcutOrderRef,
+    sidebarFooter = [],
+    sidebarSection = [],
   } = props;
 
   const [sidebarWidth, setSidebarWidth] = usePersistedPaneWidth(
@@ -638,6 +645,8 @@ export function Sidebar(props: SidebarProps) {
           </DndContext>
         )}
       </div>
+      <SidebarSectionContributions contributions={sidebarSection} />
+      <SidebarFooter contributions={sidebarFooter} />
     </aside>
   );
 }

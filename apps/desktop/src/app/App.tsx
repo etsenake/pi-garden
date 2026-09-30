@@ -31,7 +31,7 @@ import {
   type ExtensionViewTheme,
 } from "../features/extensions/extension-view-panel";
 import { useExtensionViews } from "../features/extensions/use-extension-views";
-import { useHeaderBadges } from "../features/extensions/use-header-badges";
+import { useSurfaceContributions } from "../features/extensions/use-surface-contributions";
 import { useExtensionHostActions } from "../features/extensions/use-extension-host-actions";
 import { useSidePanelTabHintsVisible } from "../features/workbench/side-panel-tab-hints";
 import { Workbench } from "../features/workbench/workbench";
@@ -217,7 +217,25 @@ export default function App() {
     flushComposerDraftAsync,
   } = useComposerDraftSync({ api, snapshot, selectedSession: workbenchTarget });
   const extensionViews = useExtensionViews({ api, target: workbenchTarget });
-  const headerBadges = useHeaderBadges({ api, target: workbenchTarget });
+  const surfaceContributions = useSurfaceContributions({ api, target: workbenchTarget });
+  const headerBadges = surfaceContributions.filter(
+    (contribution) => contribution.surface === "conversation-header",
+  );
+  const sidebarFooter = surfaceContributions.filter(
+    (contribution) => contribution.surface === "sidebar-footer",
+  );
+  const sidebarSection = surfaceContributions.filter(
+    (contribution) => contribution.surface === "sidebar-section",
+  );
+  const composerBefore = surfaceContributions.filter(
+    (contribution) => contribution.surface === "composer-before",
+  );
+  const composerAfter = surfaceContributions.filter(
+    (contribution) => contribution.surface === "composer-after",
+  );
+  const statusChrome = surfaceContributions.filter(
+    (contribution) => contribution.surface === "status-chrome",
+  );
   const workbench = useWorkbench({ api, target: workbenchTarget });
   // Tracked while the panel is closed too, so a chord that opens it shows the hints.
   const sidePanelTabHintsVisible = useSidePanelTabHintsVisible(api?.platform ?? "linux");
@@ -922,6 +940,8 @@ export default function App() {
           onSelectSession={handleSelectSession}
           onSetSessionPinned={threadMenu.setPinned}
           onUnarchiveSession={threadMenu.restore}
+          sidebarFooter={selectedSession ? sidebarFooter : []}
+          sidebarSection={selectedSession ? sidebarSection : []}
         />
       ) : null}
 
@@ -944,6 +964,9 @@ export default function App() {
           }
           headerBadges={
             snapshot.activeView === "threads" && selectedSession ? headerBadges : undefined
+          }
+          statusContributions={
+            snapshot.activeView === "threads" && selectedSession ? statusChrome : undefined
           }
         >
           {snapshot.activeView === "threads" && selectedWorkspace && selectedSession ? (
@@ -1166,6 +1189,8 @@ export default function App() {
                 }
                 onSubmit={submitComposerDraft}
                 onStop={stopCurrentRun}
+                composerBefore={composerBefore}
+                composerAfter={composerAfter}
                 selectedSession={selectedSession}
                 lastError={snapshot.lastError}
                 selectedSlashCommand={

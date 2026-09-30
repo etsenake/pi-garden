@@ -27,7 +27,7 @@ import {
   DesktopExtensionViewOwner,
   DESKTOP_EXTENSION_SCHEME,
 } from "./extensions/extension-view-owner";
-import { HeaderBadgeOwner } from "./extensions/header-badge-owner";
+import { SurfaceRegistry } from "./extensions/surface-registry";
 import { performExtensionViewHostAction } from "./extensions/extension-view-actions";
 import { extensionFrameDocument } from "./extensions/extension-frame-document";
 import { ReviewOwner } from "./workbench/review-owner";
@@ -907,7 +907,7 @@ app
         console.error("[extension-view]", target.sessionId, source, message),
     });
     extensionViewOwner = extensionViews;
-    const headerBadges = new HeaderBadgeOwner();
+    const surfaceRegistry = new SurfaceRegistry();
     protocol.handle(DESKTOP_EXTENSION_SCHEME, (request) =>
       extensionViews.assetResponse(request.url),
     );
@@ -920,11 +920,11 @@ app
       turnCaptureTimeoutMs: TURN_CAPTURE_BACKSTOP_MS,
       desktopExtensions: {
         onChanged: (runtime) => {
-          headerBadges.replaceRuntime(runtime);
+          surfaceRegistry.replaceRuntime(runtime);
           return extensionViews.replaceRuntime(runtime);
         },
         onInvalidated: ({ target, generation }) => {
-          headerBadges.invalidateRuntime(target, generation);
+          surfaceRegistry.invalidateRuntime(target, generation);
           return extensionViews.invalidateRuntime(target, generation);
         },
       },
@@ -1058,7 +1058,7 @@ app
         state: store,
         workbench: store,
         extensionViews,
-        headerBadges,
+        surfaceRegistry,
         review: new ReviewOwner({
           checkpoints,
           userDataDir: app.getPath("userData"),

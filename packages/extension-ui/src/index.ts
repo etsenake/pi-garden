@@ -34,137 +34,40 @@ export interface DesktopViewRegistration {
   dispose(): void;
 }
 
-export const HEADER_BADGE_REGISTER = "pi-garden:header-badge:register";
-export const HEADER_BADGE_DISCOVER = "pi-garden:header-badge:discover";
-export const HEADER_BADGE_UNREGISTER = "pi-garden:header-badge:unregister";
-
-/** Lowercase identifier, at most 64 characters. Shared by authors and the host. */
-export const HEADER_BADGE_ID_PATTERN = /^[a-z][a-z0-9._-]{0,63}$/;
-
-export const HEADER_BADGE_TEXT_MAX = 32;
-
-/** Semantic tones the host maps onto the active theme. Not colors or class names. */
-export const HEADER_BADGE_TONES = [
-  "default",
-  "accent",
-  "success",
-  "warning",
-  "error",
-  "muted",
-] as const;
-
-export type HeaderBadgeTone = (typeof HEADER_BADGE_TONES)[number];
-
-/** Host-rendered label. The extension supplies no markup or code. */
-export interface HeaderBadgeDeclaration {
-  readonly id: string;
-  readonly text: string;
-  /** Omitted tone is presented as `default`. */
-  readonly tone?: HeaderBadgeTone;
-}
-
-export interface HeaderBadgeRegistrationEvent {
-  readonly badge: HeaderBadgeDeclaration;
-  /** Acknowledges discovery only. */
-  readonly accept?: () => void;
-}
-
-export interface HeaderBadgeRegistration {
-  /** Whether a desktop host acknowledged this badge; false in terminal Pi. */
-  readonly available: boolean;
-  dispose(): void;
-}
-
-export function isHeaderBadgeTone(value: unknown): value is HeaderBadgeTone {
-  return typeof value === "string" && (HEADER_BADGE_TONES as readonly string[]).includes(value);
-}
-
-export function isHeaderBadgeDeclaration(value: unknown): value is HeaderBadgeDeclaration {
-  if (typeof value !== "object" || value === null) return false;
-  if (!("id" in value) || !("text" in value)) return false;
-  for (const key of Object.keys(value)) {
-    if (key !== "id" && key !== "text" && key !== "tone") return false;
-  }
-  const { id, text } = value;
-  if (typeof id !== "string" || typeof text !== "string" || !isHeaderBadgeContent(id, text)) {
-    return false;
-  }
-  return !("tone" in value) || isHeaderBadgeTone(value.tone);
-}
-
-function isHeaderBadgeContent(id: string, text: string): boolean {
-  return HEADER_BADGE_ID_PATTERN.test(id) && isHeaderBadgeText(text);
-}
-
-function isHeaderBadgeText(text: string): boolean {
-  return (
-    text.length >= 1 &&
-    text.length <= HEADER_BADGE_TEXT_MAX &&
-    text === text.trim() &&
-    !/[\u0000-\u001F\u007F]/.test(text)
-  );
-}
-
-/**
- * Registers one host-rendered conversation-header badge.
- * Discovery replays the same declaration; session shutdown unregisters it.
- */
-export function registerHeaderBadge(
-  pi: DesktopExtensionAPI,
-  badge: HeaderBadgeDeclaration,
-): HeaderBadgeRegistration {
-  for (const key of Object.keys(badge)) {
-    if (key !== "id" && key !== "text" && key !== "tone") {
-      throw new TypeError("Header badge only accepts id, text, and an optional tone");
-    }
-  }
-  const text = badge.text.trim();
-  if (!HEADER_BADGE_ID_PATTERN.test(badge.id)) {
-    throw new TypeError("Header badge ID must be a lowercase identifier of at most 64 characters");
-  }
-  if (!isHeaderBadgeText(text)) {
-    throw new TypeError(
-      `Header badge text must contain 1 to ${HEADER_BADGE_TEXT_MAX} visible characters`,
-    );
-  }
-  if (badge.tone !== undefined && !isHeaderBadgeTone(badge.tone)) {
-    throw new TypeError(
-      "Header badge tone must be default, accent, success, warning, error, or muted",
-    );
-  }
-  const declaration: HeaderBadgeDeclaration = {
-    id: badge.id,
-    text,
-    tone: badge.tone ?? "default",
-  };
-  let available = false;
-  let disposed = false;
-  const publish = () => {
-    if (disposed) return;
-    pi.events.emit(HEADER_BADGE_REGISTER, {
-      badge: declaration,
-      accept: () => {
-        if (!disposed) available = true;
-      },
-    } satisfies HeaderBadgeRegistrationEvent);
-  };
-  const stopDiscovery = pi.events.on(HEADER_BADGE_DISCOVER, publish);
-  const registration: HeaderBadgeRegistration = {
-    get available() {
-      return available;
-    },
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      available = false;
-      stopDiscovery();
-      pi.events.emit(HEADER_BADGE_UNREGISTER, declaration);
-    },
-  };
-  pi.on("session_shutdown", () => registration.dispose());
-  publish();
-  return registration;
-}
+export {
+  SURFACE_CONTRIBUTION_DISCOVER,
+  SURFACE_CONTRIBUTION_ID_PATTERN,
+  SURFACE_CONTRIBUTION_REGISTER,
+  SURFACE_CONTRIBUTION_SURFACES,
+  SURFACE_CONTRIBUTION_TEXT_MAX,
+  SURFACE_CONTRIBUTION_TONES,
+  SURFACE_CONTRIBUTION_UNREGISTER,
+  canonicalSurfaceContribution,
+  compareSurfaceContributions,
+  isSurfaceContributionSurface,
+  isSurfaceContributionTone,
+  normalizeSurfaceContribution,
+  registerComposerAfter,
+  registerComposerBefore,
+  registerHeaderBadge,
+  registerSidebarFooter,
+  registerSidebarSection,
+  registerStatusChrome,
+  surfaceContributionKey,
+} from "./surface-contributions.js";
+export type {
+  HeaderBadgeDeclaration,
+  HeaderBadgeRegistration,
+  HeaderBadgeTone,
+  HostContributionInput,
+  SidebarFooterDeclaration,
+  SidebarSectionDeclaration,
+  SurfaceContribution,
+  SurfaceContributionRegistration,
+  SurfaceContributionRegistrationEvent,
+  SurfaceContributionSurface,
+  SurfaceContributionTone,
+} from "./surface-contributions.js";
 
 /** Registers and replays the same declaration without re-running its backend factory. */
 export function registerDesktopView(

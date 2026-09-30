@@ -35,7 +35,7 @@
   /* A remembered width never crowds out the main area on a smaller window. */
   width: min(var(--sidebar-width), 45vw);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   overflow: hidden;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
@@ -47,6 +47,7 @@
 
 .sidebar__top,
 .sidebar__section,
+.sidebar__host-section,
 .sidebar__footer {
   padding: 12px;
 }
@@ -911,8 +912,75 @@
   padding-left: 0;
 }
 
+.sidebar__host-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar__host-section .host-contribution {
+  max-width: 100%;
+}
+
 .sidebar__footer {
   border-top: 1px solid var(--line);
+}
+
+.sidebar-footer-contributions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sidebar-footer-contribution {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted-strong);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 16px;
+}
+
+.sidebar-footer-contribution[data-tone="accent"] {
+  border-color: var(--accent-tint-border);
+  background: var(--accent-tint-bg);
+  color: var(--accent);
+}
+
+.sidebar-footer-contribution[data-tone="success"] {
+  border-color: color-mix(in srgb, var(--success) 28%, transparent);
+  background: var(--success-tint-bg);
+  color: var(--success);
+}
+
+.sidebar-footer-contribution[data-tone="warning"] {
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+}
+
+.sidebar-footer-contribution[data-tone="error"] {
+  border-color: var(--danger-tint-border);
+  background: var(--danger-tint-bg);
+  color: var(--error-ink);
+}
+
+.sidebar-footer-contribution[data-tone="muted"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
 }
 
 .sidebar__settings {

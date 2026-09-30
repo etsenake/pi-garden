@@ -52,7 +52,7 @@ await test(
       extensionPath,
       `
 import { appendFileSync } from "node:fs";
-import { registerDesktopView, registerHeaderBadge } from ${JSON.stringify(helperPath)};
+import { registerDesktopView, registerHeaderBadge, registerSidebarFooter } from ${JSON.stringify(helperPath)};
 export default function extension(pi) {
   appendFileSync(${JSON.stringify(factoryLog)}, "factory\\n");
   let value = 0;
@@ -62,8 +62,11 @@ export default function extension(pi) {
     backend: () => ({ id: "counter-" + (++value), setup() {} }),
   });
   registerHeaderBadge(pi, { id: "garden", text: "Old", tone: "success" });
-  const badge = registerHeaderBadge(pi, { id: "garden", text: "Garden", tone: "warning" });
-  if (!registration.available || !badge.available) {
+  const badge = registerHeaderBadge(pi, { id: "garden", text: "Garden", tone: "warning", order: 2 });
+  registerHeaderBadge(pi, { id: "alpha", text: "Alpha" });
+  const footer = registerSidebarFooter(pi, { id: "garden", text: "Side", order: -1 });
+  registerSidebarFooter(pi, { id: "note", text: "Note" });
+  if (!registration.available || !badge.available || !footer.available) {
     throw new Error("Desktop bootstrap did not acknowledge registration");
   }
 }
@@ -107,11 +110,34 @@ export default function extension(pi) {
     assert.ok(changed[0]!.extensions.some(({ resolvedPath }) => resolvedPath === extensionPath));
     assert.equal(changed[0]!.declarations.length, 1);
     assert.deepEqual(
-      changed[0]!.badges.map((badge) => ({ id: badge.id, text: badge.text, tone: badge.tone })),
-      [{ id: "garden", text: "Garden", tone: "warning" }],
+      changed[0]!.contributions.map((contribution) => ({
+        id: contribution.id,
+        surface: contribution.surface,
+        text: contribution.text,
+        tone: contribution.tone,
+        order: contribution.order,
+      })),
+      [
+        {
+          id: "alpha",
+          surface: "conversation-header",
+          text: "Alpha",
+          tone: "default",
+          order: 0,
+        },
+        {
+          id: "garden",
+          surface: "conversation-header",
+          text: "Garden",
+          tone: "warning",
+          order: 2,
+        },
+        { id: "garden", surface: "sidebar-footer", text: "Side", tone: "default", order: -1 },
+        { id: "note", surface: "sidebar-footer", text: "Note", tone: "default", order: 0 },
+      ],
     );
     const first = changed[0]!.declarations[0]!;
-    const firstBadge = changed[0]!.badges[0]!;
+    const firstContribution = changed[0]!.contributions[0]!;
     assert.equal(first.backend().id, "counter-1");
     assert.equal(first.backend().id, "counter-2", "declaration retains one Pi extension closure");
     assert.equal(await readFile(factoryLog, "utf8"), "factory\n");
@@ -122,12 +148,24 @@ export default function extension(pi) {
     const newest = changed.at(-1)!;
     assert.notEqual(newest.generation, changed[0]!.generation);
     assert.equal(newest.declarations.length, 1);
-    assert.equal(newest.badges.length, 1);
+    assert.equal(newest.contributions.length, 4);
     assert.deepEqual(
-      newest.badges.map((badge) => ({ id: badge.id, text: badge.text, tone: badge.tone })),
-      [{ id: "garden", text: "Garden", tone: "warning" }],
+      newest.contributions.map((contribution) => ({
+        id: contribution.id,
+        surface: contribution.surface,
+        text: contribution.text,
+        tone: contribution.tone,
+        order: contribution.order,
+      })),
+      changed[0]!.contributions.map((contribution) => ({
+        id: contribution.id,
+        surface: contribution.surface,
+        text: contribution.text,
+        tone: contribution.tone,
+        order: contribution.order,
+      })),
     );
-    assert.notEqual(newest.badges[0], firstBadge);
+    assert.notEqual(newest.contributions[0], firstContribution);
     assert.notEqual(newest.declarations[0], first);
     assert.equal(newest.declarations[0]!.backend().id, "counter-1");
     assert.equal(await readFile(factoryLog, "utf8"), "factory\nfactory\n");
