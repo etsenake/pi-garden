@@ -100,6 +100,7 @@ import {
   createUnsupportedHostUiError,
   parseUnsupportedHostUiErrorMessage,
 } from "./unsupported-host-ui.js";
+import { attributeExtensionCallSite } from "./extension-call-attribution.js";
 import { normalizeRuntimeCommandName, skillCommandName } from "./runtime-command-utils.js";
 import {
   buildSnapshot,
@@ -193,6 +194,8 @@ export interface PiSdkDriverOptions {
   ) => Promise<AgentSessionRuntime>;
   readonly agentDir?: string;
   readonly builtinExtensions?: readonly BuiltinExtension[];
+  /** Skill directories pi-garden ships; Pi loads them next to user and project skills. */
+  readonly builtinSkillPaths?: readonly string[];
   /** Read each time a session loads or reloads its extensions; defaults to enabled. */
   readonly isBuiltinExtensionEnabled?: BuiltinExtensionEnabled;
   readonly desktopExtensions?: PiDesktopExtensionObserver;
@@ -260,6 +263,12 @@ interface ManagedSessionRecord {
   transcriptDiskMtimeMs: number | undefined;
   /** Terminal editor factory retained for getEditorComponent. Never invoked. */
   editorComponentFactory: Parameters<ExtensionUIContext["setEditorComponent"]>[0];
+  /**
+   * Terminal-only `ctx.ui` calls seen since the current extension binding, replayed to
+   * late subscribers the way extension UI state is: most land in `session_start`,
+   * before the desktop has subscribed to the new session.
+   */
+  terminalUiObservations: Extract<SessionDriverEvent, { type: "extensionUiCapabilityObserved" }>[];
   autocompleteFactories: AutocompleteProviderFactory[];
   autocompleteEpoch: number;
   autocompleteBuiltEpoch: number;
@@ -267,6 +276,8 @@ interface ManagedSessionRecord {
   autocompleteAbort: AbortController | undefined;
   autocompleteRequest: number;
 }
+
+const TERMINAL_UI_OBSERVATION_LIMIT = 64;
 
 interface RegisteredCommandAdapter {
   readonly name: string;
@@ -324,6 +335,7 @@ export class SessionSupervisor {
   ) => Promise<AgentSessionRuntime>;
   private readonly agentDir: string | undefined;
   private readonly builtinExtensions: readonly InlineExtension[];
+  private readonly builtinSkillPaths: readonly string[];
   private readonly desktopExtensions: PiDesktopExtensionObserver | undefined;
   private readonly hostEditor: PiHostEditor | undefined;
   private readonly hostTheme: HostThemePort | undefined;
@@ -354,6 +366,7 @@ export class SessionSupervisor {
       options.builtinExtensions ?? [],
       options.isBuiltinExtensionEnabled ?? (() => true),
     );
+    this.builtinSkillPaths = options.builtinSkillPaths ?? [];
     this.desktopExtensions = options.desktopExtensions;
     this.hostEditor = options.hostEditor;
     this.hostTheme = options.hostTheme;
@@ -378,6 +391,7 @@ export class SessionSupervisor {
       cwd: workspace.path,
       sessionManager,
       resourceLoaderOptions: {
+        additionalSkillPaths: [...this.builtinSkillPaths],
         extensionFactories: [
           ...this.builtinExtensions,
           {
@@ -1597,6 +1611,7 @@ export class SessionSupervisor {
       leasePath: undefined,
       transcriptDiskMtimeMs: undefined,
       editorComponentFactory: undefined,
+      terminalUiObservations: [],
       autocompleteFactories: [],
       autocompleteEpoch: 0,
       autocompleteBuiltEpoch: -1,
@@ -1808,6 +1823,7 @@ export class SessionSupervisor {
     });
     record.bindingExtensions = true;
     record.editorComponentFactory = undefined;
+    record.terminalUiObservations = [];
     record.autocompleteFactories = [];
     record.autocompleteEpoch += 1;
     record.autocompleteProvider = undefined;
@@ -2063,7 +2079,11 @@ export class SessionSupervisor {
           ...(level ? { level } : {}),
         });
       },
-      onTerminalInput: () => () => {},
+      onTerminalInput: () => {
+        // Raw terminal input never reaches a desktop host; the handler is never called.
+        this.observeTerminalUiCapability(record, "onTerminalInput");
+        return () => {};
+      },
       setStatus: (key, text) => {
         this.emitHostUiRequest(record, {
           kind: "status",
@@ -2126,10 +2146,16 @@ export class SessionSupervisor {
             ...(lines ? { lines } : {}),
             placement: options?.placement === "belowEditor" ? "belowComposer" : "aboveComposer",
           });
+        } else {
+          this.observeTerminalUiCapability(record, "setWidget:component");
         }
       },
-      setFooter: () => {},
-      setHeader: () => {},
+      setFooter: () => {
+        this.observeTerminalUiCapability(record, "setFooter");
+      },
+      setHeader: () => {
+        this.observeTerminalUiCapability(record, "setHeader");
+      },
       setTitle: (title) => {
         this.emitHostUiRequest(record, {
           kind: "title",
@@ -2142,6 +2168,7 @@ export class SessionSupervisor {
       // while uncaught command paths fail fast and are surfaced cleanly by
       // the desktop host.
       custom: async () => {
+        this.observeTerminalUiCapability(record, "custom");
         throw createUnsupportedHostUiError("custom");
       },
       pasteToEditor: (text) => {
@@ -2184,6 +2211,7 @@ export class SessionSupervisor {
       setEditorComponent: (factory) => {
         // The terminal factory stays available to getEditorComponent and is never called.
         record.editorComponentFactory = factory;
+        if (factory) this.observeTerminalUiCapability(record, "setEditorComponent");
       },
       getEditorComponent: () => record.editorComponentFactory,
       addAutocompleteProvider: (factory) => {
@@ -2305,6 +2333,39 @@ export class SessionSupervisor {
     });
   }
 
+  /**
+   * Records a live call into a terminal-only `ctx.ui` member as runtime
+   * evidence for the desktop compatibility inventory. Pi shares one context
+   * across extensions, so the caller is attributed from the stack when a
+   * loaded extension file is on it.
+   */
+  private observeTerminalUiCapability(
+    record: ManagedSessionRecord,
+    capability: Extract<
+      SessionDriverEvent,
+      { type: "extensionUiCapabilityObserved" }
+    >["observation"]["capability"],
+  ): void {
+    const loaded = record.session?.resourceLoader.getExtensions().extensions ?? [];
+    const extensionPath = attributeExtensionCallSite(
+      new Error().stack,
+      loaded.map((extension) => ({
+        resolvedPath: extension.resolvedPath,
+        ...(extension.sourceInfo.baseDir ? { baseDir: extension.sourceInfo.baseDir } : {}),
+      })),
+    );
+    const event: Extract<SessionDriverEvent, { type: "extensionUiCapabilityObserved" }> = {
+      type: "extensionUiCapabilityObserved",
+      sessionRef: record.ref,
+      timestamp: nowIso(),
+      observation: { capability, ...(extensionPath ? { extensionPath } : {}) },
+    };
+    record.terminalUiObservations = [...record.terminalUiObservations, event].slice(
+      -TERMINAL_UI_OBSERVATION_LIMIT,
+    );
+    this.queueDriverEvents(record, [event], { persistSnapshot: false });
+  }
+
   private emitExtensionCompatibilityIssue(
     record: ManagedSessionRecord,
     issue: Extract<SessionDriverEvent, { type: "extensionCompatibilityIssue" }>["issue"],
@@ -2359,6 +2420,9 @@ export class SessionSupervisor {
       void Promise.resolve(
         listener({ type: "hostUiRequest", sessionRef: record.ref, timestamp, request }),
       ).catch(() => {});
+    }
+    for (const observation of record.terminalUiObservations) {
+      void Promise.resolve(listener({ ...observation, sessionRef: record.ref })).catch(() => {});
     }
   }
 

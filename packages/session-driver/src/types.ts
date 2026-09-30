@@ -245,6 +245,25 @@ export interface ExtensionCompatibilityIssue {
   readonly eventName?: string;
 }
 
+/** Terminal-only `ctx.ui` members the desktop host observes without serving. */
+export type ExtensionTerminalUiCapability =
+  | "onTerminalInput"
+  | "setWidget:component"
+  | "setHeader"
+  | "setFooter"
+  | "custom"
+  | "setEditorComponent";
+
+/**
+ * One live call into a terminal-only `ctx.ui` member. The extension is
+ * attributed from the call site when a loaded extension file appears on the
+ * stack; otherwise the observation stays unattributed rather than guessed.
+ */
+export interface ExtensionUiCapabilityObservation {
+  readonly capability: ExtensionTerminalUiCapability;
+  readonly extensionPath?: string;
+}
+
 export interface RunFailedEvent extends SessionEventBase {
   readonly type: "runFailed";
   readonly error: SessionErrorInfo;
@@ -391,6 +410,11 @@ export interface ExtensionCompatibilityIssueEvent extends SessionEventBase {
   readonly issue: ExtensionCompatibilityIssue;
 }
 
+export interface ExtensionUiCapabilityObservedEvent extends SessionEventBase {
+  readonly type: "extensionUiCapabilityObserved";
+  readonly observation: ExtensionUiCapabilityObservation;
+}
+
 export interface SessionClosedEvent extends SessionEventBase {
   readonly type: "sessionClosed";
   readonly reason: "manual" | "ended" | "failed";
@@ -410,6 +434,7 @@ export type SessionDriverEvent =
   | RunFailedEvent
   | HostUiRequestEvent
   | ExtensionCompatibilityIssueEvent
+  | ExtensionUiCapabilityObservedEvent
   | SessionClosedEvent;
 
 export type SessionEventListener = (event: SessionDriverEvent) => void | Promise<void>;

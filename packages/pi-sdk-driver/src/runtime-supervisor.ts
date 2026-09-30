@@ -92,6 +92,8 @@ interface RuntimeContext {
 export interface RuntimeSupervisorOptions {
   readonly agentDir?: string;
   readonly builtinExtensions?: readonly BuiltinExtension[];
+  /** Skill directories pi-garden ships; Pi loads them next to user and project skills. */
+  readonly builtinSkillPaths?: readonly string[];
   readonly isBuiltinExtensionEnabled?: BuiltinExtensionEnabled;
   readonly customProviderStore?: CustomProviderStore;
 }
@@ -109,6 +111,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
   private readonly modelsJsonPath: string;
   private readonly authPath: string;
   private readonly builtinExtensions: readonly BuiltinExtension[];
+  private readonly builtinSkillPaths: readonly string[];
   private readonly isBuiltinExtensionEnabled: BuiltinExtensionEnabled;
   private readonly customProviderStore: CustomProviderStore;
   private readonly contexts = new Map<string, RuntimeContext>();
@@ -119,6 +122,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     this.modelsJsonPath = deps.modelsJsonPath;
     this.authPath = deps.authPath;
     this.builtinExtensions = options.builtinExtensions ?? [];
+    this.builtinSkillPaths = options.builtinSkillPaths ?? [];
     this.isBuiltinExtensionEnabled = options.isBuiltinExtensionEnabled ?? (() => true);
     this.customProviderStore = deps.customProviderStore;
   }
@@ -436,6 +440,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       agentDir: this.agentDir,
       settingsManager,
       extensionFactories: this.inventoryExtensionFactories(),
+      additionalSkillPaths: [...this.builtinSkillPaths],
     });
     try {
       await resourceLoader.reload();
@@ -466,6 +471,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
         agentDir: this.agentDir,
         settingsManager,
         extensionFactories: this.inventoryExtensionFactories(),
+        additionalSkillPaths: [...this.builtinSkillPaths],
       });
       await resourceLoader.reload();
     }
@@ -1087,8 +1093,10 @@ async function inferExtensionPackageMetadata(
   return undefined;
 }
 
+/** `foo.ts` → `foo`; a directory extension `foo/index.ts` is named by its directory. */
 function inferExtensionEntryName(filePath: string): string {
-  return basename(filePath).replace(/\.(c|m)?(t|j)sx?$/i, "");
+  const name = basename(filePath).replace(/\.(c|m)?(t|j)sx?$/i, "");
+  return name === "index" ? basename(dirname(filePath)) || name : name;
 }
 
 async function inferPackageMetadata(

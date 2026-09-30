@@ -67,6 +67,7 @@ function makeHarness(
     sessionCommands: [],
     leasePath: undefined,
     transcriptDiskMtimeMs: undefined,
+    terminalUiObservations: [] as Emitted[],
   };
   const supervisor = new SessionSupervisor({
     catalogStorage: {
@@ -81,9 +82,11 @@ function makeHarness(
     ) => import("@earendil-works/pi-coding-agent").ExtensionUIContext;
     ensureRecord: (ref: unknown) => Promise<unknown>;
     respondToHostUiRequest: (ref: unknown, response: Record<string, unknown>) => Promise<void>;
+    subscribe: (ref: unknown, listener: (event: Emitted) => void) => () => void;
     records: Map<string, unknown>;
   };
   supervisor.records.set("ws-1::sess-1", record);
+  supervisor.records.set("ws-1:sess-1", record);
   supervisor.ensureRecord = async () => record;
   const ui = supervisor.createExtensionUiContext(record);
   const requests = () => emitted.flatMap((event) => (event.request ? [event.request] : []));
@@ -97,7 +100,7 @@ function makeHarness(
       ...response,
     });
   };
-  return { ui, record, emitted, requests, lastRequest, answer };
+  return { ui, record, emitted, requests, lastRequest, answer, supervisor };
 }
 
 await test("select/confirm/input/editor return the host's answer with Pi's types", async () => {
@@ -376,4 +379,83 @@ await test("theme members read and switch the desktop catalog", async () => {
   assert.equal(unrepresentable.success, false);
   assert.match(unrepresentable.error ?? "", /cannot be represented/);
   assert.equal(h.ui.theme.name, "default");
+});
+
+await test("terminal-only ctx.ui members report an observation instead of doing terminal work", async () => {
+  const h = makeHarness();
+  const component = () => ({ render: () => [], invalidate: () => {} });
+
+  const off = h.ui.onTerminalInput(() => undefined);
+  assert.equal(typeof off, "function");
+  h.ui.setWidget("panel", component);
+  h.ui.setHeader(component);
+  h.ui.setFooter(component);
+  h.ui.setEditorComponent(component as never);
+  await assert.rejects(h.ui.custom(component as never), /custom/);
+  await h.record.eventQueue;
+
+  const observed = h.emitted
+    .filter((event) => event.type === "extensionUiCapabilityObserved")
+    .map(
+      (event) =>
+        (event as unknown as { observation: { capability: string; extensionPath?: string } })
+          .observation,
+    );
+  assert.deepEqual(
+    observed.map((observation) => observation.capability),
+    [
+      "onTerminalInput",
+      "setWidget:component",
+      "setHeader",
+      "setFooter",
+      "setEditorComponent",
+      "custom",
+    ],
+  );
+  // No extension is loaded in this harness, so nothing is guessed.
+  assert.ok(observed.every((observation) => observation.extensionPath === undefined));
+  // The text form of setWidget stays a served host request, not an observation.
+  h.ui.setWidget("lines", ["a", "b"]);
+  await h.record.eventQueue;
+  assert.equal(h.lastRequest()?.kind, "widget");
+
+  // A subscriber that arrives after session_start still learns what was observed.
+  const replayed: Emitted[] = [];
+  h.supervisor.subscribe(h.record.ref, (event) => replayed.push(event));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(
+    replayed
+      .filter((event) => event.type === "extensionUiCapabilityObserved")
+      .map(
+        (event) =>
+          (event as unknown as { observation: { capability: string } }).observation.capability,
+      ),
+    [
+      "onTerminalInput",
+      "setWidget:component",
+      "setHeader",
+      "setFooter",
+      "setEditorComponent",
+      "custom",
+    ],
+  );
+});
+
+await test("a terminal-only call made from a loaded extension file is attributed to that extension", async () => {
+  const h = makeHarness();
+  const entry = new URL(import.meta.url).pathname;
+  (h.record as { session?: unknown }).session = {
+    resourceLoader: {
+      getExtensions: () => ({
+        extensions: [{ resolvedPath: entry, sourceInfo: { baseDir: undefined } }],
+        errors: [],
+      }),
+    },
+  };
+  // This test file stands in for the extension entry: its frame is on the stack.
+  h.ui.setFooter(() => ({ render: () => [], invalidate: () => {} }));
+  await h.record.eventQueue;
+  const event = h.emitted.find((entry) => entry.type === "extensionUiCapabilityObserved") as
+    { observation: { capability: string; extensionPath?: string } } | undefined;
+  assert.deepEqual(event?.observation, { capability: "setFooter", extensionPath: entry });
 });
