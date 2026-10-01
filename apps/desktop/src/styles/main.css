@@ -940,14 +940,47 @@ button.host-contribution {
 
 .startup-diagnostics {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  padding: 8px 14px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
   border-bottom: 1px solid var(--danger-tint-border);
   background: var(--danger-tint-bg);
   color: var(--error-ink);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.startup-diagnostics__body {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.startup-diagnostics__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.startup-diagnostics__action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.startup-diagnostics__dismiss {
+  flex: none;
+  color: inherit;
 }
 
 .composer__slash-intent-meta {

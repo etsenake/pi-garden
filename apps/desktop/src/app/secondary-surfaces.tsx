@@ -52,6 +52,7 @@ interface SecondarySurfacesProps {
   /** Settings and the Skills and extensions page are separate app views. */
   readonly onSelectView: (view: Extract<AppView, "settings" | "skills" | "extensions">) => void;
   readonly onTrySkill: (command: string) => void;
+  readonly onRemoveWorkspace: (workspace: WorkspaceRecord) => void;
   readonly shortcutConflicts?: readonly ExtensionActionConflict[];
   readonly extensionSettings?: {
     readonly host: RichSurfaceHost;
@@ -76,6 +77,7 @@ export function SecondarySurfaces({
   onBack,
   onSelectView,
   onTrySkill,
+  onRemoveWorkspace,
   shortcutConflicts = [],
   extensionSettings,
 }: SecondarySurfacesProps) {
@@ -613,6 +615,8 @@ export function SecondarySurfaces({
           notificationPermissionPending={notificationPermissionPending}
           modelSettingsScopeMode={snapshot.modelSettingsScopeMode}
           integratedTerminalShell={snapshot.integratedTerminalShell}
+          workspaces={rootWorkspaceOptions}
+          onRemoveWorkspace={onRemoveWorkspace}
           themeMode={snapshot.themeMode}
           themePresetId={snapshot.resolvedThemeId}
           themeCatalog={snapshot.themeCatalog}

@@ -549,6 +549,14 @@ test("preserves durable ui state when one startup workspace is unavailable", asy
         "utf8",
       );
     }
+
+    // Dismissing hides the banner for this app session only.
+    await window
+      .getByTestId("startup-diagnostics")
+      .getByRole("button", { name: "Dismiss" })
+      .click();
+    await expect(window.getByTestId("startup-diagnostics")).toHaveCount(0);
+    expect((await getDesktopState(window)).startupDiagnostics).toEqual([]);
   } finally {
     await secondRun.close();
   }
@@ -572,6 +580,26 @@ test("preserves durable ui state when one startup workspace is unavailable", asy
         fullPage: true,
       });
     }
+
+    // Removing the missing folder from the banner forgets it and clears its diagnostic.
+    const acceptRemoval = window.waitForEvent("dialog").then((dialog) => dialog.accept());
+    await Promise.all([
+      window
+        .getByTestId("startup-diagnostics")
+        .getByRole("button", { name: "Remove folder" })
+        .click(),
+      acceptRemoval,
+    ]);
+    await expect(window.getByTestId("startup-diagnostics")).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const latest = await getDesktopState(window);
+        return latest.workspaces.some((entry) => entry.id === unavailableWorkspaceId);
+      })
+      .toBe(false);
+    const afterRemoval = await getDesktopState(window);
+    expect(afterRemoval.startupDiagnostics).toEqual([]);
+    expect(afterRemoval.workspaces.some((entry) => entry.id === healthyWorkspaceId)).toBe(true);
   } finally {
     await thirdRun.close();
   }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
-import type { ModelSettingsScopeMode } from "../../../contracts/desktop-state";
+import type { ModelSettingsScopeMode, WorkspaceRecord } from "../../../contracts/desktop-state";
 import { SettingsSegmented, SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 
@@ -8,6 +8,8 @@ interface SettingsGeneralSectionProps {
   readonly runtime?: RuntimeSnapshot;
   readonly modelSettingsScopeMode: ModelSettingsScopeMode;
   readonly integratedTerminalShell: string;
+  readonly workspaces: readonly WorkspaceRecord[];
+  readonly onRemoveWorkspace: (workspace: WorkspaceRecord) => void;
   readonly onSetModelSettingsScopeMode: (mode: ModelSettingsScopeMode) => void;
   readonly onSetIntegratedTerminalShell: (shellPath: string) => void;
   readonly onToggleSkillCommands: (enabled: boolean) => void;
@@ -17,6 +19,8 @@ export function SettingsGeneralSection({
   runtime,
   modelSettingsScopeMode,
   integratedTerminalShell,
+  workspaces,
+  onRemoveWorkspace,
   onSetModelSettingsScopeMode,
   onSetIntegratedTerminalShell,
   onToggleSkillCommands,
@@ -83,6 +87,28 @@ export function SettingsGeneralSection({
             }}
           />
         </SettingsRow>
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Folders"
+        description="Folders you have opened in pi-garden. Removing one keeps its files on disk."
+      >
+        {workspaces.length === 0 ? (
+          <SettingsRow title="No folders yet" />
+        ) : (
+          workspaces.map((workspace) => (
+            <SettingsRow key={workspace.id} title={workspace.name} description={workspace.path}>
+              <button
+                aria-label={`Remove ${workspace.name}`}
+                className="button button--secondary"
+                type="button"
+                onClick={() => onRemoveWorkspace(workspace)}
+              >
+                Remove
+              </button>
+            </SettingsRow>
+          ))
+        )}
       </SettingsGroup>
     </>
   );

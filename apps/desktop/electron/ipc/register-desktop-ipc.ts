@@ -81,6 +81,7 @@ type StateOwner = Pick<
   | "setActiveView"
   | "setSidebarCollapsed"
   | "setThreadGrouping"
+  | "dismissStartupDiagnostics"
   | "setThemeMode"
   | "setThemePresetId"
 >;
@@ -429,6 +430,9 @@ export function registerDesktopIpc({
   );
   ipcMain.handle(desktopIpc.setThreadGrouping, (event, rawGrouping: unknown) =>
     run(event, () => owners.state.setThreadGrouping(expectThreadGrouping(rawGrouping))),
+  );
+  ipcMain.handle(desktopIpc.dismissStartupDiagnostics, (event) =>
+    run(event, () => owners.state.dismissStartupDiagnostics()),
   );
 
   ipcMain.handle(desktopIpc.refreshRuntime, (event, rawWorkspaceId: unknown) =>

@@ -41,6 +41,8 @@ interface SettingsViewProps {
   readonly notificationPermissionPending: boolean;
   readonly modelSettingsScopeMode: ModelSettingsScopeMode;
   readonly integratedTerminalShell: string;
+  readonly workspaces: readonly WorkspaceRecord[];
+  readonly onRemoveWorkspace: (workspace: WorkspaceRecord) => void;
   readonly themeMode: "system" | "light" | "dark";
   readonly themePresetId: string;
   readonly themeCatalog: readonly ThemeCatalogEntry[];
@@ -89,6 +91,8 @@ export function SettingsView({
   notificationPermissionPending,
   modelSettingsScopeMode,
   integratedTerminalShell,
+  workspaces,
+  onRemoveWorkspace,
   themeMode,
   themePresetId,
   themeCatalog,
@@ -177,6 +181,8 @@ export function SettingsView({
               runtime={runtime}
               modelSettingsScopeMode={modelSettingsScopeMode}
               integratedTerminalShell={integratedTerminalShell}
+              workspaces={workspaces}
+              onRemoveWorkspace={onRemoveWorkspace}
               onSetModelSettingsScopeMode={onSetModelSettingsScopeMode}
               onSetIntegratedTerminalShell={onSetIntegratedTerminalShell}
               onToggleSkillCommands={onToggleSkillCommands}

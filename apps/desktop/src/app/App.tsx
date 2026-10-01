@@ -48,6 +48,7 @@ import { CommandPaletteSurface } from "../features/command-palette/command-palet
 import { deriveModelOnboardingState } from "../features/settings/model-onboarding";
 import type { SettingsSection } from "../features/settings/settings-view";
 import { SecondarySurfaces } from "./secondary-surfaces";
+import { StartupDiagnosticsBanner } from "./startup-diagnostics-banner";
 import { NewThreadView } from "../features/threads/new-thread-view";
 import {
   buildThreadSidebarModel,
@@ -940,6 +941,7 @@ export default function App() {
           onBack={() => setActiveView("threads")}
           onSelectView={setActiveView}
           onTrySkill={handleTrySkill}
+          onRemoveWorkspace={wsMenu.removeWorkspace}
           shortcutConflicts={extensionActions?.conflicts ?? []}
           extensionSettings={rich.settings}
         />
@@ -1058,22 +1060,18 @@ export default function App() {
           ) : null}
         </Topbar>
 
-        {snapshot.startupDiagnostics.length > 0 ? (
-          <div className="startup-diagnostics" role="status" data-testid="startup-diagnostics">
-            <strong>Some saved workspaces could not be refreshed.</strong>
-            <span>
-              {snapshot.startupDiagnostics
-                .map((diagnostic) => {
-                  const workspaceName = diagnostic.workspacePath
-                    ?.split(/[\\/]/)
-                    .filter(Boolean)
-                    .at(-1);
-                  return workspaceName ? `${workspaceName} is unavailable.` : diagnostic.message;
-                })
-                .join(" ")}
-            </span>
-          </div>
-        ) : null}
+        <StartupDiagnosticsBanner
+          diagnostics={snapshot.startupDiagnostics}
+          workspaces={snapshot.workspaces}
+          onRemoveWorkspace={wsMenu.removeWorkspace}
+          onDismiss={() => {
+            void updateSnapshot(setSnapshot, () => api.dismissStartupDiagnostics()).catch(
+              (error: unknown) => {
+                console.error("[renderer] dismissStartupDiagnostics failed", error);
+              },
+            );
+          }}
+        />
 
         <>
           {snapshot.activeView === "scheduled" ? (

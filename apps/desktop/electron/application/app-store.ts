@@ -903,8 +903,22 @@ export class DesktopAppStore {
   }
 
   async removeWorkspace(workspaceId: string): Promise<DesktopAppState> {
+    const removedPath = this.state.workspaces.find((entry) => entry.id === workspaceId)?.path;
     await this.workspaceOwner.removeWorkspace(workspaceId);
     await this.refreshThemeCatalog();
+    if (removedPath && !this.state.workspaces.some((entry) => entry.path === removedPath)) {
+      const remaining = this.state.startupDiagnostics.filter(
+        (diagnostic) => diagnostic.workspacePath !== removedPath,
+      );
+      if (remaining.length !== this.state.startupDiagnostics.length) {
+        this.state = {
+          ...this.state,
+          startupDiagnostics: remaining,
+          revision: this.state.revision + 1,
+        };
+        return this.emit();
+      }
+    }
     return this.snapshot();
   }
 
@@ -1327,6 +1341,20 @@ export class DesktopAppStore {
       revision: this.state.revision + 1,
     };
     await this.persistUiState();
+    return this.emit();
+  }
+
+  /** Hide startup diagnostics for this app session; they are recomputed on next launch. */
+  async dismissStartupDiagnostics(): Promise<DesktopAppState> {
+    await this.initialize();
+    if (this.state.startupDiagnostics.length === 0) {
+      return structuredClone(this.state);
+    }
+    this.state = {
+      ...this.state,
+      startupDiagnostics: [],
+      revision: this.state.revision + 1,
+    };
     return this.emit();
   }
 

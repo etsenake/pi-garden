@@ -204,6 +204,7 @@ export const desktopIpc = {
   setActiveView: "pi-garden:set-active-view",
   setSidebarCollapsed: "pi-garden:set-sidebar-collapsed",
   setThreadGrouping: "pi-garden:set-thread-grouping",
+  dismissStartupDiagnostics: "pi-garden:dismiss-startup-diagnostics",
   refreshRuntime: "pi-garden:refresh-runtime",
   setModelSettingsScopeMode: "pi-garden:set-model-settings-scope-mode",
   setDefaultModel: "pi-garden:set-default-model",
@@ -787,6 +788,7 @@ export interface PiDesktopApi {
   setActiveView(view: AppView): Promise<DesktopAppState>;
   setSidebarCollapsed(collapsed: boolean): Promise<DesktopAppState>;
   setThreadGrouping(grouping: ThreadGrouping): Promise<DesktopAppState>;
+  dismissStartupDiagnostics(): Promise<DesktopAppState>;
   refreshRuntime(workspaceId?: string): Promise<DesktopAppState>;
   setModelSettingsScopeMode(mode: ModelSettingsScopeMode): Promise<DesktopAppState>;
   setDefaultModel(workspaceId: string, provider: string, modelId: string): Promise<DesktopAppState>;
