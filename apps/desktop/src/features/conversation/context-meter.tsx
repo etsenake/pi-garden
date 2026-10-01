@@ -1,9 +1,13 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type {
   SessionPlanLimit,
   SessionPromptCache,
   SessionUsageSnapshot,
 } from "@pi-garden/session-driver";
+import { Button } from "@/ui/shadcn/button";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/shadcn/hover-card";
+import { Progress } from "@/ui/shadcn/progress";
+import { Separator } from "@/ui/shadcn/separator";
 
 interface ContextMeterProps {
   readonly usage: SessionUsageSnapshot | undefined;
@@ -18,7 +22,6 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
  */
 export function ContextMeter({ usage }: ContextMeterProps) {
   const [open, setOpen] = useState(false);
-  const cardId = useId();
   const now = useNow(open && hasCountdown(usage));
   const context = usage?.context;
   if (!usage || !context) return null;
@@ -32,22 +35,19 @@ export function ContextMeter({ usage }: ContextMeterProps) {
       : `Context window: ${formatPercent(percent)} used`;
 
   return (
-    <div
-      className="context-meter"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        className="context-meter__ring"
-        data-tone={tone}
-        aria-label={label}
-        aria-describedby={open ? cardId : undefined}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") setOpen(false);
-        }}
+    <HoverCard open={open} onOpenChange={setOpen}>
+      <HoverCardTrigger
+        closeDelay={100}
+        delay={100}
+        render={
+          <Button
+            aria-label={label}
+            className="context-meter__ring"
+            data-tone={tone}
+            size="icon-sm"
+            variant="ghost"
+          />
+        }
       >
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
           <circle className="context-meter__track" cx="8" cy="8" r={RING_RADIUS} />
@@ -60,35 +60,41 @@ export function ContextMeter({ usage }: ContextMeterProps) {
             transform="rotate(-90 8 8)"
           />
         </svg>
-      </button>
-      {open ? (
-        <div className="context-meter__card" id={cardId} role="tooltip">
-          <section className="context-meter__section">
-            <h3 className="context-meter__heading">Context window</h3>
-            <p className="context-meter__headline">
-              {context.tokens === null || percent === null
-                ? `Unknown until the next reply · ${formatTokens(context.contextWindow)} window`
-                : `${formatPercent(percent)} used · ${formatTokens(context.tokens)} / ${formatTokens(context.contextWindow)} tokens`}
-            </p>
-            <p className="context-meter__note">
-              {context.compactAtTokens === undefined
-                ? "Automatic compaction is off"
-                : `Compacts automatically at ${formatPercent((context.compactAtTokens / context.contextWindow) * 100)}`}
-            </p>
-          </section>
-          <section className="context-meter__section">
-            <h3 className="context-meter__heading">Prompt cache</h3>
-            {usage.lastTurn ? (
-              <Row
-                label="Last turn"
-                value={`${formatPercent(cacheHitPercent(usage.lastTurn))} cached`}
-              />
-            ) : null}
-            <CacheRow cache={usage.cache} now={now} />
-          </section>
-          {usage.planLimits && usage.planLimits.limits.length > 0 ? (
-            <section className="context-meter__section">
-              <h3 className="context-meter__heading">Plan limits</h3>
+      </HoverCardTrigger>
+      <HoverCardContent className="flex w-75 flex-col gap-2" side="top" sideOffset={8}>
+        <Section title="Context window">
+          <p className="font-medium tabular-nums">
+            {context.tokens === null || percent === null
+              ? `Unknown until the next reply · ${formatTokens(context.contextWindow)} window`
+              : `${formatPercent(percent)} used · ${formatTokens(context.tokens)} / ${formatTokens(context.contextWindow)} tokens`}
+          </p>
+          {percent === null ? null : (
+            <Progress
+              aria-label="Context window used"
+              className="my-1"
+              value={Math.min(percent, 100)}
+            />
+          )}
+          <p className="text-muted-foreground">
+            {context.compactAtTokens === undefined
+              ? "Automatic compaction is off"
+              : `Compacts automatically at ${formatPercent((context.compactAtTokens / context.contextWindow) * 100)}`}
+          </p>
+        </Section>
+        <Separator />
+        <Section title="Prompt cache">
+          {usage.lastTurn ? (
+            <Row
+              label="Last turn"
+              value={`${formatPercent(cacheHitPercent(usage.lastTurn))} cached`}
+            />
+          ) : null}
+          <CacheRow cache={usage.cache} now={now} />
+        </Section>
+        {usage.planLimits && usage.planLimits.limits.length > 0 ? (
+          <>
+            <Separator />
+            <Section title="Plan limits">
               {usage.planLimits.limits.map((limit) => (
                 <Row
                   key={limit.windowMinutes}
@@ -100,49 +106,58 @@ export function ContextMeter({ usage }: ContextMeterProps) {
                   }
                 />
               ))}
-            </section>
+            </Section>
+          </>
+        ) : null}
+        <Separator />
+        <Section title="This thread">
+          <Row
+            label="Input / Output"
+            value={`${formatTokens(usage.totals.input)} / ${formatTokens(usage.totals.output)}`}
+          />
+          <Row
+            label="Cache read / write"
+            value={`${formatTokens(usage.totals.cacheRead)} / ${formatTokens(usage.totals.cacheWrite)}`}
+          />
+          <Row
+            label="Cost"
+            value={usage.subscription ? "Subscription" : `$${usage.totals.cost.toFixed(2)}`}
+          />
+          {usage.routedModel ? (
+            <Row
+              label="Routed model"
+              value={`${usage.routedModel.provider}/${usage.routedModel.model}`}
+            />
           ) : null}
-          <section className="context-meter__section">
-            <h3 className="context-meter__heading">This thread</h3>
-            <Row
-              label="Input / Output"
-              value={`${formatTokens(usage.totals.input)} / ${formatTokens(usage.totals.output)}`}
-            />
-            <Row
-              label="Cache read / write"
-              value={`${formatTokens(usage.totals.cacheRead)} / ${formatTokens(usage.totals.cacheWrite)}`}
-            />
-            <Row
-              label="Cost"
-              value={usage.subscription ? "Subscription" : `$${usage.totals.cost.toFixed(2)}`}
-            />
-            {usage.routedModel ? (
-              <Row
-                label="Routed model"
-                value={`${usage.routedModel.provider}/${usage.routedModel.model}`}
-              />
-            ) : null}
-            {usage.costByModel && usage.costByModel.length > 0
-              ? usage.costByModel.map((entry) => (
-                  <Row
-                    key={`${entry.provider}/${entry.model}`}
-                    label={`${entry.provider}/${entry.model}`}
-                    value={usage.subscription ? "Subscription" : `$${entry.cost.toFixed(2)}`}
-                  />
-                ))
-              : null}
-          </section>
-        </div>
-      ) : null}
-    </div>
+          {usage.costByModel && usage.costByModel.length > 0
+            ? usage.costByModel.map((entry) => (
+                <Row
+                  key={`${entry.provider}/${entry.model}`}
+                  label={`${entry.provider}/${entry.model}`}
+                  value={usage.subscription ? "Subscription" : `$${entry.cost.toFixed(2)}`}
+                />
+              ))
+            : null}
+        </Section>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+function Section({ title, children }: { readonly title: string; readonly children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-0.5">
+      <h3 className="text-muted-foreground">{title}</h3>
+      {children}
+    </section>
   );
 }
 
 function Row({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <div className="context-meter__row">
-      <span>{label}</span>
-      <span className="context-meter__value">{value}</span>
+    <div className="flex justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right tabular-nums">{value}</span>
     </div>
   );
 }
