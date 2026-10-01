@@ -105,7 +105,9 @@ test("switches between app-global and per-repo model scope while worktrees inher
     });
 
     await openNewThread(window);
-    await expect(window.locator(".new-thread__workspace")).toHaveValue(rootWorkspaceA.id);
+    await expect(window.getByRole("combobox", { name: "Workspace" })).toHaveValue(
+      rootWorkspaceA.id,
+    );
     await expectNewThreadModelState(window, {
       activeModel: "openai:gpt-4o",
       visibleModelLabels: ["GPT-4o", "GPT-4 Turbo"],
@@ -233,7 +235,7 @@ async function expectModelOptions(
   const scope = window.locator(scopeSelector).first();
   const badge = scope.locator(".model-selector__badge").first();
   await badge.click();
-  const dropdown = scope.locator(".model-selector__dropdown").first();
+  const dropdown = window.locator(".model-selector__dropdown").first();
   await expect(dropdown).toBeVisible();
   for (const label of expectations.visibleModelLabels) {
     await expect(dropdown).toContainText(label);
@@ -248,9 +250,9 @@ async function expectModelOptions(
 async function selectComposerModel(window: Page, label: string): Promise<void> {
   const badge = window.locator(".composer__bar .model-selector__badge").first();
   await badge.click();
-  const dropdown = window.locator(".composer__bar .model-selector__dropdown").first();
+  const dropdown = window.locator(".model-selector__dropdown").first();
   await expect(dropdown).toBeVisible();
-  await dropdown.getByRole("button", { name: new RegExp(label, "i") }).click();
+  await dropdown.getByRole("option", { name: new RegExp(label, "i") }).click();
 }
 
 function settingsWorkspacePicker(window: Page) {

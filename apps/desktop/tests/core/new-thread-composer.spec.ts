@@ -121,7 +121,7 @@ test("new thread hides the onboarding notice after picking a thread model", asyn
     await expect(startButton).toBeDisabled();
 
     await modelBadge.click();
-    const dropdown = window.locator(".new-thread__hint .model-selector__dropdown").first();
+    const dropdown = window.locator(".model-selector__dropdown").first();
     await expect(dropdown).toContainText("GPT-5");
     await expect(dropdown).toContainText("GPT-4o");
     const modelFilter = dropdown.locator(".model-selector__filter-input");
@@ -132,7 +132,7 @@ test("new thread hides the onboarding notice after picking a thread model", asyn
     await modelFilter.fill("4o");
     await expect(dropdown).toContainText("GPT-4o");
     await expect(dropdown).not.toContainText("GPT-5");
-    await dropdown.getByRole("button", { name: /GPT-4o/ }).click();
+    await dropdown.getByRole("option", { name: /GPT-4o/ }).click();
 
     await expect(modelBadge).toHaveText("openai:gpt-4o");
     await expect(startButton).toBeEnabled();
@@ -189,7 +189,7 @@ test("new thread routes disabled-model recovery to settings models", async () =>
     await expect(window.getByRole("button", { name: "Start thread" })).toBeDisabled();
 
     await modelBadge.click();
-    const dropdown = window.locator(".new-thread__hint .model-selector__dropdown").first();
+    const dropdown = window.locator(".model-selector__dropdown").first();
     await expect(dropdown).toBeVisible();
     await expect(dropdown).toContainText("No models available");
     await expect(dropdown).not.toContainText("Open Settings > Models");
@@ -256,7 +256,7 @@ test("refreshing after a provider becomes available auto-enables that provider's
     await expect(notice).toContainText("No default model set");
 
     await modelBadge.click();
-    const dropdown = window.locator(".new-thread__hint .model-selector__dropdown").first();
+    const dropdown = window.locator(".model-selector__dropdown").first();
     await expect(dropdown).toContainText("GPT-5");
     await expect(dropdown).toContainText("GPT-4o");
   } finally {

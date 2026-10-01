@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import {
   buildModelOptions,
@@ -6,6 +6,25 @@ import {
   THINKING_OPTIONS,
   type ComposerModelOption,
 } from "./composer-commands";
+import { Button } from "@/ui/shadcn/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/shadcn/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/ui/shadcn/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
 
 interface ModelSelectorProps {
   readonly runtime: RuntimeSnapshot | undefined;
@@ -24,8 +43,6 @@ interface ModelSelectorProps {
   readonly onSetThinking: (level: string) => void;
 }
 
-type OpenDropdown = "none" | "model" | "thinking";
-
 export function ModelSelector({
   runtime,
   provider,
@@ -41,9 +58,10 @@ export function ModelSelector({
   onSetModel,
   onSetThinking,
 }: ModelSelectorProps) {
-  const [open, setOpen] = useState<OpenDropdown>("none");
+  const [modelOpen, setModelOpen] = useState(false);
   const [modelFilter, setModelFilter] = useState("");
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const filterRef = useRef<HTMLInputElement | null>(null);
+  const side = dropdownPlacement === "below" ? "bottom" : "top";
 
   const modelOptions = useMemo(() => {
     const options = buildModelOptions(runtime);
@@ -88,140 +106,116 @@ export function ModelSelector({
   const noMatchingModels =
     hasAvailableModelOptions && modelFilter.trim().length > 0 && groupedModels.length === 0;
 
-  useEffect(() => {
-    if (open === "none") {
-      setModelFilter("");
-      return undefined;
-    }
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen("none");
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen("none");
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open]);
-
   if (!shouldRenderModelControl && !thinkingLevel) {
     return null;
   }
 
+  const activeKey = provider && modelId ? `${provider}:${modelId}` : undefined;
+
   return (
-    <span className="model-selector" ref={containerRef}>
+    <span className="flex max-w-full min-w-0 flex-wrap items-center gap-1">
       {shouldRenderModelControl ? (
-        <span className="model-selector__anchor">
-          <button
-            className="model-selector__badge"
-            type="button"
+        <Popover
+          open={modelOpen}
+          onOpenChange={(next) => {
+            setModelOpen(next);
+            if (!next) setModelFilter("");
+          }}
+        >
+          <PopoverTrigger
             disabled={disabled}
-            onClick={() => setOpen(open === "model" ? "none" : "model")}
+            render={
+              <Button className="model-selector__badge max-w-full" size="sm" variant="secondary" />
+            }
           >
-            {modelBadgeLabel}
-          </button>
-          {open === "model" ? (
-            <div
-              className={`model-selector__dropdown ${dropdownPlacement === "below" ? "model-selector__dropdown--below" : ""}`}
-              onWheel={(event) => event.stopPropagation()}
-            >
-              <div className="model-selector__filter">
-                <input
-                  className="model-selector__filter-input"
-                  placeholder="Filter models..."
-                  value={modelFilter}
-                  onChange={(e) => setModelFilter(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              {groupedModels.map((group) => (
-                <div key={group.provider}>
-                  <div className="model-selector__group-title">{group.provider}</div>
-                  {group.items.map((option) => {
-                    const isActive = option.providerId === provider && option.modelId === modelId;
-                    return (
-                      <button
-                        className={`model-selector__item${isActive ? " model-selector__item--active" : ""}`}
-                        key={`${option.providerId}:${option.modelId}`}
-                        type="button"
-                        onClick={() => {
-                          if (!isActive) {
-                            onSetModel(option.providerId, option.modelId);
-                          }
-                          setOpen("none");
-                        }}
-                      >
-                        <span className="model-selector__item-label">{option.label}</span>
-                        {isActive ? (
-                          <span className="model-selector__item-meta">active</span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-              {groupedModels.length === 0 ? (
-                <>
-                  <div className="model-selector__group-title">
+            <span className="truncate">{modelBadgeLabel}</span>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="model-selector__dropdown p-0"
+            initialFocus={filterRef}
+            side={side}
+            onWheel={(event) => event.stopPropagation()}
+          >
+            <Command defaultValue={activeKey} label="Models" shouldFilter={false}>
+              <CommandInput
+                className="model-selector__filter-input"
+                placeholder="Filter models..."
+                ref={filterRef}
+                value={modelFilter}
+                onValueChange={setModelFilter}
+              />
+              <CommandList>
+                <CommandEmpty className="px-2 py-3 text-left">
+                  <div className="font-medium">
                     {noMatchingModels ? "No matching models" : emptyModelTitle}
                   </div>
                   {noMatchingModels ? (
-                    <div className="model-selector__empty">Try a different filter.</div>
+                    <div className="text-muted-foreground">Try a different filter.</div>
                   ) : null}
-                </>
-              ) : null}
-            </div>
-          ) : null}
-        </span>
+                </CommandEmpty>
+                {groupedModels.map((group) => (
+                  <CommandGroup heading={group.provider} key={group.provider}>
+                    {group.items.map((option) => {
+                      const key = `${option.providerId}:${option.modelId}`;
+                      const isActive = key === activeKey;
+                      return (
+                        <CommandItem
+                          data-checked={isActive}
+                          key={key}
+                          value={key}
+                          onSelect={() => {
+                            if (!isActive) {
+                              onSetModel(option.providerId, option.modelId);
+                            }
+                            setModelOpen(false);
+                            setModelFilter("");
+                          }}
+                        >
+                          <span className="truncate">{option.label}</span>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       ) : null}
       {thinkingLevel ? (
-        <span className="model-selector__anchor">
-          <button
-            className="model-selector__badge"
-            type="button"
+        <DropdownMenu>
+          <DropdownMenuTrigger
             disabled={disabled}
-            onClick={() => setOpen(open === "thinking" ? "none" : "thinking")}
+            render={<Button className="model-selector__badge" size="sm" variant="secondary" />}
           >
             {thinkingLevel}
-          </button>
-          {open === "thinking" ? (
-            <div
-              className={`model-selector__dropdown ${dropdownPlacement === "below" ? "model-selector__dropdown--below" : ""}`}
-              onWheel={(event) => event.stopPropagation()}
-            >
-              <div className="model-selector__group-title">Thinking Level</div>
-              {THINKING_OPTIONS.map((option) => {
-                const isActive = option.value === thinkingLevel;
-                return (
-                  <button
-                    className={`model-selector__item${isActive ? " model-selector__item--active" : ""}`}
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      if (!isActive) {
-                        onSetThinking(option.value);
-                      }
-                      setOpen("none");
-                    }}
-                  >
-                    <span className="model-selector__item-label">{option.label}</span>
-                    <span className="model-selector__item-meta">{option.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-        </span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-80"
+            side={side}
+            onWheel={(event) => event.stopPropagation()}
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Thinking level</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={thinkingLevel}
+                onValueChange={(value: string) => {
+                  if (value !== thinkingLevel) onSetThinking(value);
+                }}
+              >
+                {THINKING_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem closeOnClick key={option.value} value={option.value}>
+                    <span className="flex min-w-0 flex-col">
+                      <span>{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : null}
     </span>
   );
