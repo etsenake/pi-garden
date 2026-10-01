@@ -30,6 +30,9 @@ import type {
   ModelOnboardingSettingsSection,
 } from "../settings/model-onboarding";
 import { ModelSelector } from "../conversation/model-selector";
+import { Button } from "@/ui/shadcn/button";
+import { NativeSelect, NativeSelectOption } from "@/ui/shadcn/native-select";
+import { ToggleGroup, ToggleGroupItem } from "@/ui/shadcn/toggle-group";
 
 interface NewThreadViewProps {
   readonly workspaces: readonly WorkspaceRecord[];
@@ -157,17 +160,16 @@ export function NewThreadView({
           <h1 className="new-thread__title">Let&apos;s build</h1>
           <label className="new-thread__workspace-picker">
             <span className="sr-only">Workspace</span>
-            <select
-              className="new-thread__workspace"
+            <NativeSelect
               value={workspace.id}
               onChange={(event) => onSelectWorkspace(event.target.value)}
             >
               {workspaces.map((entry) => (
-                <option key={entry.id} value={entry.id}>
+                <NativeSelectOption key={entry.id} value={entry.id}>
                   {entry.name}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </label>
         </div>
 
@@ -276,22 +278,19 @@ function NewThreadComposerFooter({
       <div className="composer__footer">
         <div className="composer__footer-row">
           <div className="composer__hint new-thread__hint">
-            <div className="new-thread__environment-group">
-              <button
-                className={`new-thread__environment ${environment === "local" ? "new-thread__environment--active" : ""}`}
-                type="button"
-                onClick={() => onSelectEnvironment("local")}
-              >
-                <span>Local</span>
-              </button>
-              <button
-                className={`new-thread__environment ${environment === "worktree" ? "new-thread__environment--active" : ""}`}
-                type="button"
-                onClick={() => onSelectEnvironment("worktree")}
-              >
-                <span>Worktree</span>
-              </button>
-            </div>
+            <ToggleGroup
+              aria-label="Environment"
+              variant="outline"
+              value={[environment]}
+              onValueChange={(values) => {
+                // Choosing the active environment again keeps it selected.
+                const next = values[0];
+                if (next === "local" || next === "worktree") onSelectEnvironment(next);
+              }}
+            >
+              <ToggleGroupItem value="local">Local</ToggleGroupItem>
+              <ToggleGroupItem value="worktree">Worktree</ToggleGroupItem>
+            </ToggleGroup>
             <span className="new-thread__hint-separator">·</span>
             <ModelSelector
               runtime={runtime}
@@ -322,23 +321,22 @@ function NewThreadComposerFooter({
                 event.currentTarget.value = "";
               }}
             />
-            <button
+            <Button
               aria-label="Attach files"
-              className="icon-button composer__attach"
-              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => fileInputRef.current?.click()}
             >
               <PlusIcon />
-            </button>
-            <button
+            </Button>
+            <Button
               aria-label="Start thread"
-              className="button button--primary button--cta-icon"
-              type="button"
+              size="icon"
               disabled={!hasContent || modelOnboarding.requiresModelSelection}
               onClick={onSubmit}
             >
               <ArrowUpIcon />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

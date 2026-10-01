@@ -57,15 +57,6 @@
   justify-items: center;
 }
 
-.new-thread__workspace {
-  padding: 8px 12px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text-strong);
-  font: inherit;
-}
-
 .new-thread__composer {
   width: min(820px, 100%);
   margin: 0 auto;
@@ -78,27 +69,6 @@
 
 .new-thread__composer .conversation--composer {
   width: 100%;
-}
-
-.new-thread__environment-group {
-  display: inline-flex;
-  gap: 8px;
-}
-
-.new-thread__environment {
-  padding: 7px 11px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
-  background: var(--surface-muted);
-  color: var(--muted-strong);
-  font-size: 14px;
-  font-weight: 560;
-}
-
-.new-thread__environment--active {
-  border-color: var(--line-strong);
-  background: var(--accent-tint-bg);
-  color: var(--text-strong);
 }
 
 .new-thread__textarea {
