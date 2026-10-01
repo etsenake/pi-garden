@@ -14,7 +14,7 @@ export function HeaderBadges({
     <div aria-label="Extension badges" className="header-badges" data-testid="header-badges">
       {badges.map((badge) => (
         <HostContributionItem
-          className="header-badge"
+          className="header-badge max-w-[12em]"
           contribution={badge}
           idAttribute="data-badge-id"
           key={badge.id}

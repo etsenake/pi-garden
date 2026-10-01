@@ -15,7 +15,7 @@ export function SidebarFooter({
       <div className="sidebar-footer-contributions">
         {contributions.map((contribution) => (
           <HostContributionItem
-            className="sidebar-footer-contribution"
+            className="max-w-full"
             contribution={contribution}
             idAttribute="data-contribution-id"
             key={contribution.id}
