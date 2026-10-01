@@ -43,7 +43,11 @@ test("Back to app lines up with New thread below the window buttons", async ({},
       const back = window.getByRole("button", { name: "Back to app", exact: true });
       await expect(back).toBeVisible();
       await window.screenshot({ path: testInfo.outputPath(`${view.toLowerCase()}.png`) });
-      const backToApp = await layoutOf(window, ".secondary-surface__back", "Back to app");
+      const backToApp = await layoutOf(
+        window,
+        "[data-testid='secondary-surface-back']",
+        "Back to app",
+      );
       expect.soft(backToApp.top, `${view} top`).toBeCloseTo(newThread.top, 0);
       expect.soft(backToApp.height, `${view} height`).toBeCloseTo(newThread.height, 0);
       expect.soft(backToApp.labelCenter, `${view} label`).toBeCloseTo(newThread.labelCenter, 0);

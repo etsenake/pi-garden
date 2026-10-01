@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowLeftIcon } from "lucide-react";
 import { SearchIcon } from "../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
 
 export interface SecondarySurfaceNavItem {
   readonly id: string;
@@ -53,10 +56,15 @@ export function SecondarySurface({
   return (
     <div className="secondary-surface" data-testid={testId}>
       <aside className="secondary-surface__sidebar">
-        <button className="secondary-surface__back" type="button" onClick={onBack}>
-          <span aria-hidden="true">←</span>
+        <Button
+          className="w-full justify-start"
+          data-testid="secondary-surface-back"
+          variant="ghost"
+          onClick={onBack}
+        >
+          <ArrowLeftIcon aria-hidden="true" />
           <span>Back to app</span>
-        </button>
+        </Button>
         {navItems.length > 0 ? (
           <SecondarySurfaceNav
             activeNavId={activeNavId}
@@ -95,9 +103,11 @@ function SecondarySurfaceNav({
 
   return (
     <>
-      <label className="secondary-surface__search">
-        <SearchIcon />
-        <input
+      <InputGroup>
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
           aria-label={searchLabel}
           placeholder="Search"
           spellCheck={false}
@@ -115,7 +125,7 @@ function SecondarySurfaceNav({
             }
           }}
         />
-      </label>
+      </InputGroup>
       <nav aria-label={label} className="secondary-surface__nav">
         {groups.map((group) => (
           <div className="secondary-surface__nav-group" key={group}>
@@ -123,16 +133,16 @@ function SecondarySurfaceNav({
             {matches
               .filter((item) => item.group === group)
               .map((item) => (
-                <button
+                <Button
                   key={item.id}
                   aria-current={activeNavId === item.id ? "page" : undefined}
-                  className={`secondary-surface__nav-item ${activeNavId === item.id ? "secondary-surface__nav-item--active" : ""}`}
-                  type="button"
+                  className="w-full justify-start"
+                  variant={activeNavId === item.id ? "secondary" : "ghost"}
                   onClick={() => onSelect(item.id)}
                 >
-                  <span className="secondary-surface__nav-icon">{item.icon}</span>
+                  {item.icon}
                   <span>{item.title}</span>
-                </button>
+                </Button>
               ))}
           </div>
         ))}
