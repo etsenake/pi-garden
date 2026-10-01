@@ -24,6 +24,10 @@ import {
 import type { OpenTurnChange } from "./turn-changes-card";
 import type { WorkspaceFileLine } from "./workspace-file-line";
 import { SparkIcon } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/shadcn/empty";
+import { Skeleton } from "@/ui/shadcn/skeleton";
+import { Spinner } from "@/ui/shadcn/spinner";
 
 interface ThreadSearchModel {
   readonly isOpen: boolean;
@@ -201,14 +205,14 @@ export function ConversationTimeline({
             </div>
           )}
           {!transcriptFailed && viewport.showJumpToLatest ? (
-            <button
-              className="timeline-jump"
+            <Button
+              className="sticky bottom-3 mx-auto mt-[18px] flex w-fit"
               data-testid="timeline-jump"
-              type="button"
+              variant="outline"
               onClick={viewport.jumpToLatest}
             >
               New activity below
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>
@@ -221,19 +225,19 @@ function TranscriptSkeleton() {
   return (
     <div className="transcript-skeleton" data-testid="transcript-skeleton" aria-hidden="true">
       <div className="transcript-skeleton__row transcript-skeleton__row--user">
-        <span className="skeleton-line" style={{ width: "42%" }} />
+        <Skeleton className="h-3" style={{ width: "42%" }} />
       </div>
       <div className="transcript-skeleton__row">
-        <span className="skeleton-line" style={{ width: "88%" }} />
-        <span className="skeleton-line" style={{ width: "94%" }} />
-        <span className="skeleton-line" style={{ width: "66%" }} />
+        <Skeleton className="h-3" style={{ width: "88%" }} />
+        <Skeleton className="h-3" style={{ width: "94%" }} />
+        <Skeleton className="h-3" style={{ width: "66%" }} />
       </div>
       <div className="transcript-skeleton__row transcript-skeleton__row--tool">
-        <span className="skeleton-line skeleton-line--tool" style={{ width: "38%" }} />
+        <Skeleton className="h-5" style={{ width: "38%" }} />
       </div>
       <div className="transcript-skeleton__row">
-        <span className="skeleton-line" style={{ width: "80%" }} />
-        <span className="skeleton-line" style={{ width: "72%" }} />
+        <Skeleton className="h-3" style={{ width: "80%" }} />
+        <Skeleton className="h-3" style={{ width: "72%" }} />
       </div>
       <span className="sr-only">Loading transcript…</span>
     </div>
@@ -252,15 +256,10 @@ function TranscriptHydrateError({
       <h2>Couldn't load this thread</h2>
       <p>The selected conversation couldn't be restored. Retry to try again.</p>
       <div className="transcript-hydrate-error__actions">
-        <button
-          className="button button--primary"
-          data-testid="hydrate-retry"
-          type="button"
-          disabled={retrying || !onRetry}
-          onClick={onRetry}
-        >
+        <Button data-testid="hydrate-retry" disabled={retrying || !onRetry} onClick={onRetry}>
+          {retrying ? <Spinner data-icon="inline-start" /> : null}
           {retrying ? "Retrying…" : "Retry"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -268,13 +267,15 @@ function TranscriptHydrateError({
 
 function TranscriptEmptyState() {
   return (
-    <div className="transcript-empty" data-testid="transcript-empty">
-      <span className="transcript-empty__glyph" aria-hidden="true">
-        <SparkIcon />
-      </span>
-      <p className="transcript-empty__title">Start the conversation</p>
-      <p className="transcript-empty__hint">Send a prompt below to begin this session.</p>
-    </div>
+    <Empty className="py-16" data-testid="transcript-empty">
+      <EmptyHeader>
+        <EmptyMedia aria-hidden="true" variant="icon">
+          <SparkIcon />
+        </EmptyMedia>
+        <EmptyTitle>Start the conversation</EmptyTitle>
+        <EmptyDescription>Send a prompt below to begin this session.</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 

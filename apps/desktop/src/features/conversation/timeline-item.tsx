@@ -34,6 +34,9 @@ import {
   TerminalIcon,
 } from "../../ui/icons";
 import { extensionToLanguage } from "../../ui/syntax-highlight";
+import { Button } from "@/ui/shadcn/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 /**
  * Pi `ExtensionUIContext` state that shapes transcript rows: the working row,
@@ -255,22 +258,27 @@ function TimelineMessage({
       />
       {forkable ? (
         <div className="timeline-item__actions">
-          <button
-            type="button"
-            className="timeline-item__action"
-            title={
-              onForkFromMessage
+          <Tooltip>
+            {/* A disabled button takes no pointer events; the wrapper keeps the hint. */}
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              <Button
+                aria-label="Fork conversation from this point"
+                data-testid="fork-from-message"
+                disabled={!onForkFromMessage}
+                size="xs"
+                variant="ghost"
+                onClick={() => onForkFromMessage?.(sourceMessageIndex, item.text)}
+              >
+                <ForkIcon />
+                Fork
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {onForkFromMessage
                 ? "Fork conversation from this point"
-                : "Fork is available when the run finishes"
-            }
-            aria-label="Fork conversation from this point"
-            data-testid="fork-from-message"
-            disabled={!onForkFromMessage}
-            onClick={() => onForkFromMessage?.(sourceMessageIndex, item.text)}
-          >
-            <ForkIcon />
-            <span className="timeline-item__action-label">Fork</span>
-          </button>
+                : "Fork is available when the run finishes"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       ) : null}
       {markers}
@@ -392,32 +400,34 @@ function TimelineToolCallItem({
   const [failedRendererKey, setFailedRendererKey] = useState<string | null>(null);
   const customFailed = failedRendererKey === rendererKey && rendererKey !== "";
   if (renderer && richTools && !customFailed) {
+    // The extension renders both states itself, so the trigger has no panel to show.
     return (
-      <article
-        className={`timeline-tool timeline-tool--${item.status} timeline-tool__custom${
-          item.nestingDepth ? " timeline-tool--nested" : ""
-        }`}
-        data-testid="timeline-tool"
-        data-tool-name={item.toolName}
-        data-tool-renderer="custom"
-        data-parent-tool-call-id={item.parentToolCallId}
-        data-nesting-depth={item.nestingDepth ?? 0}
-        style={toolNestingStyle(item.nestingDepth)}
+      <Collapsible
+        open={expanded}
+        render={
+          <article
+            className={`timeline-tool timeline-tool--${item.status} timeline-tool__custom${
+              item.nestingDepth ? " timeline-tool--nested" : ""
+            }`}
+            data-testid="timeline-tool"
+            data-tool-name={item.toolName}
+            data-tool-renderer="custom"
+            data-parent-tool-call-id={item.parentToolCallId}
+            data-nesting-depth={item.nestingDepth ?? 0}
+            style={toolNestingStyle(item.nestingDepth)}
+          />
+        }
+        onOpenChange={() => onToggle?.(item.callId)}
       >
         <div className="timeline-tool__header-row">
-          <button
-            className="timeline-tool__header"
-            type="button"
-            aria-expanded={expanded}
-            onClick={() => onToggle?.(item.callId)}
-          >
+          <CollapsibleTrigger className="timeline-tool__header">
             <span
               className={`timeline-tool__chevron ${expanded ? "timeline-tool__chevron--expanded" : ""}`}
             >
               <ChevronRightIcon />
             </span>
             <span className="timeline-tool__label">{item.label}</span>
-          </button>
+          </CollapsibleTrigger>
         </div>
         <ExtensionViewPanel
           api={richTools.api}
@@ -430,7 +440,7 @@ function TimelineToolCallItem({
           onPrepareTaskDraftPendingChange={richTools.onPrepareTaskDraftPendingChange}
           onUnavailable={() => setFailedRendererKey(rendererKey)}
         />
-      </article>
+      </Collapsible>
     );
   }
   return (
@@ -474,29 +484,41 @@ function BuiltinToolCall({
     });
   };
 
+  const copyButton = (
+    <Tooltip>
+      <TooltipTrigger
+        render={<Button aria-label="Copy" size="icon-xs" variant="ghost" onClick={handleCopy} />}
+      >
+        <CopyIcon />
+      </TooltipTrigger>
+      <TooltipContent>Copy</TooltipContent>
+    </Tooltip>
+  );
+
   return (
-    <article
-      className={`timeline-tool timeline-tool--${item.status}${
-        item.nestingDepth ? " timeline-tool--nested" : ""
-      }`}
-      data-testid="timeline-tool"
-      data-tool-name={item.toolName}
-      data-tool-renderer={rendererState}
-      data-parent-tool-call-id={item.parentToolCallId}
-      data-nesting-depth={item.nestingDepth ?? 0}
-      style={toolNestingStyle(item.nestingDepth)}
+    <Collapsible
+      disabled={!hasContent}
+      open={expanded}
+      render={
+        <article
+          className={`timeline-tool timeline-tool--${item.status}${
+            item.nestingDepth ? " timeline-tool--nested" : ""
+          }`}
+          data-testid="timeline-tool"
+          data-tool-name={item.toolName}
+          data-tool-renderer={rendererState}
+          data-parent-tool-call-id={item.parentToolCallId}
+          data-nesting-depth={item.nestingDepth ?? 0}
+          style={toolNestingStyle(item.nestingDepth)}
+        />
+      }
+      onOpenChange={() => onToggle?.(item.callId)}
     >
       <div className="timeline-tool__header-row">
         <span className="timeline-tool__glyph" aria-hidden="true">
           {toolGlyph(item.toolName)}
         </span>
-        <button
-          className="timeline-tool__header"
-          type="button"
-          aria-expanded={expanded}
-          disabled={!hasContent}
-          onClick={() => onToggle?.(item.callId)}
-        >
+        <CollapsibleTrigger className="timeline-tool__header">
           {hasContent ? (
             <span
               className={`timeline-tool__chevron ${expanded ? "timeline-tool__chevron--expanded" : ""}`}
@@ -516,24 +538,28 @@ function BuiltinToolCall({
             <span className="timeline-tool__status-pip" aria-hidden="true" />
             {`${formatToolDisplayName(item.toolName)} \u00b7 ${statusLabel(item.status)}`}
           </span>
-        </button>
+        </CollapsibleTrigger>
         {filePath && onViewFileInDiff ? (
-          <button
-            aria-label={`View ${filePath} in changes`}
-            className="icon-button timeline-tool__view-in-diff"
-            data-testid="timeline-tool-view-in-diff"
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onViewFileInDiff(filePath);
-            }}
-          >
-            <DiffIcon />
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-label={`View ${filePath} in changes`}
+                  data-testid="timeline-tool-view-in-diff"
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={() => onViewFileInDiff(filePath)}
+                />
+              }
+            >
+              <DiffIcon />
+            </TooltipTrigger>
+            <TooltipContent>View in changes</TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
-      {expanded && hasContent ? (
-        <div className="timeline-tool__body">
+      {hasContent ? (
+        <CollapsibleContent className="timeline-tool__body">
           {diffText ? (
             <>
               <div className="timeline-tool__diff-header">
@@ -547,35 +573,19 @@ function BuiltinToolCall({
                     </span>
                   ) : null}
                 </span>
-                <button
-                  className="icon-button timeline-tool__copy"
-                  type="button"
-                  onClick={handleCopy}
-                  aria-label="Copy"
-                >
-                  <CopyIcon />
-                </button>
+                {copyButton}
               </div>
               <InlineDiff diff={diffText} language={diffLanguage} />
             </>
           ) : (
             <>
-              <div className="timeline-tool__body-actions">
-                <button
-                  className="icon-button timeline-tool__copy"
-                  type="button"
-                  onClick={handleCopy}
-                  aria-label="Copy"
-                >
-                  <CopyIcon />
-                </button>
-              </div>
+              <div className="timeline-tool__body-actions">{copyButton}</div>
               <pre className="timeline-tool__pre">{formatToolContent(item.input, item.output)}</pre>
             </>
           )}
-        </div>
+        </CollapsibleContent>
       ) : null}
-    </article>
+    </Collapsible>
   );
 }
 

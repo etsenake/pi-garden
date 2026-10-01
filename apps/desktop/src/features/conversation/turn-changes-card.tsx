@@ -1,6 +1,10 @@
 import { useRef, useState } from "react";
 import type { TurnChangeSummary, TurnChangedFile } from "../../../contracts/review";
 import { FileDiffIcon } from "../../ui/icons";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/ui/shadcn/card";
+import { Item, ItemContent, ItemGroup, ItemMedia } from "@/ui/shadcn/item";
 
 const COLLAPSED_FILE_COUNT = 5;
 
@@ -15,7 +19,7 @@ export function TurnChangesCard({
   readonly onOpen?: OpenTurnChange;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const listRef = useRef<HTMLUListElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const { files } = turn;
   const hidden = expanded ? 0 : Math.max(0, files.length - COLLAPSED_FILE_COUNT);
   const shown = hidden ? files.slice(0, COLLAPSED_FILE_COUNT) : files;
@@ -29,87 +33,84 @@ export function TurnChangesCard({
   const firstFile = files[0];
 
   return (
-    <section
-      className="turn-changes"
+    <Card
       aria-label="Files changed in this turn"
+      className="gap-1 pb-1"
       data-testid="turn-changes"
+      role="region"
+      size="sm"
     >
-      <header className="turn-changes__header">
-        <span className="turn-changes__glyph" aria-hidden="true">
-          <FileDiffIcon />
-        </span>
-        <div className="turn-changes__summary">
-          <span className="turn-changes__title">
-            {`Edited ${files.length} ${files.length === 1 ? "file" : "files"}`}
-          </span>
-          <LineStats lines={totals} />
-        </div>
+      <CardHeader className="turn-changes__header">
+        <Item className="p-0" size="xs">
+          <ItemMedia variant="icon">
+            <FileDiffIcon />
+          </ItemMedia>
+          <ItemContent>
+            <CardTitle>{`Edited ${files.length} ${files.length === 1 ? "file" : "files"}`}</CardTitle>
+            <LineStats lines={totals} />
+          </ItemContent>
+        </Item>
         {firstFile && onOpen ? (
-          <button
-            type="button"
-            className="turn-changes__review"
-            onClick={() => onOpen(turn, firstFile.path)}
-          >
-            Review
-          </button>
+          <CardAction className="self-center">
+            <Button size="sm" variant="outline" onClick={() => onOpen(turn, firstFile.path)}>
+              Review
+            </Button>
+          </CardAction>
         ) : null}
-      </header>
-      <ul className="turn-changes__files" ref={listRef}>
-        {shown.map((file) => (
-          <li key={file.path}>
-            <button
-              type="button"
-              className="turn-changes__file"
-              data-file-path={file.path}
-              disabled={!onOpen}
-              title={file.previousPath ? `${file.previousPath} → ${file.path}` : file.path}
-              onClick={() => onOpen?.(turn, file.path)}
-            >
-              <FilePath path={file.path} />
-              <FileStats file={file} />
-            </button>
-          </li>
-        ))}
+      </CardHeader>
+      <CardContent className="px-1">
+        <ItemGroup className="gap-0" ref={listRef}>
+          {shown.map((file) => (
+            <div key={file.path} role="listitem">
+              <Button
+                className="turn-changes__file w-full justify-between gap-4"
+                data-file-path={file.path}
+                disabled={!onOpen}
+                title={file.previousPath ? `${file.previousPath} → ${file.path}` : file.path}
+                variant="ghost"
+                onClick={() => onOpen?.(turn, file.path)}
+              >
+                <FilePath path={file.path} />
+                <FileStats file={file} />
+              </Button>
+            </div>
+          ))}
+        </ItemGroup>
         {hidden ? (
-          <li>
-            <button
-              type="button"
-              className="turn-changes__file turn-changes__more"
-              onClick={() => {
-                setExpanded(true);
-                // The button unmounts; keep keyboard focus on the first newly shown file.
-                requestAnimationFrame(() =>
-                  listRef.current
-                    ?.querySelectorAll<HTMLButtonElement>(".turn-changes__file")
-                    [COLLAPSED_FILE_COUNT]?.focus(),
-                );
-              }}
-            >
-              {`Show ${hidden} more`}
-            </button>
-          </li>
+          <Button
+            className="w-full justify-start"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setExpanded(true);
+              // The button unmounts; keep keyboard focus on the first newly shown file.
+              requestAnimationFrame(() =>
+                listRef.current
+                  ?.querySelectorAll<HTMLButtonElement>(".turn-changes__file")
+                  [COLLAPSED_FILE_COUNT]?.focus(),
+              );
+            }}
+          >
+            {`Show ${hidden} more`}
+          </Button>
         ) : null}
-      </ul>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
 function FilePath({ path }: { readonly path: string }) {
   const slash = path.lastIndexOf("/");
   return (
-    <span className="turn-changes__path">
+    <span className="min-w-0 truncate">
       {slash >= 0 ? <span className="turn-changes__dir">{path.slice(0, slash + 1)}</span> : null}
-      <span className="turn-changes__name">{path.slice(slash + 1)}</span>
+      {path.slice(slash + 1)}
     </span>
   );
 }
 
 function FileStats({ file }: { readonly file: TurnChangedFile }) {
-  return file.lines ? (
-    <LineStats lines={file.lines} />
-  ) : (
-    <span className="turn-changes__stats turn-changes__binary">Binary</span>
-  );
+  return file.lines ? <LineStats lines={file.lines} /> : <Badge variant="outline">Binary</Badge>;
 }
 
 function LineStats({
