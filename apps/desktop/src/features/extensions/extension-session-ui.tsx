@@ -1,6 +1,17 @@
-import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useRef, useState, type KeyboardEvent } from "react";
 import type { HostUiResponse } from "@pi-garden/session-driver";
-import { trapDialogFocus } from "../../ui/dialog-focus";
+import { Button } from "@/ui/shadcn/button";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/ui/shadcn/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/shadcn/dialog";
+import { Input } from "@/ui/shadcn/input";
+import { Textarea } from "@/ui/shadcn/textarea";
 import {
   ansiStyleClassNames,
   hasAnsiStyle,
@@ -189,34 +200,21 @@ export function ExtensionDialog({
   readonly dialog: SessionExtensionDialogRecord;
   readonly onRespond: (response: HostUiResponse) => void;
 }) {
-  const [draft, setDraft] = useState("");
-  const titleId = useId();
-  const bodyId = useId();
-  const dialogRef = useRef<HTMLDivElement | null>(null);
+  // A new request is a new dialog: its draft and initial focus start fresh.
+  return <ExtensionDialogView dialog={dialog} key={dialog.requestId} onRespond={onRespond} />;
+}
+
+function ExtensionDialogView({
+  dialog,
+  onRespond,
+}: {
+  readonly dialog: SessionExtensionDialogRecord;
+  readonly onRespond: (response: HostUiResponse) => void;
+}) {
+  const [draft, setDraft] = useState(
+    dialog.kind === "input" || dialog.kind === "editor" ? (dialog.initialValue ?? "") : "",
+  );
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
-  const firstOptionButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (dialog.kind === "input") {
-      setDraft(dialog.initialValue ?? "");
-      return;
-    }
-    if (dialog.kind === "editor") {
-      setDraft(dialog.initialValue ?? "");
-      return;
-    }
-    setDraft("");
-  }, [dialog]);
-
-  useEffect(() => {
-    if (dialog.kind === "confirm") {
-      cancelButtonRef.current?.focus();
-      return;
-    }
-    if (dialog.kind === "select") {
-      firstOptionButtonRef.current?.focus();
-    }
-  }, [dialog]);
 
   const respondWithCancel = () => onRespond({ requestId: dialog.requestId, cancelled: true });
   const respondWithSubmit = () => {
@@ -229,111 +227,99 @@ export function ExtensionDialog({
     }
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Tab") {
-      trapDialogFocus(event, dialogRef.current);
-      return;
-    }
-    if (event.key === "Escape") {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && dialog.kind !== "select") {
       event.preventDefault();
-      respondWithCancel();
-      return;
-    }
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      if (dialog.kind === "confirm" || dialog.kind === "input" || dialog.kind === "editor") {
-        event.preventDefault();
-        respondWithSubmit();
-      }
+      respondWithSubmit();
     }
   };
 
   return (
-    <div className="extension-dialog-backdrop">
-      <div
-        aria-describedby={dialog.kind === "confirm" ? bodyId : undefined}
-        aria-labelledby={titleId}
+    <Dialog
+      disablePointerDismissal
+      open
+      onOpenChange={(open) => {
+        if (!open) respondWithCancel();
+      }}
+    >
+      <DialogContent
         aria-modal="true"
-        className="extension-dialog"
+        className="sm:max-w-lg"
         data-testid="extension-dialog"
-        ref={dialogRef}
-        role="dialog"
+        initialFocus={dialog.kind === "confirm" ? cancelButtonRef : undefined}
+        showCloseButton={false}
         onKeyDown={handleKeyDown}
       >
-        <div className="extension-dialog__title" id={titleId}>
-          {dialog.title}
-        </div>
-        {dialog.kind === "confirm" ? (
-          <p className="extension-dialog__body" id={bodyId}>
-            {dialog.message}
-          </p>
-        ) : null}
+        <DialogHeader>
+          <DialogTitle>{dialog.title}</DialogTitle>
+          {dialog.kind === "confirm" ? (
+            <DialogDescription>{dialog.message}</DialogDescription>
+          ) : null}
+        </DialogHeader>
 
         {dialog.kind === "select" ? (
-          <div className="extension-dialog__options">
-            {dialog.options.map((option, index) => (
-              <button
-                className="extension-dialog__option"
-                key={option}
-                ref={index === 0 ? firstOptionButtonRef : undefined}
-                type="button"
-                onClick={() => onRespond({ requestId: dialog.requestId, value: option })}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
+          <Command>
+            <CommandInput aria-label="Filter options" placeholder="Filter options" />
+            <CommandList>
+              <CommandEmpty>No matching options</CommandEmpty>
+              {dialog.options.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  onSelect={() => onRespond({ requestId: dialog.requestId, value: option })}
+                >
+                  {option}
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
         ) : null}
 
         {dialog.kind === "input" ? (
-          <input
-            autoFocus
-            className="skills-search"
-            placeholder={dialog.placeholder ?? "Enter a value"}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              respondWithSubmit();
+            }}
+          >
+            <Input
+              aria-label={dialog.title}
+              placeholder={dialog.placeholder ?? "Enter a value"}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          </form>
         ) : null}
 
         {dialog.kind === "editor" ? (
-          <textarea
-            autoFocus
-            className="extension-dialog__editor"
+          <Textarea
+            aria-label={dialog.title}
+            className="max-h-[50vh] min-h-44"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
           />
         ) : null}
 
-        <div className="extension-dialog__actions">
-          <button
-            ref={cancelButtonRef}
-            className="button button--secondary"
+        <DialogFooter>
+          <Button
             data-testid="extension-dialog-cancel"
-            type="button"
+            ref={cancelButtonRef}
+            variant="outline"
             onClick={respondWithCancel}
           >
             Cancel
-          </button>
+          </Button>
           {dialog.kind === "confirm" ? (
-            <button
-              className="button button--primary"
-              data-testid="extension-dialog-confirm"
-              type="button"
-              onClick={respondWithSubmit}
-            >
+            <Button data-testid="extension-dialog-confirm" onClick={respondWithSubmit}>
               Confirm
-            </button>
+            </Button>
           ) : null}
           {dialog.kind === "input" || dialog.kind === "editor" ? (
-            <button
-              className="button button--primary"
-              data-testid="extension-dialog-submit"
-              type="button"
-              onClick={respondWithSubmit}
-            >
+            <Button data-testid="extension-dialog-submit" onClick={respondWithSubmit}>
               Submit
-            </button>
+            </Button>
           ) : null}
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
