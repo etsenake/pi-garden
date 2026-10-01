@@ -3,7 +3,6 @@ import {
   useRef,
   useState,
   type Dispatch,
-  type MouseEvent as ReactMouseEvent,
   type RefObject,
   type SetStateAction,
 } from "react";
@@ -24,15 +23,11 @@ interface UseWorkspaceMenuParams {
 }
 
 export interface WorkspaceMenuState {
-  readonly workspaceMenuId: string | null;
   readonly workspaceRenameId: string | null;
   readonly workspaceRenameDraft: string;
   readonly setWorkspaceRenameDraft: Dispatch<SetStateAction<string>>;
-  readonly workspaceMenuWrapRef: RefObject<HTMLSpanElement | null>;
   readonly workspaceRenamePanelRef: RefObject<HTMLFormElement | null>;
   readonly workspaceRenameInputRef: RefObject<HTMLInputElement | null>;
-  readonly openWorkspaceMenu: (workspaceId: string) => void;
-  readonly closeWorkspaceMenu: () => void;
   readonly startRename: (workspace: WorkspaceRecord) => void;
   readonly submitRename: (workspace: WorkspaceRecord) => void;
   readonly cancelRename: () => void;
@@ -44,20 +39,14 @@ export interface WorkspaceMenuState {
   ) => void;
   readonly removeWorktree: (workspaceId: string, worktree: WorktreeRecord) => void;
   readonly selectWorkspace: (workspaceId: string) => void;
-  readonly runWorkspaceMenuAction: (
-    event: ReactMouseEvent<HTMLElement>,
-    action: () => void,
-  ) => void;
 }
 
 export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuState {
   const { api, setSnapshot, updateSnapshot } = params;
 
-  const [workspaceMenuId, setWorkspaceMenuId] = useState<string | null>(null);
   const [workspaceRenameId, setWorkspaceRenameId] = useState<string | null>(null);
   const [workspaceRenameDraft, setWorkspaceRenameDraft] = useState("");
 
-  const workspaceMenuWrapRef = useRef<HTMLSpanElement | null>(null);
   const workspaceRenamePanelRef = useRef<HTMLFormElement | null>(null);
   const workspaceRenameInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -72,24 +61,21 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     return undefined;
   }, [workspaceRenameId]);
 
-  // Click-outside / Escape handler for workspace menu and rename panel
+  // Click-outside / Escape closes the rename panel. The "…" menu is a shadcn
+  // DropdownMenu that dismisses itself.
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) {
         return;
       }
-      const menuContains = workspaceMenuWrapRef.current?.contains(target) ?? false;
-      const renamePanelContains = workspaceRenamePanelRef.current?.contains(target) ?? false;
-      if (!menuContains && !renamePanelContains) {
-        setWorkspaceMenuId(null);
+      if (!(workspaceRenamePanelRef.current?.contains(target) ?? false)) {
         setWorkspaceRenameId(null);
       }
     };
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        setWorkspaceMenuId(null);
         setWorkspaceRenameId(null);
       }
     };
@@ -102,23 +88,13 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     };
   }, []);
 
-  const openWorkspaceMenu = (workspaceId: string) => {
-    setWorkspaceMenuId((current) => (current === workspaceId ? null : workspaceId));
-  };
-
-  const closeWorkspaceMenu = () => {
-    setWorkspaceMenuId(null);
-  };
-
   const startRename = (workspace: WorkspaceRecord) => {
-    setWorkspaceMenuId(null);
     setWorkspaceRenameId(workspace.id);
     setWorkspaceRenameDraft(workspace.name);
   };
 
   const submitRename = (workspace: WorkspaceRecord) => {
     const nextName = workspaceRenameDraft.trim();
-    setWorkspaceMenuId(null);
     setWorkspaceRenameId(null);
     if (!nextName || nextName === workspace.name) {
       setWorkspaceRenameDraft("");
@@ -144,7 +120,6 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     const confirmed = window.confirm(
       `Remove ${workspace.name} from pi-garden? This will not delete any files.`,
     );
-    setWorkspaceMenuId(null);
     setWorkspaceRenameId(null);
     if (!confirmed || !api) {
       return;
@@ -161,7 +136,6 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     fromSessionWorkspaceId?: string,
     fromSessionId?: string,
   ) => {
-    setWorkspaceMenuId(null);
     if (!api) {
       return;
     }
@@ -197,23 +171,12 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     );
   };
 
-  const runWorkspaceMenuAction = (event: ReactMouseEvent<HTMLElement>, action: () => void) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setWorkspaceMenuId(null);
-    action();
-  };
-
   return {
-    workspaceMenuId,
     workspaceRenameId,
     workspaceRenameDraft,
     setWorkspaceRenameDraft,
-    workspaceMenuWrapRef,
     workspaceRenamePanelRef,
     workspaceRenameInputRef,
-    openWorkspaceMenu,
-    closeWorkspaceMenu,
     startRename,
     submitRename,
     cancelRename,
@@ -221,6 +184,5 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     createWorktree,
     removeWorktree,
     selectWorkspace,
-    runWorkspaceMenuAction,
   };
 }

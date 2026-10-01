@@ -62,59 +62,16 @@
   margin-top: 8px;
 }
 
-.sidebar__nav-item {
-  width: 100%;
-  min-height: 30px;
-  padding: 6px 8px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted-strong);
-  font-size: 14px;
-  font-weight: var(--font-medium);
-  border: 1px solid transparent;
-}
-
-.sidebar__nav-item svg {
-  width: 15px;
-  height: 15px;
-}
-
-.sidebar__nav-item--active {
-  background: var(--overlay-hover);
-  border-color: transparent;
-  color: var(--text-strong);
-}
-
 .sidebar__new {
   -webkit-app-region: no-drag;
-  width: 100%;
-  min-height: var(--sidebar-first-control-height);
-  padding: 7px 10px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  color: var(--text-strong);
-  font-size: 14px;
-  font-weight: var(--font-medium);
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
 }
 
-.sidebar__new:disabled,
 .icon-button:disabled {
   opacity: 0.45;
   cursor: default;
 }
 
 .sidebar__section {
-  overflow: auto;
-  /* Keeps the scrollbar clear of the resize handle on the right edge. */
-  margin-right: 4px;
   padding-right: 8px;
 }
 
@@ -134,83 +91,7 @@
   gap: 8px;
 }
 
-.thread-grouping {
-  position: relative;
-  letter-spacing: normal;
-  text-transform: none;
-}
-
-.shortcut-tooltip-wrap.thread-grouping .shortcut-tooltip {
-  left: auto;
-  right: 0;
-  transform: translateY(-2px);
-  letter-spacing: normal;
-  text-transform: none;
-}
-
-.shortcut-tooltip-wrap.thread-grouping:hover .shortcut-tooltip,
-.shortcut-tooltip-wrap.thread-grouping:focus-within .shortcut-tooltip {
-  opacity: 1;
-  transform: none;
-}
-
-.workspace-menu.thread-grouping__menu,
-.workspace-menu.thread-grouping__submenu {
-  position: fixed;
-  top: auto;
-  right: auto;
-  bottom: auto;
-  left: auto;
-  width: max-content;
-  min-width: 0;
-  max-width: max-content;
-  z-index: 80;
-  letter-spacing: normal;
-  text-transform: none;
-}
-
-.thread-grouping__parent--open {
-  background: var(--surface-muted);
-}
-
-.thread-grouping__option {
-  justify-content: flex-start;
-  gap: 8px;
-}
-
-.thread-grouping__check {
-  width: 16px;
-  height: 16px;
-  display: grid;
-  place-items: center;
-  flex: none;
-}
-
-.thread-history-toggle {
-  min-height: 28px;
-  padding: 4px 8px 4px 26px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-md);
-  color: var(--muted-soft);
-  font-size: 14px;
-  font-weight: 500;
-  text-align: left;
-}
-
-.thread-history-toggle:hover {
-  background: var(--overlay-hover);
-  color: var(--muted-strong);
-}
-
-.thread-history-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.icon-button,
-.sidebar__settings {
+.icon-button {
   border: 1px solid transparent;
   transition:
     background var(--motion-base) var(--ease-out),
@@ -229,8 +110,7 @@
 
 .workspace-row:hover,
 .session-row:hover,
-.icon-button:hover:not(:disabled),
-.sidebar__settings:hover {
+.icon-button:hover:not(:disabled) {
   background: var(--overlay-hover);
   border-color: var(--border-heavy);
 }
@@ -245,19 +125,7 @@
   gap: 2px;
 }
 
-.worktree-list {
-  display: grid;
-  gap: 4px;
-  padding-left: 24px;
-}
-
-.worktree-group {
-  display: grid;
-  gap: 2px;
-}
-
 .workspace-row,
-.worktree-row,
 .session-row {
   width: 100%;
   display: grid;
@@ -293,13 +161,6 @@
   pointer-events: none;
 }
 
-.worktree-row {
-  padding: 2px 4px 1px;
-  border-radius: var(--radius-md);
-  position: relative;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
 .workspace-row__select {
   width: 100%;
   display: grid;
@@ -313,22 +174,7 @@
   position: relative;
 }
 
-.worktree-row__select {
-  width: 100%;
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  text-align: left;
-  color: inherit;
-}
-
 .workspace-row--active {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-strong);
-}
-
-.worktree-row--active {
   background: transparent;
   border-color: transparent;
   color: var(--text-strong);
@@ -371,23 +217,6 @@
   color: var(--muted-strong);
 }
 
-.worktree-row__name {
-  font-size: 14px;
-  font-weight: 560;
-  color: var(--text-strong);
-}
-
-.worktree-row__meta {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted-soft);
-  font-size: 12px;
-  font-weight: 520;
-}
-
-.workspace-row__time,
 .session-row__time {
   color: var(--muted-soft);
   font-size: 12px;
@@ -400,82 +229,6 @@
   gap: 2px;
 }
 
-.workspace-row__menu-wrap {
-  position: relative;
-  display: grid;
-  align-items: center;
-  justify-items: end;
-}
-
-.workspace-row__action-button {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-lg);
-  color: var(--muted-soft);
-  background: transparent;
-}
-
-.workspace-row__action-button svg {
-  width: 14px;
-  height: 14px;
-}
-
-.workspace-row__menu-button {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-lg);
-  font-size: 18px;
-  line-height: 1;
-  color: var(--muted-soft);
-  background: transparent;
-}
-
-.workspace-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 10;
-  min-width: 160px;
-  padding: 6px;
-  border-radius: var(--radius-2xl);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow-xl);
-  display: grid;
-  gap: 2px;
-}
-
-.workspace-menu__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 9px 11px;
-  border-radius: var(--radius-lg);
-  text-align: left;
-  font-size: 14px;
-  white-space: nowrap;
-  color: var(--text-strong);
-  background: transparent;
-}
-
-.workspace-menu__shortcut {
-  flex: none;
-  color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 0.5px;
-}
-
-.workspace-menu__item:hover {
-  background: var(--surface-muted);
-}
-
-.workspace-menu__item--danger {
-  color: var(--error);
-}
-
 .workspace-rename {
   display: grid;
   gap: 8px;
@@ -486,45 +239,11 @@
   background: var(--surface);
 }
 
-.workspace-rename__input {
-  width: 100%;
-  min-height: 34px;
-  padding: 7px 10px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text-strong);
-  font-size: 15px;
-  font-weight: 520;
-}
-
-.workspace-rename__input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring-color);
-}
-
 .workspace-rename__actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.workspace-rename__button {
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  background: var(--surface-muted);
-  color: var(--muted-strong);
-  font-size: 13px;
-  font-weight: 560;
-}
-
-.workspace-rename__button--primary {
-  border-color: var(--button-primary-border);
-  background: var(--button-primary-bg);
-  color: var(--button-primary-ink);
 }
 
 .session-list {
@@ -537,7 +256,6 @@
   display: grid;
   gap: 4px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--line);
 }
 
 .recency-thread-group {
@@ -713,7 +431,7 @@
 .session-row:hover .session-row__trailing,
 .session-row:focus-within .session-row__trailing,
 .session-row--pinned .session-row__trailing {
-  min-width: 52px;
+  min-width: 58px;
 }
 
 .session-row__trailing:has(.session-row__workspace-icon) {
@@ -767,53 +485,10 @@
 }
 
 .session-row .session-row__action {
-  width: auto;
-  height: auto;
-  display: inline-flex;
-  align-items: center;
-  padding: 6px;
-  padding-right: 0;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transform: scale(0.92);
-}
-
-.session-row .session-row__action svg {
-  width: 16px;
-  height: 16px;
-}
-
-.session-row__menu-wrap {
-  position: absolute;
-  top: 100%;
-  right: 0;
-}
-
-.session-row__menu {
-  top: 4px;
-  right: -6px;
-  z-index: 20;
-}
-
-.session-row__tooltip-wrap {
-  display: inline-flex;
-}
-
-/* Lift the hovered row so its archive tooltip draws over the rows below. */
-.session-row:hover {
-  z-index: 3;
-}
-
-.session-row .session-row__tooltip {
-  left: auto;
-  right: -6px;
-  transform: translateY(-2px);
-}
-
-.session-row .session-row__tooltip-wrap:hover .session-row__tooltip,
-.session-row .session-row__tooltip-wrap:focus-within .session-row__tooltip {
-  transform: none;
 }
 
 .session-rename {
@@ -842,15 +517,6 @@
   visibility: visible;
   pointer-events: auto;
   transform: scale(1);
-  color: var(--text-strong);
-}
-
-.session-row__shortcut {
-  font-size: 13px;
-  font-weight: 560;
-  color: var(--muted-strong);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
 .session-row--shortcut .session-row__workspace-icon,
@@ -867,45 +533,6 @@
   padding-left: 24px;
   display: grid;
   gap: 4px;
-}
-
-.archived-thread-group__toggle {
-  min-height: 28px;
-  padding: 2px 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  border-radius: var(--radius-pill);
-  color: var(--muted-soft);
-  font-size: 12px;
-  font-weight: 620;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.archived-thread-group__toggle:hover {
-  background: var(--overlay-hover);
-}
-
-.archived-thread-group__chevron {
-  width: 14px;
-  height: 14px;
-  display: grid;
-  place-items: center;
-  transition: transform var(--motion-base) var(--ease-out);
-}
-
-.archived-thread-group__chevron--open {
-  transform: rotate(0deg);
-}
-
-.archived-thread-group__toggle:not([aria-expanded="true"]) .archived-thread-group__chevron {
-  transform: rotate(-90deg);
-}
-
-.archived-thread-group__count {
-  color: var(--muted-subtle);
 }
 
 .session-list--archived {
@@ -986,23 +613,6 @@ button.sidebar-footer-contribution {
   border-color: transparent;
   background: transparent;
   color: var(--muted);
-}
-
-.sidebar__settings {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted-strong);
-  font-size: 14px;
-  font-weight: var(--font-medium);
-  padding: 8px;
-  border-radius: var(--radius-md);
-}
-
-.sidebar__settings-mark {
-  display: grid;
-  place-items: center;
-  color: var(--muted-settings);
 }
 
 @media (max-width: 1180px) {

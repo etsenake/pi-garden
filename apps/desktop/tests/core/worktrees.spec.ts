@@ -67,7 +67,7 @@ test("creates and selects a worktree-backed workspace from the desktop UI", asyn
     await window
       .getByRole("button", { name: `Workspace actions for ${rootWorkspace.name}` })
       .click();
-    await window.getByRole("button", { name: "Create permanent worktree" }).click();
+    await window.getByRole("menuitem", { name: "Create permanent worktree" }).click();
 
     await expect
       .poll(async () => {
@@ -139,7 +139,7 @@ test("scopes worktree creation and startup collection to the active profile", as
       await window
         .getByRole("button", { name: `Workspace actions for ${rootWorkspace.name}` })
         .click();
-      await window.getByRole("button", { name: "Create permanent worktree" }).click();
+      await window.getByRole("menuitem", { name: "Create permanent worktree" }).click();
 
       await expect
         .poll(async () => {
@@ -252,7 +252,7 @@ test("shows a worktree icon in the sidebar without a local text badge", async ()
     await window
       .getByRole("button", { name: `Workspace actions for ${rootWorkspace.name}` })
       .click();
-    await window.getByRole("button", { name: "Create permanent worktree" }).click();
+    await window.getByRole("menuitem", { name: "Create permanent worktree" }).click();
 
     await expect
       .poll(async () => {
@@ -297,7 +297,7 @@ test("keeps orphaned worktree workspaces visible after removing the root workspa
     await window
       .getByRole("button", { name: `Workspace actions for ${rootWorkspace.name}` })
       .click();
-    await window.getByRole("button", { name: "Create permanent worktree" }).click();
+    await window.getByRole("menuitem", { name: "Create permanent worktree" }).click();
 
     await expect
       .poll(async () => {
@@ -319,7 +319,10 @@ test("keeps orphaned worktree workspaces visible after removing the root workspa
       .getByRole("button", { name: `Workspace actions for ${rootWorkspace.name}` })
       .click();
     const acceptRemoval = window.waitForEvent("dialog").then((dialog) => dialog.accept());
-    await Promise.all([window.getByRole("button", { name: "Remove" }).click(), acceptRemoval]);
+    await Promise.all([
+      window.getByRole("menuitem", { name: "Remove", exact: true }).click(),
+      acceptRemoval,
+    ]);
 
     await expect(window.getByTestId("empty-state")).toHaveCount(0);
     await expect
@@ -361,8 +364,8 @@ test("a git worktree the user opens is its own folder and nests the worktrees ma
 
     // The user's own checkout offers to make a worktree, never to delete itself.
     await window.getByRole("button", { name: `Workspace actions for ${checkout.name}` }).click();
-    await expect(window.getByRole("button", { name: "Remove worktree" })).toHaveCount(0);
-    await window.getByRole("button", { name: "Create permanent worktree" }).click();
+    await expect(window.getByRole("menuitem", { name: "Remove worktree" })).toHaveCount(0);
+    await window.getByRole("menuitem", { name: "Create permanent worktree" }).click();
 
     await expect
       .poll(async () => {

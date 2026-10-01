@@ -10,6 +10,8 @@ import {
   PinIcon,
   RestoreIcon,
 } from "../../ui/icons";
+import { ContextMenuItem, ContextMenuShortcut } from "@/ui/shadcn/context-menu";
+import { DropdownMenuItem, DropdownMenuShortcut } from "@/ui/shadcn/dropdown-menu";
 
 /**
  * The one list of things a thread can do. The thread header menu, the sidebar
@@ -124,34 +126,30 @@ export function buildThreadActions(
   return actions;
 }
 
-interface ThreadActionsMenuProps {
+interface ThreadActionItemsProps {
   readonly actions: readonly ThreadAction[];
-  readonly className: string;
 }
 
-export function ThreadActionsMenu({ actions, className }: ThreadActionsMenuProps) {
-  return (
-    <div className={`workspace-menu ${className}`} role="menu">
-      {actions.map((action) => (
-        <button
-          key={action.id}
-          className="workspace-menu__item"
-          data-thread-action={action.id}
-          type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            action.run();
-          }}
-        >
-          <span>{action.title}</span>
-          {action.hint ? (
-            <span className="workspace-menu__shortcut" aria-hidden="true">
-              {action.hint}
-            </span>
-          ) : null}
-        </button>
-      ))}
-    </div>
-  );
+/** Items for a thread's right-click `ContextMenuContent`. */
+export function ThreadActionContextMenuItems({ actions }: ThreadActionItemsProps) {
+  return actions.map((action) => (
+    <ContextMenuItem key={action.id} data-thread-action={action.id} onClick={action.run}>
+      <span>{action.title}</span>
+      {action.hint ? (
+        <ContextMenuShortcut aria-hidden="true">{action.hint}</ContextMenuShortcut>
+      ) : null}
+    </ContextMenuItem>
+  ));
+}
+
+/** Items for a thread's "…" `DropdownMenuContent`, matching the right-click menu. */
+export function ThreadActionDropdownMenuItems({ actions }: ThreadActionItemsProps) {
+  return actions.map((action) => (
+    <DropdownMenuItem key={action.id} data-thread-action={action.id} onClick={action.run}>
+      <span>{action.title}</span>
+      {action.hint ? (
+        <DropdownMenuShortcut aria-hidden="true">{action.hint}</DropdownMenuShortcut>
+      ) : null}
+    </DropdownMenuItem>
+  ));
 }

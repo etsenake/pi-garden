@@ -32,25 +32,17 @@ interface UseThreadActionsParams {
   readonly openScheduledEditor: (editor: ScheduledEditorState) => void;
 }
 
-/** Where a thread menu is open: a sidebar row's right-click menu, or the thread header. */
-type OpenThreadMenu =
-  { readonly surface: "sidebar"; readonly sessionId: string } | { readonly surface: "header" };
-
 export interface ThreadMenuState {
   readonly platform: NodeJS.Platform;
-  readonly openMenu: OpenThreadMenu | null;
   readonly renameSessionId: string | null;
   readonly renameDraft: string;
   readonly setRenameDraft: Dispatch<SetStateAction<string>>;
-  readonly menuWrapRef: RefObject<HTMLDivElement | null>;
   readonly renamePanelRef: RefObject<HTMLFormElement | null>;
-  readonly openSidebarMenu: (sessionId: string) => void;
-  readonly toggleHeaderMenu: () => void;
   readonly submitRename: (subject: ThreadActionSubject) => void;
   readonly cancelRename: () => void;
   /**
    * The shared action list every thread menu, shortcut and the command palette
-   * use. Running an action closes any open thread menu first.
+   * use. The menus themselves are shadcn menus that close on selection.
    */
   readonly actionsFor: (subject: ThreadActionSubject) => readonly ThreadAction[];
   readonly archive: (target: WorkspaceSessionTarget) => void;
@@ -66,24 +58,18 @@ export function useThreadActions({
   sidebarCollapsed,
   openScheduledEditor,
 }: UseThreadActionsParams): ThreadMenuState {
-  const [openMenu, setOpenMenu] = useState<OpenThreadMenu | null>(null);
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
-  const menuWrapRef = useRef<HTMLDivElement | null>(null);
   const renamePanelRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (!menuWrapRef.current?.contains(target) && !renamePanelRef.current?.contains(target)) {
-        setOpenMenu(null);
-        setRenameSessionId(null);
-      }
+      if (!renamePanelRef.current?.contains(target)) setRenameSessionId(null);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpenMenu(null);
         setRenameSessionId(null);
       }
     };
@@ -153,20 +139,10 @@ export function useThreadActions({
 
   return {
     platform,
-    openMenu,
     renameSessionId,
     renameDraft,
     setRenameDraft,
-    menuWrapRef,
     renamePanelRef,
-    openSidebarMenu: (sessionId) => {
-      setRenameSessionId(null);
-      setOpenMenu({ surface: "sidebar", sessionId });
-    },
-    toggleHeaderMenu: () => {
-      setRenameSessionId(null);
-      setOpenMenu((current) => (current?.surface === "header" ? null : { surface: "header" }));
-    },
     submitRename: (subject) => {
       const nextTitle = renameDraft.trim();
       setRenameSessionId(null);
@@ -178,14 +154,7 @@ export function useThreadActions({
       setRenameSessionId(null);
       setRenameDraft("");
     },
-    actionsFor: (subject) =>
-      buildThreadActions(subject, handlers).map((action) => ({
-        ...action,
-        run: () => {
-          setOpenMenu(null);
-          action.run();
-        },
-      })),
+    actionsFor: (subject) => buildThreadActions(subject, handlers),
     archive,
     restore,
     setPinned,

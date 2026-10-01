@@ -3,14 +3,11 @@ import {
   forwardRef,
   useContext,
   useEffect,
-  useLayoutEffect,
-  useRef,
   useState,
   type CSSProperties,
   type MutableRefObject,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 import {
   DndContext,
   DragOverlay,
@@ -42,12 +39,11 @@ import { SidebarSectionContributions } from "../extensions/host-contributions";
 import { SidebarFooter } from "../extensions/sidebar-footer";
 import {
   ArchiveIcon,
-  CheckIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   CustomizeSidebarIcon,
   ExtensionIcon,
   FolderIcon,
+  MoreIcon,
   PinIcon,
   PlusIcon,
   RestoreIcon,
@@ -67,7 +63,7 @@ import { usePersistedPaneWidth } from "../../ui/use-persisted-pane-width";
 import { sessionLastInteractedAt } from "../../../contracts/thread-recency";
 import type { WorkspaceMenuState } from "./hooks/use-workspace-menu";
 import type { ThreadMenuState } from "./hooks/use-thread-actions";
-import { archiveThreadShortcut, ThreadActionsMenu } from "./thread-actions";
+import { archiveThreadShortcut, ThreadActionContextMenuItems } from "./thread-actions";
 import {
   recencyHistoryExpansionKey,
   sessionThreadKey,
@@ -82,6 +78,28 @@ import {
 import { useThreadShortcutHintsVisible } from "./thread-shortcut-hints";
 import type { Dispatch, SetStateAction } from "react";
 import type { DesktopAppState } from "../../../contracts/desktop-state";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/ui/shadcn/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/ui/shadcn/dropdown-menu";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/shadcn/empty";
+import { Input } from "@/ui/shadcn/input";
+import { Kbd } from "@/ui/shadcn/kbd";
+import { ScrollArea } from "@/ui/shadcn/scroll-area";
+import { Separator } from "@/ui/shadcn/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 interface SidebarProps {
   readonly activeView: AppView;
@@ -374,6 +392,12 @@ export function Sidebar(props: SidebarProps) {
     ? pinnedThreads.find((thread) => pinnedSortableId(thread) === activeId)
     : undefined;
 
+  function pickWorkspace() {
+    void updateSnapshot(setSnapshot, () => api.pickWorkspace()).catch((error: unknown) => {
+      console.error("[renderer] pickWorkspace failed", error);
+    });
+  }
+
   function toggleHistoryExpanded(key: string) {
     setExpandedHistory((current) => {
       const next = new Set(current);
@@ -398,258 +422,242 @@ export function Sidebar(props: SidebarProps) {
         onReset={() => setSidebarWidth(undefined)}
       />
       <div className="sidebar__top">
-        <button
-          className="sidebar__new"
-          type="button"
+        <Button
+          className="sidebar__new w-full justify-start"
+          variant="secondary"
           disabled={!selectedWorkspace}
           onClick={() => onNewThread()}
         >
           <PlusIcon />
           <span>New thread</span>
-        </button>
+        </Button>
 
-        <div className="sidebar__nav">
-          <button
-            className={`sidebar__nav-item ${activeView === "threads" ? "sidebar__nav-item--active" : ""}`}
-            type="button"
+        <nav className="sidebar__nav" aria-label="Sidebar">
+          <SidebarNavItem
+            active={activeView === "threads"}
+            icon={<FolderIcon />}
+            label="Threads"
             onClick={() => onSetActiveView("threads")}
-          >
-            <FolderIcon />
-            <span>Threads</span>
-          </button>
-          <button
-            className={`sidebar__nav-item ${activeView === "scheduled" ? "sidebar__nav-item--active" : ""}`}
-            type="button"
-            data-testid="sidebar-scheduled"
+          />
+          <SidebarNavItem
+            active={activeView === "scheduled"}
+            icon={<ClockIcon />}
+            label="Scheduled"
+            testId="sidebar-scheduled"
             onClick={() => onSetActiveView("scheduled")}
-          >
-            <ClockIcon />
-            <span>Scheduled</span>
-          </button>
-          <button
-            className="sidebar__nav-item"
-            type="button"
+          />
+          <SidebarNavItem
+            icon={<SkillIcon />}
+            label="Skills"
             onClick={() =>
               onOpenSkills(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)
             }
-          >
-            <SkillIcon />
-            <span>Skills</span>
-          </button>
-          <button
-            className="sidebar__nav-item"
-            type="button"
+          />
+          <SidebarNavItem
+            icon={<ExtensionIcon />}
+            label="Extensions"
             onClick={() =>
               onOpenExtensions(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)
             }
-          >
-            <ExtensionIcon />
-            <span>Extensions</span>
-          </button>
-          <button
-            className="sidebar__nav-item"
-            type="button"
+          />
+          <SidebarNavItem
+            icon={<SettingsIcon />}
+            label="Settings"
             onClick={() =>
               onOpenSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)
             }
-          >
-            <SettingsIcon />
-            <span>Settings</span>
-          </button>
-        </div>
+          />
+        </nav>
       </div>
 
-      <div className="sidebar__section">
-        <div className="section__head">
-          <span>Threads</span>
-          <div className="section__tools">
-            <ThreadGroupingControl
-              grouping={threadGrouping}
-              onChange={(grouping) => {
-                void updateSnapshot(setSnapshot, () => api.setThreadGrouping(grouping)).catch(
-                  (error: unknown) => {
-                    console.error("[renderer] setThreadGrouping failed", error);
-                  },
-                );
-              }}
-            />
-            <button
-              aria-label="Open folder"
-              className="icon-button"
-              type="button"
-              onClick={() => {
-                void updateSnapshot(setSnapshot, () => api.pickWorkspace()).catch(
-                  (error: unknown) => {
-                    console.error("[renderer] pickWorkspace failed", error);
-                  },
-                );
-              }}
-            >
-              <FolderIcon />
-            </button>
+      <ScrollArea className="mr-1 min-h-0">
+        <div className="sidebar__section">
+          <div className="section__head">
+            <span>Threads</span>
+            <div className="section__tools">
+              <ThreadGroupingControl
+                grouping={threadGrouping}
+                onChange={(grouping) => {
+                  void updateSnapshot(setSnapshot, () => api.setThreadGrouping(grouping)).catch(
+                    (error: unknown) => {
+                      console.error("[renderer] setThreadGrouping failed", error);
+                    },
+                  );
+                }}
+              />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      aria-label="Open folder"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={pickWorkspace}
+                    />
+                  }
+                >
+                  <FolderIcon />
+                </TooltipTrigger>
+                <TooltipContent role="tooltip">Open folder</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        </div>
 
-        {visibleWorkspaces.length === 0 ? (
-          <div className="empty-state" data-testid="empty-state">
-            <h2>No folders yet</h2>
-            <p>Open a project folder to start building a workspace and session list.</p>
-            <button
-              className="button button--primary"
-              type="button"
-              onClick={() => {
-                void updateSnapshot(setSnapshot, () => api.pickWorkspace()).catch(
-                  (error: unknown) => {
-                    console.error("[renderer] pickWorkspace failed", error);
-                  },
-                );
-              }}
+          {visibleWorkspaces.length === 0 ? (
+            <Empty className="p-4" data-testid="empty-state">
+              <EmptyHeader>
+                <EmptyTitle>No folders yet</EmptyTitle>
+                <EmptyDescription>
+                  Open a project folder to start building a workspace and session list.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={pickWorkspace}>Open first folder</Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={headerCollision}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
             >
-              Open first folder
-            </button>
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={headerCollision}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <ThreadShortcutContext.Provider value={shortcutByKey}>
-              <div className="workspace-list" data-testid="workspace-list">
-                <SortableContext items={rootGroupIds} strategy={verticalListSortingStrategy}>
-                  {rootGroups.map((group) => (
-                    <SortableWorkspaceFolder
-                      key={group.workspace.id}
-                      workspace={group.workspace}
-                      threads={threadGrouping === "workspace" ? group.threads : undefined}
-                      historyExpanded={expandedHistory.has(
-                        workspaceHistoryExpansionKey(group.workspace.id),
-                      )}
-                      onToggleHistory={() =>
-                        toggleHistoryExpanded(workspaceHistoryExpansionKey(group.workspace.id))
-                      }
-                      canDrag={canDrag}
-                      selectedWorkspace={selectedWorkspace}
-                      selectedSession={selectedSession}
-                      linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
-                      wsMenu={wsMenu}
-                      api={api}
-                      threadMenu={threadMenu}
-                      onNewThread={onNewThread}
-                      onArchiveSession={onArchiveSession}
-                      onSelectSession={onSelectSession}
-                      onSetSessionPinned={onSetSessionPinned}
-                    />
-                  ))}
-                </SortableContext>
-                {orphanGroups.map((group) => (
-                  <section
-                    key={group.workspace.id}
-                    className="workspace-group"
-                    data-workspace-id={group.workspace.id}
-                  >
-                    <WorkspaceFolderContent
-                      workspace={group.workspace}
-                      threads={threadGrouping === "workspace" ? group.threads : undefined}
-                      historyExpanded={expandedHistory.has(
-                        workspaceHistoryExpansionKey(group.workspace.id),
-                      )}
-                      onToggleHistory={() =>
-                        toggleHistoryExpanded(workspaceHistoryExpansionKey(group.workspace.id))
-                      }
-                      canDrag={false}
-                      selectedWorkspace={selectedWorkspace}
-                      selectedSession={selectedSession}
-                      linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
-                      wsMenu={wsMenu}
-                      api={api}
-                      threadMenu={threadMenu}
-                      onNewThread={onNewThread}
-                      onArchiveSession={onArchiveSession}
-                      onSelectSession={onSelectSession}
-                      onSetSessionPinned={onSetSessionPinned}
-                    />
-                  </section>
-                ))}
-                {pinnedThreads.length > 0 ? (
-                  <PinnedThreadsSection
-                    pinnedThreads={pinnedThreads}
-                    sortableIds={pinnedSortableIds}
-                    sortableIdForThread={pinnedSortableId}
-                    selectedWorkspace={selectedWorkspace}
-                    selectedSession={selectedSession}
-                    threadMenu={threadMenu}
-                    onArchiveSession={onArchiveSession}
-                    onSelectSession={onSelectSession}
-                    onSetSessionPinned={onSetSessionPinned}
-                  />
-                ) : null}
-                {threadGrouping === "time"
-                  ? threadSidebarModel.recencySections.map((section) => (
-                      <RecencyThreadSectionView
-                        key={section.bucket}
-                        section={section}
+              <ThreadShortcutContext.Provider value={shortcutByKey}>
+                <div className="workspace-list" data-testid="workspace-list">
+                  <SortableContext items={rootGroupIds} strategy={verticalListSortingStrategy}>
+                    {rootGroups.map((group) => (
+                      <SortableWorkspaceFolder
+                        key={group.workspace.id}
+                        workspace={group.workspace}
+                        threads={threadGrouping === "workspace" ? group.threads : undefined}
                         historyExpanded={expandedHistory.has(
-                          recencyHistoryExpansionKey(section.bucket),
+                          workspaceHistoryExpansionKey(group.workspace.id),
                         )}
                         onToggleHistory={() =>
-                          toggleHistoryExpanded(recencyHistoryExpansionKey(section.bucket))
+                          toggleHistoryExpanded(workspaceHistoryExpansionKey(group.workspace.id))
                         }
+                        canDrag={canDrag}
                         selectedWorkspace={selectedWorkspace}
                         selectedSession={selectedSession}
+                        linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
+                        wsMenu={wsMenu}
+                        api={api}
                         threadMenu={threadMenu}
+                        onNewThread={onNewThread}
                         onArchiveSession={onArchiveSession}
                         onSelectSession={onSelectSession}
                         onSetSessionPinned={onSetSessionPinned}
                       />
-                    ))
-                  : null}
-                {threadSidebarModel.archivedThreads.length > 0 ? (
-                  <ArchivedThreadsSection
-                    archivedThreads={threadSidebarModel.archivedThreads}
-                    open={archivedOpen}
-                    onToggle={() => setArchivedOpen((current) => !current)}
-                    selectedWorkspace={selectedWorkspace}
-                    selectedSession={selectedSession}
-                    threadMenu={threadMenu}
-                    onUnarchiveSession={onUnarchiveSession}
-                    onSelectSession={onSelectSession}
-                    onSetSessionPinned={onSetSessionPinned}
-                  />
-                ) : null}
-              </div>
-              <DragOverlay>
-                {activePinnedThread ? (
-                  <ThreadSessionRow
-                    active={
-                      activePinnedThread.workspaceId === selectedWorkspace?.id &&
-                      activePinnedThread.session.id === selectedSession?.id
-                    }
-                    thread={activePinnedThread}
-                    showContext
-                    overlay
-                    onAction={() => undefined}
-                    onSelect={() => undefined}
-                    onTogglePinned={() => undefined}
-                  />
-                ) : activeFolder ? (
-                  <div className="workspace-group workspace-group--overlay">
-                    <WorkspaceFolderContent
-                      workspace={activeFolder}
-                      canDrag={false}
+                    ))}
+                  </SortableContext>
+                  {orphanGroups.map((group) => (
+                    <section
+                      key={group.workspace.id}
+                      className="workspace-group"
+                      data-workspace-id={group.workspace.id}
+                    >
+                      <WorkspaceFolderContent
+                        workspace={group.workspace}
+                        threads={threadGrouping === "workspace" ? group.threads : undefined}
+                        historyExpanded={expandedHistory.has(
+                          workspaceHistoryExpansionKey(group.workspace.id),
+                        )}
+                        onToggleHistory={() =>
+                          toggleHistoryExpanded(workspaceHistoryExpansionKey(group.workspace.id))
+                        }
+                        canDrag={false}
+                        selectedWorkspace={selectedWorkspace}
+                        selectedSession={selectedSession}
+                        linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
+                        wsMenu={wsMenu}
+                        api={api}
+                        threadMenu={threadMenu}
+                        onNewThread={onNewThread}
+                        onArchiveSession={onArchiveSession}
+                        onSelectSession={onSelectSession}
+                        onSetSessionPinned={onSetSessionPinned}
+                      />
+                    </section>
+                  ))}
+                  {pinnedThreads.length > 0 ? (
+                    <PinnedThreadsSection
+                      pinnedThreads={pinnedThreads}
+                      sortableIds={pinnedSortableIds}
+                      sortableIdForThread={pinnedSortableId}
                       selectedWorkspace={selectedWorkspace}
-                      linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
-                      wsMenu={wsMenu}
-                      api={api}
+                      selectedSession={selectedSession}
+                      threadMenu={threadMenu}
+                      onArchiveSession={onArchiveSession}
+                      onSelectSession={onSelectSession}
+                      onSetSessionPinned={onSetSessionPinned}
                     />
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </ThreadShortcutContext.Provider>
-          </DndContext>
-        )}
-      </div>
+                  ) : null}
+                  {threadGrouping === "time"
+                    ? threadSidebarModel.recencySections.map((section) => (
+                        <RecencyThreadSectionView
+                          key={section.bucket}
+                          section={section}
+                          historyExpanded={expandedHistory.has(
+                            recencyHistoryExpansionKey(section.bucket),
+                          )}
+                          onToggleHistory={() =>
+                            toggleHistoryExpanded(recencyHistoryExpansionKey(section.bucket))
+                          }
+                          selectedWorkspace={selectedWorkspace}
+                          selectedSession={selectedSession}
+                          threadMenu={threadMenu}
+                          onArchiveSession={onArchiveSession}
+                          onSelectSession={onSelectSession}
+                          onSetSessionPinned={onSetSessionPinned}
+                        />
+                      ))
+                    : null}
+                  {threadSidebarModel.archivedThreads.length > 0 ? (
+                    <ArchivedThreadsSection
+                      archivedThreads={threadSidebarModel.archivedThreads}
+                      open={archivedOpen}
+                      onOpenChange={setArchivedOpen}
+                      selectedWorkspace={selectedWorkspace}
+                      selectedSession={selectedSession}
+                      threadMenu={threadMenu}
+                      onUnarchiveSession={onUnarchiveSession}
+                      onSelectSession={onSelectSession}
+                      onSetSessionPinned={onSetSessionPinned}
+                    />
+                  ) : null}
+                </div>
+                <DragOverlay>
+                  {activePinnedThread ? (
+                    <ThreadSessionRow
+                      active={
+                        activePinnedThread.workspaceId === selectedWorkspace?.id &&
+                        activePinnedThread.session.id === selectedSession?.id
+                      }
+                      thread={activePinnedThread}
+                      showContext
+                      overlay
+                      onAction={() => undefined}
+                      onSelect={() => undefined}
+                      onTogglePinned={() => undefined}
+                    />
+                  ) : activeFolder ? (
+                    <div className="workspace-group workspace-group--overlay">
+                      <WorkspaceFolderContent
+                        workspace={activeFolder}
+                        canDrag={false}
+                        selectedWorkspace={selectedWorkspace}
+                        linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
+                        wsMenu={wsMenu}
+                        api={api}
+                      />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </ThreadShortcutContext.Provider>
+            </DndContext>
+          )}
+        </div>
+      </ScrollArea>
       <SidebarSectionContributions
         contributions={sidebarSection}
         onInvokeAction={onInvokeExtensionAction}
@@ -765,98 +773,78 @@ function WorkspaceFolderContent(
         </button>
         <span className="workspace-row__actions">
           {onNewThread ? (
-            <button
-              aria-label={`New thread in ${workspace.name}`}
-              className="icon-button workspace-row__action-button"
-              title="New thread"
-              type="button"
-              onClick={() => onNewThread(workspace.id)}
-            >
-              <PlusIcon />
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={`New thread in ${workspace.name}`}
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => onNewThread(workspace.id)}
+                  />
+                }
+              >
+                <PlusIcon />
+              </TooltipTrigger>
+              <TooltipContent role="tooltip">New thread</TooltipContent>
+            </Tooltip>
           ) : null}
-          <span
-            className="workspace-row__menu-wrap"
-            ref={wsMenu.workspaceMenuId === workspace.id ? wsMenu.workspaceMenuWrapRef : undefined}
-          >
-            <button
-              aria-label={`Workspace actions for ${workspace.name}`}
-              aria-haspopup="menu"
-              className="icon-button workspace-row__menu-button"
-              aria-expanded={wsMenu.workspaceMenuId === workspace.id}
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                wsMenu.openWorkspaceMenu(workspace.id);
-              }}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label={`Workspace actions for ${workspace.name}`}
+                  variant="ghost"
+                  size="icon-sm"
+                />
+              }
             >
-              …
-            </button>
-            {wsMenu.workspaceMenuId === workspace.id ? (
-              <div className="workspace-menu">
-                <button
-                  className="workspace-menu__item"
-                  type="button"
-                  onClick={(event) =>
-                    wsMenu.runWorkspaceMenuAction(event, () => {
-                      void api.openWorkspaceInFinder(workspace.id).catch((error: unknown) => {
-                        console.error("[renderer] openWorkspaceInFinder failed", error);
-                      });
-                    })
+              <MoreIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              aria-label={`Workspace actions for ${workspace.name}`}
+              className="w-auto"
+              // "Edit name" opens a field; keep focus there instead of on the trigger.
+              finalFocus={() => wsMenu.workspaceRenameInputRef.current ?? true}
+            >
+              <DropdownMenuItem
+                onClick={() => {
+                  void api.openWorkspaceInFinder(workspace.id).catch((error: unknown) => {
+                    console.error("[renderer] openWorkspaceInFinder failed", error);
+                  });
+                }}
+              >
+                Open folder
+              </DropdownMenuItem>
+              {linkedWorktree ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() =>
+                    wsMenu.removeWorktree(
+                      linkedWorktree.rootWorkspaceId || workspace.id,
+                      linkedWorktree,
+                    )
                   }
                 >
-                  Open folder
-                </button>
-                {linkedWorktree ? (
-                  <button
-                    className="workspace-menu__item workspace-menu__item--danger"
-                    type="button"
-                    onClick={(event) =>
-                      wsMenu.runWorkspaceMenuAction(event, () =>
-                        wsMenu.removeWorktree(
-                          linkedWorktree.rootWorkspaceId || workspace.id,
-                          linkedWorktree,
-                        ),
-                      )
-                    }
-                  >
-                    Remove worktree
-                  </button>
-                ) : (
-                  <button
-                    className="workspace-menu__item"
-                    type="button"
-                    onClick={(event) =>
-                      wsMenu.runWorkspaceMenuAction(event, () =>
-                        wsMenu.createWorktree(workspace.id),
-                      )
-                    }
-                  >
-                    Create permanent worktree
-                  </button>
-                )}
-                <button
-                  className="workspace-menu__item"
-                  type="button"
-                  onClick={(event) =>
-                    wsMenu.runWorkspaceMenuAction(event, () => wsMenu.startRename(workspace))
-                  }
-                >
-                  Edit name
-                </button>
-                <button
-                  className="workspace-menu__item workspace-menu__item--danger"
-                  type="button"
-                  onClick={(event) =>
-                    wsMenu.runWorkspaceMenuAction(event, () => wsMenu.removeWorkspace(workspace))
-                  }
-                >
-                  Remove
-                </button>
-              </div>
-            ) : null}
-          </span>
+                  Remove worktree
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => wsMenu.createWorktree(workspace.id)}>
+                  Create permanent worktree
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => wsMenu.startRename(workspace)}>
+                Edit name
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => wsMenu.removeWorkspace(workspace)}
+              >
+                Remove
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </span>
       </div>
       {wsMenu.workspaceRenameId === workspace.id ? (
@@ -868,9 +856,8 @@ function WorkspaceFolderContent(
             wsMenu.submitRename(workspace);
           }}
         >
-          <input
+          <Input
             aria-label={`Rename ${workspace.name}`}
-            className="workspace-rename__input"
             ref={wsMenu.workspaceRenameInputRef}
             value={wsMenu.workspaceRenameDraft}
             onChange={(event) => {
@@ -883,21 +870,7 @@ function WorkspaceFolderContent(
               }
             }}
           />
-          <div className="workspace-rename__actions">
-            <button
-              className="workspace-rename__button"
-              type="button"
-              onClick={wsMenu.cancelRename}
-            >
-              Cancel
-            </button>
-            <button
-              className="workspace-rename__button workspace-rename__button--primary"
-              type="submit"
-            >
-              Save
-            </button>
-          </div>
+          <RenameActions onCancel={wsMenu.cancelRename} />
         </form>
       ) : null}
       {history && onSelectSession && onArchiveSession && onSetSessionPinned ? (
@@ -1050,15 +1023,56 @@ function HistoryToggle({
 }) {
   const text = expanded ? "Show less" : "Show more";
   return (
-    <button
+    <Button
       aria-expanded={expanded}
       aria-label={`${text} ${label}`}
-      className="thread-history-toggle"
-      type="button"
+      className="thread-history-toggle w-full justify-start pl-6.5"
+      variant="ghost"
+      size="sm"
       onClick={onToggle}
     >
       {text}
-    </button>
+    </Button>
+  );
+}
+
+function SidebarNavItem({
+  active = false,
+  icon,
+  label,
+  testId,
+  onClick,
+}: {
+  readonly active?: boolean;
+  readonly icon: ReactNode;
+  readonly label: string;
+  readonly testId?: string;
+  readonly onClick: () => void;
+}) {
+  return (
+    <Button
+      aria-current={active ? "page" : undefined}
+      className="sidebar__nav-item w-full justify-start"
+      data-testid={testId}
+      variant={active ? "secondary" : "ghost"}
+      onClick={onClick}
+    >
+      {icon}
+      <span>{label}</span>
+    </Button>
+  );
+}
+
+function RenameActions({ onCancel }: { readonly onCancel: () => void }) {
+  return (
+    <div className="workspace-rename__actions">
+      <Button variant="outline" size="sm" onClick={onCancel}>
+        Cancel
+      </Button>
+      <Button size="sm" type="submit">
+        Save
+      </Button>
+    </div>
   );
 }
 
@@ -1070,209 +1084,53 @@ function ThreadGroupingControl({
   readonly onChange: (grouping: ThreadGrouping) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [submenuOpen, setSubmenuOpen] = useState(false);
-  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
-  const [submenuStyle, setSubmenuStyle] = useState<CSSProperties>({});
-  const wrapRef = useRef<HTMLSpanElement | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const groupingRef = useRef<HTMLButtonElement | null>(null);
-  const submenuRef = useRef<HTMLDivElement | null>(null);
-  const submenuTimer = useRef<number | null>(null);
-
-  const closeSubmenuSoon = () => {
-    if (submenuTimer.current !== null) {
-      window.clearTimeout(submenuTimer.current);
-    }
-    submenuTimer.current = window.setTimeout(() => {
-      submenuTimer.current = null;
-      setSubmenuOpen(false);
-    }, 140);
-  };
-
-  const keepSubmenu = () => {
-    if (submenuTimer.current !== null) {
-      window.clearTimeout(submenuTimer.current);
-      submenuTimer.current = null;
-    }
-    setSubmenuOpen(true);
-  };
-
-  const closeMenu = () => {
-    if (submenuTimer.current !== null) {
-      window.clearTimeout(submenuTimer.current);
-      submenuTimer.current = null;
-    }
-    setSubmenuOpen(false);
-    setOpen(false);
-  };
-
-  useEffect(() => {
-    if (!open) {
-      return undefined;
-    }
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (wrapRef.current?.contains(target) || menuRef.current?.contains(target)) {
-        return;
-      }
-      closeMenu();
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeMenu();
-      }
-    };
-    window.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  useEffect(
-    () => () => {
-      if (submenuTimer.current !== null) {
-        window.clearTimeout(submenuTimer.current);
-      }
-    },
-    [],
-  );
-
-  useLayoutEffect(() => {
-    if (!open || !buttonRef.current) {
-      return;
-    }
-    const rect = buttonRef.current.getBoundingClientRect();
-    setMenuStyle({
-      top: rect.bottom + 6,
-      left: rect.right,
-      right: "auto",
-      width: "max-content",
-      transform: "translateX(-100%)",
-    });
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!submenuOpen || !groupingRef.current) {
-      return;
-    }
-    const rect = groupingRef.current.getBoundingClientRect();
-    const gap = 6;
-    const width = submenuRef.current?.offsetWidth ?? 0;
-    const openRight = rect.right + gap;
-    const left =
-      width > 0 && openRight + width > window.innerWidth - 8
-        ? Math.max(8, rect.left - gap - width)
-        : openRight;
-    setSubmenuStyle({
-      top: rect.top - 6,
-      left,
-      right: "auto",
-      width: "max-content",
-    });
-  }, [submenuOpen]);
-
   return (
-    <span className="shortcut-tooltip-wrap thread-grouping" ref={wrapRef}>
-      <button
-        ref={buttonRef}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label="Customize Sidebar"
-        className="icon-button"
-        type="button"
-        onClick={() => {
-          if (open) {
-            closeMenu();
-            return;
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <DropdownMenuTrigger
+              render={<Button aria-label="Customize Sidebar" variant="ghost" size="icon-sm" />}
+            />
           }
-          setOpen(true);
-        }}
-      >
-        <CustomizeSidebarIcon />
-      </button>
-      {open ? null : (
-        <span className="shortcut-tooltip" role="tooltip">
-          Customize Sidebar
-        </span>
-      )}
-      {open
-        ? createPortal(
-            <div ref={menuRef}>
-              <div
-                aria-label="Customize Sidebar"
-                className="workspace-menu thread-grouping__menu"
-                role="menu"
-                style={menuStyle}
-              >
-                <button
-                  ref={groupingRef}
-                  aria-expanded={submenuOpen}
-                  aria-haspopup="menu"
-                  className={`workspace-menu__item${submenuOpen ? " thread-grouping__parent--open" : ""}`}
-                  role="menuitem"
-                  type="button"
-                  onClick={() => {
-                    keepSubmenu();
-                  }}
-                  onMouseEnter={keepSubmenu}
-                  onMouseLeave={closeSubmenuSoon}
-                >
-                  <span>Grouping</span>
-                  <ChevronRightIcon />
-                </button>
-              </div>
-              {submenuOpen ? (
-                <div
-                  ref={submenuRef}
-                  aria-label="Grouping"
-                  className="workspace-menu thread-grouping__submenu"
-                  role="menu"
-                  style={submenuStyle}
-                  onMouseEnter={keepSubmenu}
-                  onMouseLeave={closeSubmenuSoon}
-                >
-                  {(
-                    [
-                      ["time", "Time"],
-                      ["workspace", "Workspace"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <button
-                      key={value}
-                      aria-checked={grouping === value}
-                      className="workspace-menu__item thread-grouping__option"
-                      role="menuitemradio"
-                      type="button"
-                      onClick={() => {
-                        closeMenu();
-                        if (value !== grouping) {
-                          onChange(value);
-                        }
-                      }}
-                    >
-                      <span aria-hidden="true" className="thread-grouping__check">
-                        {grouping === value ? <CheckIcon /> : null}
-                      </span>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>,
-            document.body,
-          )
-        : null}
-    </span>
+        >
+          <CustomizeSidebarIcon />
+        </TooltipTrigger>
+        <TooltipContent role="tooltip">Customize Sidebar</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end" aria-label="Customize Sidebar">
+        <DropdownMenuSub
+          onOpenChange={(subOpen, details) => {
+            // Escape dismisses the whole menu, not just the Grouping submenu.
+            if (!subOpen && details.reason === "escape-key") setOpen(false);
+          }}
+        >
+          <DropdownMenuSubTrigger>Grouping</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent aria-label="Grouping">
+            <DropdownMenuRadioGroup
+              value={grouping}
+              onValueChange={(value: ThreadGrouping) => {
+                if (value !== grouping) onChange(value);
+              }}
+            >
+              <DropdownMenuRadioItem value="time" closeOnClick>
+                Time
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="workspace" closeOnClick>
+                Workspace
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 function ArchivedThreadsSection({
   archivedThreads,
   open,
-  onToggle,
+  onOpenChange,
   selectedWorkspace,
   selectedSession,
   threadMenu,
@@ -1282,7 +1140,7 @@ function ArchivedThreadsSection({
 }: {
   readonly archivedThreads: readonly ThreadListEntry[];
   readonly open: boolean;
-  readonly onToggle: () => void;
+  readonly onOpenChange: (open: boolean) => void;
   readonly selectedWorkspace: WorkspaceRecord | undefined;
   readonly selectedSession: SessionRecord | undefined;
   readonly threadMenu: ThreadMenuState;
@@ -1294,60 +1152,54 @@ function ArchivedThreadsSection({
   ) => void;
 }) {
   return (
-    <div className="archived-thread-group">
-      <button
-        aria-expanded={open}
-        className="archived-thread-group__toggle"
-        type="button"
-        onClick={onToggle}
+    <Collapsible className="archived-thread-group" open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger
+        render={
+          <Button className="archived-thread-group__toggle w-fit" variant="ghost" size="xs" />
+        }
       >
-        <span
-          aria-hidden="true"
-          className={`archived-thread-group__chevron ${open ? "archived-thread-group__chevron--open" : ""}`}
-        >
+        <span aria-hidden="true" className={cn("flex transition-transform", !open && "-rotate-90")}>
           <ChevronDownIcon />
         </span>
         <span>Archived</span>
-        <span className="archived-thread-group__count">{archivedThreads.length}</span>
-      </button>
-      {open ? (
-        <div className="session-list session-list--archived">
-          {archivedThreads.map((thread) => {
-            const active =
-              thread.workspaceId === selectedWorkspace?.id &&
-              thread.session.id === selectedSession?.id;
-            return (
-              <ThreadSessionRow
-                key={`${thread.workspaceId}:${thread.session.id}`}
-                active={active}
-                archived
-                thread={thread}
-                showContext
-                threadMenu={threadMenu}
-                onAction={() =>
-                  onUnarchiveSession({
-                    workspaceId: thread.workspaceId,
-                    sessionId: thread.session.id,
-                  })
-                }
-                onSelect={() =>
-                  onSelectSession({
-                    workspaceId: thread.workspaceId,
-                    sessionId: thread.session.id,
-                  })
-                }
-                onTogglePinned={() =>
-                  onSetSessionPinned(
-                    { workspaceId: thread.workspaceId, sessionId: thread.session.id },
-                    !thread.session.pinnedAt,
-                  )
-                }
-              />
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+        <Badge variant="secondary">{archivedThreads.length}</Badge>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="session-list session-list--archived">
+        {archivedThreads.map((thread) => {
+          const active =
+            thread.workspaceId === selectedWorkspace?.id &&
+            thread.session.id === selectedSession?.id;
+          return (
+            <ThreadSessionRow
+              key={`${thread.workspaceId}:${thread.session.id}`}
+              active={active}
+              archived
+              thread={thread}
+              showContext
+              threadMenu={threadMenu}
+              onAction={() =>
+                onUnarchiveSession({
+                  workspaceId: thread.workspaceId,
+                  sessionId: thread.session.id,
+                })
+              }
+              onSelect={() =>
+                onSelectSession({
+                  workspaceId: thread.workspaceId,
+                  sessionId: thread.session.id,
+                })
+              }
+              onTogglePinned={() =>
+                onSetSessionPinned(
+                  { workspaceId: thread.workspaceId, sessionId: thread.session.id },
+                  !thread.session.pinnedAt,
+                )
+              }
+            />
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -1414,6 +1266,7 @@ function PinnedThreadsSection({
           })}
         </div>
       </SortableContext>
+      <Separator />
     </section>
   );
 }
@@ -1518,10 +1371,6 @@ const ThreadSessionRow = forwardRef<HTMLDivElement, ThreadSessionRowProps>(
     const actionContext = showContext ? ` in ${thread.contextLabel}` : "";
     const shortcut = useContext(ThreadShortcutContext)?.get(sessionThreadKey(thread));
     const shortcutBadge = overlay ? undefined : shortcut;
-    const menuOpen =
-      !overlay &&
-      threadMenu?.openMenu?.surface === "sidebar" &&
-      threadMenu.openMenu.sessionId === thread.session.id;
     const classes = [
       "session-row",
       active ? "session-row--active" : "",
@@ -1532,119 +1381,127 @@ const ThreadSessionRow = forwardRef<HTMLDivElement, ThreadSessionRowProps>(
     ]
       .filter(Boolean)
       .join(" ");
-    return (
+    const rowProps = {
+      ref,
+      style,
+      className: classes,
+      "data-sidebar-indicator": indicatorVariant,
+      "data-session-pinned": pinned ? "true" : "false",
+      "data-session-id": thread.session.id,
+      "data-thread-shortcut": shortcutBadge ? String(shortcutBadge.slot) : undefined,
+      "aria-keyshortcuts": shortcutBadge
+        ? `${IS_MAC ? "Meta" : "Control"}+${shortcutBadge.slot}`
+        : undefined,
+      onClick: () => {
+        if (!dragging) onSelect();
+      },
+    };
+    const rowContent = (
       <>
-        <div
-          ref={ref}
-          style={style}
-          className={classes}
-          data-sidebar-indicator={indicatorVariant}
-          data-session-pinned={pinned ? "true" : "false"}
-          data-session-id={thread.session.id}
-          data-thread-shortcut={shortcutBadge ? String(shortcutBadge.slot) : undefined}
-          aria-keyshortcuts={
-            shortcutBadge ? `${IS_MAC ? "Meta" : "Control"}+${shortcutBadge.slot}` : undefined
-          }
-          onClick={() => {
-            if (!dragging) onSelect();
-          }}
-          onContextMenu={(event) => {
-            if (!threadMenu || overlay) return;
-            event.preventDefault();
+        <button
+          className="session-row__select"
+          onClick={(event) => {
             event.stopPropagation();
-            threadMenu.openSidebarMenu(thread.session.id);
+            onSelect();
           }}
+          type="button"
+          {...dragAttributes}
+          {...dragListeners}
         >
-          <button
-            className="session-row__select"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect();
-            }}
-            type="button"
-            {...dragAttributes}
-            {...dragListeners}
-          >
-            <span className="session-row__leading" aria-hidden="true">
-              {indicatorVariant === "running" ? (
-                <span className="session-row__status session-row__status--running" />
-              ) : null}
-              {indicatorVariant === "failed" ? (
-                <span className="session-row__status session-row__status--failed" />
-              ) : null}
-              {indicatorVariant === "unseen" ? (
-                <span className="session-row__status session-row__status--unseen" />
-              ) : null}
-            </span>
-            <span className="session-row__body">
-              <span className="session-row__title-line">
-                <span className="session-row__title">{thread.session.title}</span>
-              </span>
-              {showContext ? (
-                <span className="session-row__context">{thread.contextLabel}</span>
-              ) : null}
-            </span>
-          </button>
-          <span className="session-row__trailing">
-            {thread.environment.kind === "worktree" ? (
-              <span className="session-row__workspace-icon" aria-hidden="true" title="Worktree">
-                <WorktreeIcon />
-              </span>
+          <span className="session-row__leading" aria-hidden="true">
+            {indicatorVariant === "running" ? (
+              <span className="session-row__status session-row__status--running" />
             ) : null}
-            {shortcutBadge ? (
-              <span className="session-row__shortcut" aria-hidden="true">
-                {shortcutBadge.label}
-              </span>
-            ) : (
-              <span className="session-row__time">
-                {formatRelativeTime(sessionLastInteractedAt(thread.session))}
-              </span>
-            )}
-            <span className="session-row__action-cluster">
-              {!archived ? (
-                <button
-                  aria-label={`${pinned ? "Unpin" : "Pin"} ${thread.session.title}${actionContext}`}
-                  aria-pressed={pinned}
-                  className="icon-button session-row__action session-row__pin-action"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onTogglePinned();
-                  }}
-                >
-                  <PinIcon filled={pinned} />
-                </button>
-              ) : null}
-              <span className="shortcut-tooltip-wrap session-row__tooltip-wrap">
-                <button
-                  aria-label={`${archived ? "Restore" : "Archive"} ${thread.session.title}${actionContext}`}
-                  className="icon-button session-row__action"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onAction();
-                  }}
-                >
-                  {archived ? <RestoreIcon /> : <ArchiveIcon />}
-                </button>
-                {threadMenu && !overlay && !menuOpen ? (
-                  <span className="shortcut-tooltip session-row__tooltip" role="tooltip">
-                    <span>{archived ? "Restore thread" : "Archive thread"}</span>
-                    {archived ? null : <kbd>{archiveThreadShortcut(threadMenu.platform)}</kbd>}
-                  </span>
-                ) : null}
-              </span>
-            </span>
-            {threadMenu && menuOpen ? (
-              <div className="session-row__menu-wrap" ref={threadMenu.menuWrapRef}>
-                <ThreadActionsMenu
-                  actions={threadMenu.actionsFor(thread)}
-                  className="session-row__menu"
-                />
-              </div>
+            {indicatorVariant === "failed" ? (
+              <span className="session-row__status session-row__status--failed" />
+            ) : null}
+            {indicatorVariant === "unseen" ? (
+              <span className="session-row__status session-row__status--unseen" />
             ) : null}
           </span>
-        </div>
+          <span className="session-row__body">
+            <span className="session-row__title-line">
+              <span className="session-row__title">{thread.session.title}</span>
+            </span>
+            {showContext ? (
+              <span className="session-row__context">{thread.contextLabel}</span>
+            ) : null}
+          </span>
+        </button>
+        <span className="session-row__trailing">
+          {thread.environment.kind === "worktree" ? (
+            <span className="session-row__workspace-icon" aria-hidden="true" title="Worktree">
+              <WorktreeIcon />
+            </span>
+          ) : null}
+          {shortcutBadge ? (
+            <Kbd className="session-row__shortcut" aria-hidden="true">
+              {shortcutBadge.label}
+            </Kbd>
+          ) : (
+            <span className="session-row__time">
+              {formatRelativeTime(sessionLastInteractedAt(thread.session))}
+            </span>
+          )}
+          <span className="session-row__action-cluster">
+            {!archived ? (
+              <Button
+                aria-label={`${pinned ? "Unpin" : "Pin"} ${thread.session.title}${actionContext}`}
+                aria-pressed={pinned}
+                className="session-row__action session-row__pin-action"
+                variant="ghost"
+                size="icon-sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTogglePinned();
+                }}
+              >
+                <PinIcon filled={pinned} />
+              </Button>
+            ) : null}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={`${archived ? "Restore" : "Archive"} ${thread.session.title}${actionContext}`}
+                    className="session-row__action"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAction();
+                    }}
+                  />
+                }
+              >
+                {archived ? <RestoreIcon /> : <ArchiveIcon />}
+              </TooltipTrigger>
+              {threadMenu && !overlay ? (
+                <TooltipContent role="tooltip">
+                  <span>{archived ? "Restore thread" : "Archive thread"}</span>
+                  {archived ? null : <Kbd>{archiveThreadShortcut(threadMenu.platform)}</Kbd>}
+                </TooltipContent>
+              ) : null}
+            </Tooltip>
+          </span>
+        </span>
+      </>
+    );
+    return (
+      <>
+        {threadMenu && !overlay ? (
+          <ContextMenu>
+            <ContextMenuTrigger {...rowProps}>{rowContent}</ContextMenuTrigger>
+            <ContextMenuContent
+              // "Rename thread" opens a field; keep focus there instead of on the row.
+              finalFocus={() => threadMenu.renamePanelRef.current?.querySelector("input") ?? true}
+            >
+              <SidebarThreadMenuItems thread={thread} threadMenu={threadMenu} />
+            </ContextMenuContent>
+          </ContextMenu>
+        ) : (
+          <div {...rowProps}>{rowContent}</div>
+        )}
         {threadMenu?.renameSessionId === thread.session.id ? (
           <form
             className="workspace-rename session-rename"
@@ -1654,9 +1511,8 @@ const ThreadSessionRow = forwardRef<HTMLDivElement, ThreadSessionRowProps>(
               threadMenu.submitRename(thread);
             }}
           >
-            <input
+            <Input
               aria-label={`Rename thread ${thread.session.title}`}
-              className="workspace-rename__input"
               // Mounts when a rename starts, including after the sidebar or a
               // collapsed group opens to reveal the row.
               autoFocus
@@ -1670,24 +1526,21 @@ const ThreadSessionRow = forwardRef<HTMLDivElement, ThreadSessionRowProps>(
                 }
               }}
             />
-            <div className="workspace-rename__actions">
-              <button
-                className="workspace-rename__button"
-                type="button"
-                onClick={threadMenu.cancelRename}
-              >
-                Cancel
-              </button>
-              <button
-                className="workspace-rename__button workspace-rename__button--primary"
-                type="submit"
-              >
-                Save
-              </button>
-            </div>
+            <RenameActions onCancel={threadMenu.cancelRename} />
           </form>
         ) : null}
       </>
     );
   },
 );
+
+/** Builds the action list only while the row's right-click menu is open. */
+function SidebarThreadMenuItems({
+  thread,
+  threadMenu,
+}: {
+  readonly thread: ThreadListEntry;
+  readonly threadMenu: ThreadMenuState;
+}) {
+  return <ThreadActionContextMenuItems actions={threadMenu.actionsFor(thread)} />;
+}

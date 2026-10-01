@@ -198,7 +198,7 @@ test("maintenance: skills, pin, thread list, worktree, queued follow-ups", async
       });
       await expect(workspaceActions).toBeVisible();
       await workspaceActions.click();
-      await page.getByRole("button", { name: "Create permanent worktree" }).click();
+      await page.getByRole("menuitem", { name: "Create permanent worktree" }).click();
       let selectedPath = "";
       await expect
         .poll(

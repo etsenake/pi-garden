@@ -15,7 +15,7 @@ const proofDir = process.env.PI_APP_THREAD_MENU_PROOF_DIR;
 
 async function menuItemTitles(menu: Locator): Promise<string[]> {
   return menu
-    .locator(".workspace-menu__item > span:first-child")
+    .locator("[data-thread-action] > span:first-child")
     .evaluateAll((items) => items.map((item) => item.textContent ?? ""));
 }
 
@@ -83,7 +83,7 @@ test("right-click thread menu supports rename, archive/restore, mark read, and c
     await row.hover();
     await expect(row.locator(".session-row__menu-button")).toHaveCount(0);
     await row.click({ button: "right" });
-    const menu = row.getByRole("menu");
+    const menu = window.getByRole("menu");
     expect(await menuItemTitles(menu)).toEqual([
       "Rename thread",
       "Pin thread",
@@ -94,13 +94,13 @@ test("right-click thread menu supports rename, archive/restore, mark read, and c
     ]);
     await captureProof(window, "01-open-menu.png");
 
-    await menu.getByRole("button", { name: "Copy session ID" }).click();
+    await menu.getByRole("menuitem", { name: "Copy session ID" }).click();
     await expect
       .poll(() => window.evaluate(() => navigator.clipboard.readText()))
       .toBe(target!.sessionId);
 
     await row.click({ button: "right" });
-    await row.getByRole("menu").getByRole("button", { name: "Mark as read" }).click();
+    await window.getByRole("menu").getByRole("menuitem", { name: "Mark as read" }).click();
     await expect(row).toHaveAttribute("data-sidebar-indicator", "none");
     await captureProof(window, "02-marked-read.png");
 
@@ -136,7 +136,7 @@ test("right-click thread menu supports rename, archive/restore, mark read, and c
     await captureProof(window, "06-gap-fixed.png");
 
     await row.click({ button: "right" });
-    await row.getByRole("menu").getByRole("button", { name: "Rename thread" }).click();
+    await window.getByRole("menu").getByRole("menuitem", { name: "Rename thread" }).click();
     const renameInput = window.getByLabel(`Rename thread ${targetTitle}`);
     await renameInput.fill(renamedTitle);
     await window.getByRole("button", { name: "Save" }).click();
@@ -145,7 +145,7 @@ test("right-click thread menu supports rename, archive/restore, mark read, and c
     await captureProof(window, "03-renamed.png");
 
     await row.click({ button: "right" });
-    await row.getByRole("menu").getByRole("button", { name: "Archive thread" }).click();
+    await window.getByRole("menu").getByRole("menuitem", { name: "Archive thread" }).click();
     await expect(
       window.locator(".session-list > .session-row", { hasText: renamedTitle }),
     ).toHaveCount(0);
@@ -158,7 +158,7 @@ test("right-click thread menu supports rename, archive/restore, mark read, and c
       hasText: renamedTitle,
     });
     await archivedRow.click({ button: "right" });
-    await archivedRow.getByRole("menu").getByRole("button", { name: "Restore thread" }).click();
+    await window.getByRole("menu").getByRole("menuitem", { name: "Restore thread" }).click();
     await expect(
       window.locator(".session-list > .session-row", { hasText: renamedTitle }),
     ).toHaveCount(1);
@@ -189,20 +189,24 @@ test("header and right-click menus match, show shortcuts, and Shift chords renam
 
     const row = window.locator(".session-row", { hasText: targetTitle }).first();
     await row.click({ button: "right" });
-    const rowMenu = row.getByRole("menu");
+    const rowMenu = window.getByRole("menu");
     const rowItems = await menuItemTitles(rowMenu);
     await expect(
-      rowMenu.getByRole("button", { name: "Rename thread" }).locator(".workspace-menu__shortcut"),
+      rowMenu
+        .getByRole("menuitem", { name: "Rename thread" })
+        .locator("[data-slot=context-menu-shortcut]"),
     ).toHaveText(isMac ? "⇧⌘R" : "Ctrl+Shift+R");
     await expect(
-      rowMenu.getByRole("button", { name: "Archive thread" }).locator(".workspace-menu__shortcut"),
+      rowMenu
+        .getByRole("menuitem", { name: "Archive thread" })
+        .locator("[data-slot=context-menu-shortcut]"),
     ).toHaveText(isMac ? "⇧⌘A" : "Ctrl+Shift+A");
     await captureProof(window, "07-row-menu-hints.png");
     await window.keyboard.press("Escape");
     await expect(rowMenu).toHaveCount(0);
 
     await window.getByTestId("thread-header-menu").click();
-    const headerMenu = window.locator(".chat-header__menu");
+    const headerMenu = window.getByRole("menu");
     expect(await menuItemTitles(headerMenu)).toEqual(rowItems);
     await captureProof(window, "08-header-menu.png");
     await window.keyboard.press("Escape");
@@ -211,8 +215,8 @@ test("header and right-click menus match, show shortcuts, and Shift chords renam
     // Hovering the row's archive button shows the shortcut.
     await row.hover();
     await row.getByRole("button", { name: `Archive ${targetTitle}` }).hover();
-    const tooltip = row.locator(".session-row__tooltip");
-    await expect(tooltip).toHaveCSS("opacity", "1");
+    const tooltip = window.getByRole("tooltip", { name: /Archive thread/ });
+    await expect(tooltip).toBeVisible();
     await expect(tooltip.locator("kbd")).toHaveText(isMac ? "⇧⌘A" : "Ctrl+Shift+A");
     await captureProof(window, "09-archive-tooltip.png");
 
