@@ -3,10 +3,26 @@ import type {
   RuntimeProviderRecord,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
-import { SearchIcon } from "../../ui/icons";
 import type { CustomProviderConfig } from "../../../contracts/ipc";
+import { Button } from "@/ui/shadcn/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/shadcn/dialog";
+import { Field, FieldError } from "@/ui/shadcn/field";
+import { Input } from "@/ui/shadcn/input";
 import { SettingsCustomEndpointsSection } from "./settings-custom-endpoints-section";
-import { filterProviders, ProviderRow, SettingsGroup } from "./settings-utils";
+import {
+  filterProviders,
+  ProviderRow,
+  SearchField,
+  SettingsGroup,
+  SettingsNote,
+} from "./settings-utils";
 
 interface SettingsProvidersSectionProps {
   readonly runtime?: RuntimeSnapshot;
@@ -124,27 +140,19 @@ export function SettingsProvidersSection({
         </SettingsGroup>
       ) : null}
 
-      <section className="settings-section">
-        <h3 className="settings-section__title">
-          Connected <span className="resource-list__count">{connectedProviders.length}</span>
-        </h3>
-        <p className="settings-section__description">
-          pi picks models from connected providers first.
-        </p>
-        <div className="settings-group">
-          {connectedProviders.length > 0 ? (
-            connectedProviders.map((provider) => (
-              <ProviderRow key={provider.id} provider={provider} {...rowHandlers} />
-            ))
-          ) : (
-            <div className="settings-row">
-              <span className="settings-row__description">
-                No providers connected yet. Sign in or add an API key below.
-              </span>
-            </div>
-          )}
-        </div>
-      </section>
+      <SettingsGroup
+        title="Connected"
+        count={connectedProviders.length}
+        description="pi picks models from connected providers first."
+      >
+        {connectedProviders.length > 0 ? (
+          connectedProviders.map((provider) => (
+            <ProviderRow key={provider.id} provider={provider} {...rowHandlers} />
+          ))
+        ) : (
+          <SettingsNote>No providers connected yet. Sign in or add an API key below.</SettingsNote>
+        )}
+      </SettingsGroup>
 
       <SettingsCustomEndpointsSection
         existingProviderIds={existingProviderIds}
@@ -152,51 +160,39 @@ export function SettingsProvidersSection({
         onDeleteCustomProvider={onDeleteCustomProvider}
       />
 
-      <section className="settings-section">
-        <div className="settings-section__header">
-          <h3 className="settings-section__title">
-            Available <span className="resource-list__count">{availableProviders.length}</span>
-          </h3>
-          <label className="resource-search">
-            <SearchIcon />
-            <input
-              aria-label="Search providers"
-              placeholder="Search providers"
-              spellCheck={false}
-              type="search"
-              value={providerQuery}
-              onChange={(event) => setProviderQuery(event.currentTarget.value)}
-            />
-          </label>
-        </div>
-        <p className="settings-section__description">
-          Sign in with OAuth or save an API key to connect a provider.
-        </p>
-        <div className="settings-group" data-testid="settings-available-providers">
-          {shownAvailable.length > 0 ? (
-            shownAvailable.map((provider) => (
-              <ProviderRow key={provider.id} provider={provider} {...rowHandlers} />
-            ))
-          ) : (
-            <div className="settings-row">
-              <span className="settings-row__description">
-                {providerQuery.trim()
-                  ? `No providers match “${providerQuery.trim()}”.`
-                  : "Every provider is connected."}
-              </span>
-            </div>
-          )}
-        </div>
-        {hiddenAvailableCount > 0 ? (
-          <button
-            className="resource-list__more"
-            type="button"
-            onClick={() => setShowAllAvailable(true)}
-          >
-            Show {hiddenAvailableCount} more
-          </button>
-        ) : null}
-      </section>
+      <SettingsGroup
+        title="Available"
+        count={availableProviders.length}
+        description="Sign in with OAuth or save an API key to connect a provider."
+        actions={
+          <SearchField label="Search providers" value={providerQuery} onChange={setProviderQuery} />
+        }
+        listTestId="settings-available-providers"
+        footer={
+          hiddenAvailableCount > 0 ? (
+            <Button
+              className="justify-self-start"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAllAvailable(true)}
+            >
+              Show {hiddenAvailableCount} more
+            </Button>
+          ) : null
+        }
+      >
+        {shownAvailable.length > 0 ? (
+          shownAvailable.map((provider) => (
+            <ProviderRow key={provider.id} provider={provider} {...rowHandlers} />
+          ))
+        ) : (
+          <SettingsNote>
+            {providerQuery.trim()
+              ? `No providers match “${providerQuery.trim()}”.`
+              : "Every provider is connected."}
+          </SettingsNote>
+        )}
+      </SettingsGroup>
 
       {apiKeyProvider ? (
         <ProviderApiKeyDialog
@@ -239,49 +235,49 @@ function ProviderApiKeyDialog({
       ? `Replace or remove the saved API key for ${provider.name}.`
       : `Save an API key locally for ${provider.name}.`;
 
+  const save = () =>
+    void onSave().catch((error: unknown) => {
+      console.error("[renderer] onSave failed", error);
+    });
+
   return (
-    <div className="extension-dialog-backdrop">
-      <div className="extension-dialog" data-testid="provider-api-key-dialog">
-        <div className="extension-dialog__title">{title}</div>
-        <p className="extension-dialog__body">{body}</p>
-        <input
-          aria-label={`${provider.name} API key`}
-          autoFocus
-          className="settings-search"
-          disabled={pending}
-          placeholder="Enter API key"
-          type="password"
-          value={draft}
-          onChange={(event) => onChangeDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              onClose();
-              return;
-            }
-            if (event.key === "Enter" && draft.trim()) {
-              event.preventDefault();
-              void onSave().catch((error: unknown) => {
-                console.error("[renderer] onSave failed", error);
-              });
-            }
-          }}
-        />
-        {error ? <p className="extension-dialog__body settings-warning">{error}</p> : null}
-        <div className="extension-dialog__actions">
-          <button
-            className="button button--secondary"
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent data-testid="provider-api-key-dialog" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
+        <Field data-invalid={error ? true : undefined}>
+          <Input
+            aria-invalid={error ? true : undefined}
+            aria-label={`${provider.name} API key`}
             disabled={pending}
-            type="button"
-            onClick={onClose}
-          >
+            placeholder="Enter API key"
+            type="password"
+            value={draft}
+            onChange={(event) => onChangeDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && draft.trim()) {
+                event.preventDefault();
+                save();
+              }
+            }}
+          />
+          {error ? <FieldError className="settings-warning">{error}</FieldError> : null}
+        </Field>
+        <DialogFooter>
+          <Button disabled={pending} variant="outline" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
           {onRemove ? (
-            <button
-              className="button button--secondary"
+            <Button
               disabled={pending}
-              type="button"
+              variant="destructive"
               onClick={() =>
                 void onRemove().catch((error: unknown) => {
                   console.error("[renderer] onRemove failed", error);
@@ -289,22 +285,13 @@ function ProviderApiKeyDialog({
               }
             >
               Remove saved key
-            </button>
+            </Button>
           ) : null}
-          <button
-            className="button"
-            disabled={pending || draft.trim().length === 0}
-            type="button"
-            onClick={() =>
-              void onSave().catch((error: unknown) => {
-                console.error("[renderer] onSave failed", error);
-              })
-            }
-          >
+          <Button disabled={pending || draft.trim().length === 0} onClick={save}>
             {provider.authSource === "auth_file" ? "Save key" : "Set API key"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
