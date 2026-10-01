@@ -120,7 +120,7 @@ test("the terminal-heavy fixture loads under ordinary Pi unchanged", async () =>
   expect([...loaded.tools.keys()]).toEqual(["fixture-terminal-heavy_tool"]);
 });
 
-test("the bundled authoring skills are discovered by Pi's skill loader", async () => {
+test("the bundled skills are discovered by Pi's skill loader", async () => {
   const { agentDir, workspacePath } = await dirs();
   const loader = new pi.DefaultResourceLoader({
     cwd: workspacePath,
@@ -137,6 +137,7 @@ test("the bundled authoring skills are discovered by Pi's skill loader", async (
     "create-rich-surface",
     "create-desktop-view",
     "theme-pi-garden",
+    "pi-garden-reference",
   ]) {
     const skill = skills.find((entry) => entry.name === name);
     expect(skill, name).toBeDefined();
