@@ -15,7 +15,7 @@
   gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--font-medium);
 }
 
@@ -28,7 +28,7 @@
   flex: none;
   padding: 16px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -36,7 +36,7 @@
 .extension-view-panel__status h3 {
   margin: 0 0 8px;
   color: var(--text-strong);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .extension-view-panel__body {
@@ -76,7 +76,7 @@
   margin: 0;
   padding: 4px 8px;
   color: var(--warning, var(--muted));
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .rich-surface-slot[data-surface="app-header"] .extension-view-panel__frame,
@@ -127,7 +127,7 @@
 
 .rich-overlay-dialog__header h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .rich-overlay-dialog .extension-view-panel__frame {
@@ -141,6 +141,6 @@
 .workbench__extension-heading {
   margin: 16px 0 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--font-medium);
 }

@@ -70,7 +70,7 @@
   box-shadow: var(--elevation-popover);
   z-index: 20;
   color: var(--text-strong);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   cursor: default;
 }
@@ -102,13 +102,13 @@
 .context-meter__heading {
   margin: 0 0 2px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--font-normal);
 }
 
 .context-meter__headline {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: var(--font-medium);
   font-variant-numeric: tabular-nums;
 }

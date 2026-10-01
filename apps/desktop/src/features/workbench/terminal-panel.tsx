@@ -219,7 +219,7 @@ export function TerminalPanel({ workspace, sessionId, onHide }: TerminalPanelPro
       convertEol: true,
       cursorBlink: true,
       fontFamily: "Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
-      fontSize: 12,
+      fontSize: 13,
       scrollback: 2_000,
       theme: terminalThemeFor(getActiveTheme()),
     });
