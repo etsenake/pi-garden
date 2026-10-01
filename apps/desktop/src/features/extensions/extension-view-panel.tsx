@@ -9,6 +9,7 @@ import type {
 import type { DesktopToolPresentation } from "@pi-garden/extension-ui/browser";
 import { themeSnapshot } from "../../../contracts/theme-catalog";
 import type { ActiveTheme } from "../../ui/active-theme";
+import { Button } from "@/ui/shadcn/button";
 import { RefreshIcon } from "../../ui/icons";
 
 export interface ExtensionViewTheme {
@@ -336,14 +337,10 @@ export function ExtensionViewPanel({
       {variant === "panel" ? (
         <header className="extension-view-panel__header">
           <span>{view.title}</span>
-          <button
-            className="button"
-            type="button"
-            onClick={() => setReloadNonce((value) => value + 1)}
-          >
+          <Button size="sm" variant="outline" onClick={() => setReloadNonce((value) => value + 1)}>
             <RefreshIcon />
             Reload view
-          </button>
+          </Button>
         </header>
       ) : null}
       {state.kind === "failed" ? (

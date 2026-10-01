@@ -19,11 +19,6 @@
   font-weight: var(--font-medium);
 }
 
-.extension-view-panel__header .button {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
 .extension-view-panel__status {
   flex: none;
   padding: 16px;
@@ -93,41 +88,6 @@
 
 .rich-surface-slot[data-surface="settings"] .extension-view-panel__frame {
   height: 220px;
-}
-
-.rich-overlay-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--main) 28%, transparent);
-}
-
-.rich-overlay-dialog {
-  display: flex;
-  flex-direction: column;
-  width: min(560px, calc(100vw - 48px));
-  max-height: min(640px, calc(100vh - 48px));
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--main);
-  color: var(--text);
-}
-
-.rich-overlay-dialog__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
-}
-
-.rich-overlay-dialog__header h2 {
-  margin: 0;
-  font-size: 15px;
 }
 
 .rich-overlay-dialog .extension-view-panel__frame {

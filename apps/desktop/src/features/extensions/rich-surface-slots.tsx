@@ -6,6 +6,7 @@ import type {
   DesktopRichSurface,
   ExtensionOverlayChange,
 } from "../../../contracts/extension-views";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/shadcn/dialog";
 import { ExtensionViewPanel, type ExtensionViewTheme } from "./extension-view-panel";
 
 export interface RichToolHost extends RichSurfaceHost {
@@ -168,46 +169,40 @@ export function RichOverlayDialog({
   readonly view: DesktopExtensionViewInfo;
   readonly onDismiss: () => void;
 }): ReactNode {
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const node = dialogRef.current;
-    node?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      event.stopPropagation();
-      onDismiss();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onDismiss]);
   return (
-    <div className="rich-overlay-backdrop" data-testid="rich-overlay">
-      <div
-        aria-label={view.title}
+    <Dialog
+      disablePointerDismissal
+      open
+      onOpenChange={(open) => {
+        if (!open) onDismiss();
+      }}
+    >
+      {/*
+        aria-modal keeps the window-level Escape guards out while the overlay is open. Focus is
+        not returned on close: the opener lives inside an extension frame, which would swallow
+        the app's keyboard shortcuts.
+      */}
+      <DialogContent
         aria-modal="true"
-        className="rich-overlay-dialog"
+        className="rich-overlay-dialog sm:max-w-xl"
         data-testid="rich-overlay-dialog"
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
+        finalFocus={false}
       >
-        <header className="rich-overlay-dialog__header">
-          <h2>{view.title}</h2>
-          <button className="button" type="button" onClick={onDismiss}>
-            Close
-          </button>
-        </header>
-        <ExtensionViewPanel
-          api={host.api}
-          target={host.target}
-          view={view}
-          theme={host.theme}
-          variant="overlay"
-          onBeforePrepareTaskDraft={host.onBeforePrepareTaskDraft}
-          onPrepareTaskDraftPendingChange={host.onPrepareTaskDraftPendingChange}
-        />
-      </div>
-    </div>
+        <DialogHeader>
+          <DialogTitle>{view.title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex min-h-0 flex-col" data-testid="rich-overlay">
+          <ExtensionViewPanel
+            api={host.api}
+            target={host.target}
+            view={view}
+            theme={host.theme}
+            variant="overlay"
+            onBeforePrepareTaskDraft={host.onBeforePrepareTaskDraft}
+            onPrepareTaskDraftPendingChange={host.onPrepareTaskDraftPendingChange}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
