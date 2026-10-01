@@ -1,13 +1,28 @@
 import {
   useEffect,
-  useId,
-  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
-import { SearchIcon } from "../../ui/icons";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/ui/shadcn/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/shadcn/dialog";
+import { Kbd, KbdGroup } from "@/ui/shadcn/kbd";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 
 export interface PaletteItem {
   readonly id: string;
@@ -63,19 +78,18 @@ export function CommandPalette<F extends string>({
   onBack,
   onClose,
 }: CommandPaletteProps<F>) {
-  const listId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [enterQueued, setEnterQueued] = useState(false);
   const items = sections.flatMap((section) => section.items);
   const activePosition = Math.min(activeIndex, items.length - 1);
   const active = items[activePosition];
-  // Item ids can hold paths with spaces, so DOM ids use the position instead.
-  const optionId = (position: number) => `${listId}-option-${position}`;
 
+  // The dialog's own focus return would undo focus the picked item moved
+  // (the composer, a file tab), so restore focus only when it was lost.
   useEffect(() => {
     const previousFocus = document.activeElement;
-    inputRef.current?.focus();
     return () => {
       const focusIsLost =
         !document.activeElement ||
@@ -89,6 +103,7 @@ export function CommandPalette<F extends string>({
 
   useEffect(() => {
     setActiveIndex(0);
+    listRef.current?.scrollTo({ top: 0 });
   }, [query, activeFilter, label]);
 
   useEffect(() => {
@@ -97,11 +112,6 @@ export function CommandPalette<F extends string>({
       active?.run();
     }
   }, [active, enterQueued, settling]);
-
-  // Keyed on the position, not the item: items are rebuilt on every app render.
-  useLayoutEffect(() => {
-    document.getElementById(optionId(activePosition))?.scrollIntoView({ block: "nearest" });
-  }, [activePosition, query, activeFilter, label]);
 
   const cycleFilter = (step: 1 | -1) => {
     if (!filters || filters.length === 0 || !onFilterChange) {
@@ -114,30 +124,17 @@ export function CommandPalette<F extends string>({
     }
   };
 
+  // cmdk handles arrows and Enter; these keys are ours, and preventDefault
+  // keeps cmdk from also handling them.
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.nativeEvent.isComposing) {
       return;
     }
     switch (event.key) {
-      case "ArrowDown":
-      case "ArrowUp": {
-        event.preventDefault();
-        if (items.length === 0) {
-          return;
-        }
-        const step = event.key === "ArrowDown" ? 1 : -1;
-        setActiveIndex((current) => {
-          const from = Math.min(current, items.length - 1);
-          return (from + step + items.length) % items.length;
-        });
-        return;
-      }
       case "Enter":
-        event.preventDefault();
         if (settling) {
+          event.preventDefault();
           setEnterQueued(true);
-        } else {
-          active?.run();
         }
         return;
       case "Escape":
@@ -163,159 +160,131 @@ export function CommandPalette<F extends string>({
     }
   };
 
-  let itemIndex = -1;
   return (
-    <div
-      className="command-palette-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
       }}
     >
-      <div
-        aria-label={label}
-        aria-modal="true"
-        className="command-palette"
-        data-testid="command-palette"
-        role="dialog"
-        onKeyDown={handleKeyDown}
+      <DialogContent
+        className="top-[min(14vh,120px)] translate-y-0 gap-0 overflow-hidden rounded-xl! p-0 sm:max-w-xl"
+        finalFocus={false}
+        initialFocus={inputRef}
+        showCloseButton={false}
       >
-        <div className="command-palette__search">
-          <span className="command-palette__search-icon">
-            <SearchIcon />
-          </span>
-          <input
+        <DialogHeader className="sr-only">
+          <DialogTitle>{label}</DialogTitle>
+          <DialogDescription>{placeholder}</DialogDescription>
+        </DialogHeader>
+        <Command
+          aria-label={label}
+          data-testid="command-palette"
+          label={placeholder}
+          loop
+          shouldFilter={false}
+          value={active?.id ?? ""}
+          vimBindings={false}
+          onKeyDown={handleKeyDown}
+          onValueChange={(value) => {
+            const index = items.findIndex((item) => item.id === value);
+            if (index >= 0) setActiveIndex(index);
+          }}
+        >
+          {/* shadow-none matches shadcn's InputGroupInput; it drops the legacy
+              base.css input focus ring inside the input group's own ring. */}
+          <CommandInput
             ref={inputRef}
-            aria-activedescendant={active ? optionId(activePosition) : undefined}
-            aria-autocomplete="list"
-            aria-controls={listId}
-            aria-expanded="true"
-            aria-label={placeholder}
-            className="command-palette__input"
+            className="shadow-none"
             data-testid="command-palette-input"
             placeholder={placeholder}
-            role="combobox"
-            spellCheck={false}
-            type="text"
             value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+            onValueChange={onQueryChange}
           />
-          <button
-            aria-label="Close"
-            className="command-palette__close"
-            type="button"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
 
-        {filters && filters.length > 0 ? (
-          <div aria-label="Filters" className="command-palette__filters" role="tablist">
-            {filters.map((filter) => (
-              <button
-                key={filter.id}
-                aria-selected={filter.id === activeFilter}
-                className={`command-palette__filter${filter.id === activeFilter ? " command-palette__filter--active" : ""}`}
-                role="tab"
-                tabIndex={-1}
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onFilterChange?.(filter.id)}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="command-palette__results" id={listId} role="listbox">
-          {items.length === 0 ? (
-            <div className="command-palette__empty" data-testid="command-palette-empty">
-              {emptyText}
-            </div>
-          ) : (
-            sections.map((section) =>
-              section.items.length === 0 ? null : (
-                <div
-                  key={section.id}
-                  aria-labelledby={`${listId}-section-${section.id}`}
-                  className="command-palette__section"
-                  role="group"
-                >
-                  <div
-                    className="command-palette__section-label"
-                    id={`${listId}-section-${section.id}`}
+          {filters && filters.length > 0 && onFilterChange ? (
+            <Tabs
+              className="px-2 pt-2"
+              value={activeFilter}
+              onValueChange={(value: F) => onFilterChange(value)}
+            >
+              <TabsList aria-label="Filters" variant="line">
+                {filters.map((filter) => (
+                  <TabsTrigger
+                    key={filter.id}
+                    tabIndex={-1}
+                    value={filter.id}
+                    onMouseDown={(event) => event.preventDefault()}
                   >
-                    {section.label}
-                  </div>
-                  {section.items.map((item) => {
-                    itemIndex += 1;
-                    const index = itemIndex;
-                    const selected = item === active;
-                    return (
-                      <div
-                        key={item.id}
-                        aria-selected={selected}
-                        className={`command-palette__item${selected ? " command-palette__item--active" : ""}`}
-                        id={optionId(index)}
-                        role="option"
-                        onClick={() => item.run()}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onMouseMove={() => {
-                          if (!selected) setActiveIndex(index);
-                        }}
-                      >
-                        <span className="command-palette__item-icon" aria-hidden="true">
-                          {item.icon}
-                        </span>
-                        <span className="command-palette__item-text">
-                          <span className="command-palette__item-title">
-                            <HighlightedText text={item.title} positions={item.titleMatches} />
-                          </span>
-                          {item.detail ? (
-                            <span className="command-palette__item-detail">
-                              <HighlightedText text={item.detail} positions={item.detailMatches} />
-                            </span>
-                          ) : null}
-                        </span>
-                        {item.hint ? (
-                          <kbd className="command-palette__item-hint">{item.hint}</kbd>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              ),
-            )
-          )}
-        </div>
+                    {filter.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          ) : null}
 
-        <div className="command-palette__footer" aria-hidden="true">
-          <span>
-            <kbd>↑</kbd>
-            <kbd>↓</kbd> Navigate
-          </span>
-          <span>
-            <kbd>↵</kbd> Open
-          </span>
-          {filters && filters.length > 0 ? (
-            <span>
-              <kbd>Tab</kbd> Filters
+          <CommandList ref={listRef} className="max-h-[min(420px,calc(100vh-280px))]">
+            <CommandEmpty data-testid="command-palette-empty">{emptyText}</CommandEmpty>
+            {sections.map((section) =>
+              section.items.length === 0 ? null : (
+                <CommandGroup key={section.id} heading={section.label}>
+                  {section.items.map((item) => (
+                    <CommandItem
+                      key={item.id}
+                      value={item.id}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onSelect={() => item.run()}
+                    >
+                      {item.icon}
+                      <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                        <span className="max-w-[70%] flex-none truncate">
+                          <HighlightedText text={item.title} positions={item.titleMatches} />
+                        </span>
+                        {item.detail ? (
+                          <span className="min-w-0 truncate text-xs text-muted-foreground">
+                            <HighlightedText text={item.detail} positions={item.detailMatches} />
+                          </span>
+                        ) : null}
+                      </span>
+                      {item.hint ? <CommandShortcut>{item.hint}</CommandShortcut> : null}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ),
+            )}
+          </CommandList>
+
+          <div
+            aria-hidden="true"
+            className="flex flex-wrap gap-4 border-t px-3 py-2 text-xs text-muted-foreground"
+          >
+            <span className="inline-flex items-center gap-1">
+              <KbdGroup>
+                <Kbd>↑</Kbd>
+                <Kbd>↓</Kbd>
+              </KbdGroup>
+              Navigate
             </span>
-          ) : null}
-          {onBack ? (
-            <span>
-              <kbd>⌫</kbd> Back
+            <span className="inline-flex items-center gap-1">
+              <Kbd>↵</Kbd> Open
             </span>
-          ) : null}
-          <span>
-            <kbd>Esc</kbd> Close
-          </span>
-        </div>
-      </div>
-    </div>
+            {filters && filters.length > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <Kbd>Tab</Kbd> Filters
+              </span>
+            ) : null}
+            {onBack ? (
+              <span className="inline-flex items-center gap-1">
+                <Kbd>⌫</Kbd> Back
+              </span>
+            ) : null}
+            <span className="inline-flex items-center gap-1">
+              <Kbd>Esc</Kbd> Close
+            </span>
+          </div>
+        </Command>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -339,7 +308,15 @@ function HighlightedText({
       end += 1;
     }
     const slice = text.slice(start, end);
-    parts.push(isMatch ? <mark key={start}>{slice}</mark> : slice);
+    parts.push(
+      isMatch ? (
+        <mark key={start} className="bg-transparent font-semibold text-(--accent)">
+          {slice}
+        </mark>
+      ) : (
+        slice
+      ),
+    );
     start = end;
   }
   return <>{parts}</>;
