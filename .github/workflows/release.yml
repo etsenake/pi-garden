@@ -159,6 +159,7 @@ jobs:
           pnpm run build
           node scripts/run-electron-builder.mjs --linux \
             --publish never \
+            -c.productName=pi-garden \
             "-c.extraMetadata.version=${GITHUB_REF_NAME#v}"
 
       - name: Verify packaged runtime dependencies

@@ -5,7 +5,11 @@ import path from "node:path";
 const VERSION_PATTERN = /^(\s*version\s+")([^"]+)(")$/m;
 const SHA256_PATTERN = /^(\s*sha256\s+")([^"]+)(")$/m;
 const URL_PATTERN = /^(\s*url\s+")([^"]+)(")$/m;
+const NAME_PATTERN = /^(\s*name\s+")([^"]+)(")$/m;
+const APP_PATTERN = /^(\s*app\s+")([^"]+)(")$/m;
 const CASK_PATTERN = /^cask "([^"]+)" do$/m;
+const APP_DISPLAY_NAME = "Pi Garden";
+const APP_BUNDLE_NAME = `${APP_DISPLAY_NAME}.app`;
 
 export function resolveCaskPath(tapDir, caskToken = "pi-garden") {
   return path.join(path.resolve(tapDir), "Casks", `${caskToken}.rb`);
@@ -20,13 +24,13 @@ cask "${caskToken}" do
   sha256 "${sha256}"
 
   url "${assetUrl}"
-  name "pi-garden"
+  name "${APP_DISPLAY_NAME}"
   desc "Codex-style desktop shell for pi"
   homepage "https://github.com/etsenake/pi-garden"
 
   depends_on arch: :arm64
 
-  app "pi-garden.app"
+  app "${APP_BUNDLE_NAME}"
 end
 `;
 }
@@ -46,7 +50,9 @@ export function updateCaskContent(
   const nextContent = existingContent
     .replace(VERSION_PATTERN, `$1${version}$3`)
     .replace(SHA256_PATTERN, `$1${sha256}$3`)
-    .replace(URL_PATTERN, `$1${assetUrl}$3`);
+    .replace(URL_PATTERN, `$1${assetUrl}$3`)
+    .replace(NAME_PATTERN, `$1${APP_DISPLAY_NAME}$3`)
+    .replace(APP_PATTERN, `$1${APP_BUNDLE_NAME}$3`);
 
   if (nextContent === existingContent) {
     return {
@@ -59,6 +65,7 @@ export function updateCaskContent(
     ["version", VERSION_PATTERN, version],
     ["sha256", SHA256_PATTERN, sha256],
     ["url", URL_PATTERN, assetUrl],
+    ["app", APP_PATTERN, APP_BUNDLE_NAME],
   ]) {
     const match = nextContent.match(pattern);
     if (!match || match[2] !== expected) {

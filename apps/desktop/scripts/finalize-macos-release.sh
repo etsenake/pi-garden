@@ -16,7 +16,7 @@ release_dir="$(cd "$1" && pwd)"
 version="$2"
 dmg="$release_dir/pi-garden-$version-arm64.dmg"
 zip="$release_dir/pi-garden-$version-arm64.zip"
-packaged_app="$release_dir/mac-arm64/pi-garden.app"
+packaged_app="$release_dir/mac-arm64/Pi Garden.app"
 
 for artifact in "$dmg" "$zip"; do
   if [[ ! -f "$artifact" ]]; then
@@ -56,7 +56,7 @@ verify_app() {
   spctl --assess --type execute --verbose=4 "$app_path"
 
   local architectures
-  architectures="$(lipo -archs "$app_path/Contents/MacOS/pi-garden")"
+  architectures="$(lipo -archs "$app_path/Contents/MacOS/Pi Garden")"
   if [[ "$architectures" != "arm64" ]]; then
     echo "Expected an arm64 app, found: $architectures" >&2
     exit 1
@@ -81,11 +81,11 @@ trap cleanup EXIT
 
 mkdir "$mount_point" "$zip_root"
 ditto -x -k "$zip" "$zip_root"
-verify_app "$zip_root/pi-garden.app"
+verify_app "$zip_root/Pi Garden.app"
 
 hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point"
 mounted=1
-verify_app "$mount_point/pi-garden.app"
+verify_app "$mount_point/Pi Garden.app"
 
 if [[ "$verify_only" -eq 0 ]]; then
   verify_app "$packaged_app"

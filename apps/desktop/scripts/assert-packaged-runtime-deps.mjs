@@ -92,13 +92,14 @@ const packagePlatform = (process.env.PI_APP_PACKAGE_PLATFORM ?? process.platform
   .trim()
   .toLowerCase();
 const releaseDir = path.resolve(desktopDir, process.env.PI_APP_TEST_RELEASE_DIR ?? "release");
+const macAppBundleName = "Pi Garden.app";
 const asarPath = resolveAsarPath(releaseDir, packagePlatform);
 const notificationHelperPath =
   packagePlatform === "darwin"
     ? path.join(
         releaseDir,
         "mac-arm64",
-        "pi-garden.app",
+        macAppBundleName,
         "Contents",
         "MacOS",
         "pi-garden-notification-status-helper",
@@ -210,7 +211,14 @@ console.log(`Verified packaged runtime dependencies in ${asarPath}`);
 
 function resolveAsarPath(releaseDir, packagePlatform) {
   if (packagePlatform === "darwin") {
-    return path.join(releaseDir, "mac-arm64", "pi-garden.app", "Contents", "Resources", "app.asar");
+    return path.join(
+      releaseDir,
+      "mac-arm64",
+      macAppBundleName,
+      "Contents",
+      "Resources",
+      "app.asar",
+    );
   }
 
   if (packagePlatform === "linux") {

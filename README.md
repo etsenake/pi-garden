@@ -95,7 +95,7 @@ pi-garden runs on macOS (Apple Silicon), Linux (x64) and Windows (x64).
 Download the latest `.dmg` (macOS), `.AppImage` or `.deb` (Linux), or `.exe` (Windows) from the
 [Releases page](https://github.com/etsenake/pi-garden/releases).
 
-- **macOS:** drag `pi-garden.app` into Applications. Releases are signed and notarized.
+- **macOS:** drag `Pi Garden.app` into Applications. Releases are signed and notarized.
 - **Linux:** make the AppImage executable and run it, or install the `.deb`.
 - **Windows:** run the setup `.exe`, or use the portable `.exe`. Builds are not code-signed
   yet, so SmartScreen may ask you to confirm.

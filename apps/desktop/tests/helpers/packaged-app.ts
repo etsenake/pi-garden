@@ -22,7 +22,7 @@ export async function resolvePackagedAppBundle(releaseDir = packagedReleaseDir):
   }
 
   const appBundle =
-    appBundles.find((candidate) => basename(candidate) === "pi-garden.app") ?? appBundles[0];
+    appBundles.find((candidate) => basename(candidate) === "Pi Garden.app") ?? appBundles[0];
   if (!appBundle) {
     throw new Error(
       `No .app bundle found under ${releaseDir}. Run pnpm --filter @pi-garden/desktop run package:dir first.`,
@@ -39,18 +39,17 @@ export async function resolvePackagedAppExecutable(
 }
 
 export async function resolveAppBundleExecutable(appBundle: string): Promise<string> {
-  const macOsDir = join(appBundle, "Contents", "MacOS");
-  const entries = await readdir(macOsDir, { withFileTypes: true });
-  const expectedExecutableName = basename(appBundle, ".app");
-  const executableEntry =
-    entries.find((entry) => entry.isFile() && entry.name === expectedExecutableName) ??
-    entries.find((entry) => entry.isFile());
-
-  if (!executableEntry) {
-    throw new Error(`No packaged executable found under ${macOsDir}.`);
+  // Copies are renamed freely, so trust the bundle's declared executable.
+  const { stdout } = await execFileAsync("/usr/libexec/PlistBuddy", [
+    "-c",
+    "Print :CFBundleExecutable",
+    join(appBundle, "Contents", "Info.plist"),
+  ]);
+  const executableName = stdout.trim();
+  if (!executableName) {
+    throw new Error(`No CFBundleExecutable declared in ${appBundle}.`);
   }
-
-  return join(macOsDir, executableEntry.name);
+  return join(appBundle, "Contents", "MacOS", executableName);
 }
 
 export async function resolvePackagedReleaseZip(releaseDir = packagedReleaseDir): Promise<string> {
@@ -71,7 +70,7 @@ export async function resolvePackagedReleaseZip(releaseDir = packagedReleaseDir)
 
 export async function extractPackagedReleaseZipAppBundle(
   releaseDir = packagedReleaseDir,
-  appName = "pi-garden 2.app",
+  appName = "Pi Garden 2.app",
 ): Promise<string> {
   const zipPath = await resolvePackagedReleaseZip(releaseDir);
   return extractAppBundleFromReleaseZip(zipPath, appName);
@@ -79,7 +78,7 @@ export async function extractPackagedReleaseZipAppBundle(
 
 export async function extractAppBundleFromReleaseZip(
   zipPath: string,
-  appName = "pi-garden 2.app",
+  appName = "Pi Garden 2.app",
 ): Promise<string> {
   const extractionDir = await mkdtemp(join(tmpdir(), "pi-garden-release-zip-"));
   await execFileAsync("ditto", ["-x", "-k", zipPath, extractionDir]);

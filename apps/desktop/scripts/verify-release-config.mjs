@@ -8,7 +8,8 @@ import { assertWorkflowActionPolicy, isAction } from "../../../scripts/workflow-
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoDir = path.resolve(scriptDir, "..", "..", "..");
-const linuxPackageCommand = "node scripts/run-electron-builder.mjs --linux --publish never";
+const linuxProductNamePin = "-c.productName=pi-garden";
+const linuxPackageCommand = `node scripts/run-electron-builder.mjs --linux --publish never ${linuxProductNamePin}`;
 const linuxDependencies = [
   "libgtk-3-0 | libgtk-3-0t64",
   "libnotify4",
@@ -135,8 +136,18 @@ function validateBuilderConfig(config, desktopPackage, afterRemoveSource) {
   assert(targets.has("nsis"), "Windows packaging must include NSIS");
   assert(targets.has("portable"), "Windows packaging must include portable");
 
-  const setupName = "${productName}-${version}-${arch}-setup.${ext}";
-  const portableName = "${productName}-${version}-${arch}-portable.${ext}";
+  assert(config.productName === "Pi Garden", "Display name must be Pi Garden");
+  assert(
+    config.artifactName === "pi-garden-${version}-${arch}.${ext}",
+    "Release artifact names must stay pi-garden-* independent of the display name",
+  );
+  assert(
+    config.linux?.desktop?.entry?.Name === "Pi Garden",
+    "Linux launcher must show the Pi Garden display name",
+  );
+
+  const setupName = "pi-garden-${version}-${arch}-setup.${ext}";
+  const portableName = "pi-garden-${version}-${arch}-portable.${ext}";
   assert(config.nsis?.artifactName === setupName, `NSIS artifactName must be ${setupName}`);
   assert(
     config.portable?.artifactName === portableName,
@@ -157,7 +168,7 @@ function validateBuilderConfig(config, desktopPackage, afterRemoveSource) {
   );
   assert(
     desktopPackage.scripts?.["package:linux:dir"]?.includes(
-      "node scripts/run-electron-builder.mjs --linux --dir --publish never",
+      `node scripts/run-electron-builder.mjs --linux --dir --publish never ${linuxProductNamePin}`,
     ),
     "pnpm Linux directory packaging must retry GitHub binary downloads",
   );
@@ -189,7 +200,7 @@ function validateBuilderConfig(config, desktopPackage, afterRemoveSource) {
   );
 
   assert(
-    config.deb?.artifactName === "${productName}_${version}_${arch}.${ext}",
+    config.deb?.artifactName === "pi-garden_${version}_${arch}.${ext}",
     "Debian artifact naming must remain deterministic",
   );
   assert(config.deb?.packageName === "pi-garden", "Debian package name must remain pi-garden");
@@ -314,9 +325,10 @@ function validateWorkflow(workflow, finalizerSource, linuxVerifierSource, window
   assert(
     runText(linuxPackage).includes("run-electron-builder.mjs") &&
       runText(linuxPackage).includes("--linux") &&
+      runText(linuxPackage).includes(linuxProductNamePin) &&
       !runText(linuxPackage).includes("--linux AppImage") &&
       !runText(linuxPackage).includes("--x64"),
-    "Linux release packaging must use the validated target and architecture configuration",
+    "Linux release packaging must use the validated target, architecture and pi-garden product name",
   );
   const linuxBuildVerification = stepNamed(linuxJob, "Verify Linux packages");
   assert(

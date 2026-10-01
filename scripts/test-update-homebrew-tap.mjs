@@ -9,13 +9,16 @@ async function main() {
   await mkdir(path.join(tapDir, "Casks"), { recursive: true });
 
   const caskPath = resolveCaskPath(tapDir);
+  // Casks published before the Pi Garden rename point at pi-garden.app.
   await writeFile(
     caskPath,
     renderCask({
       assetUrl: "https://example.com/pi-garden-0.1.0-beta.1-arm64.dmg",
       sha256: "a".repeat(64),
       version: "0.1.0-beta.1",
-    }),
+    })
+      .replace('name "Pi Garden"', 'name "pi-garden"')
+      .replace('app "Pi Garden.app"', 'app "pi-garden.app"'),
     "utf8",
   );
 
@@ -48,6 +51,8 @@ async function main() {
     updatedContent,
     /url "https:\/\/example\.com\/pi-garden-0\.1\.0-beta\.2-arm64\.dmg"/,
   );
+  assert.match(updatedContent, /^\s*name "Pi Garden"$/m);
+  assert.match(updatedContent, /^\s*app "Pi Garden\.app"$/m);
 
   process.stdout.write("Homebrew tap rewrite fixture passed.\n");
 }

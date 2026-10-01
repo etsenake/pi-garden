@@ -161,8 +161,8 @@ async function main() {
   };
   const qualifiedToken = `${values["tap-name"]}/${values["cask-token"]}`;
   const caskPath = resolveCaskPath(tapDir, values["cask-token"]);
-  const appBundlePath = path.join(appDir, "pi-garden.app");
-  const executablePath = path.join(appBundlePath, "Contents", "MacOS", "pi-garden");
+  const appBundlePath = path.join(appDir, "Pi Garden.app");
+  const executablePath = path.join(appBundlePath, "Contents", "MacOS", "Pi Garden");
 
   await mkdir(appDir, { recursive: true });
   await mkdir(cacheDir, { recursive: true });
