@@ -99,7 +99,7 @@ test("opens task terminals with persistent output and independent shell tabs", a
     // target the panel's own close buttons rather than the "Terminal N" label.
     await window
       .getByRole("tablist", { name: "Terminal sessions" })
-      .locator(".terminal-panel__tab-close")
+      .getByRole("button", { name: /^Close / })
       .last()
       .click();
     await expect(window.getByTestId("terminal-tab")).toHaveCount(2);
