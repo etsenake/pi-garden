@@ -5,12 +5,18 @@ import type {
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
-import { SearchIcon } from "../../ui/icons";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/shadcn/item";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
 import {
   filterModels,
   labelForThinking,
+  SearchField,
+  SettingsCard,
   SettingsGroup,
+  SettingsNote,
   SettingsRow,
   THINKING_LEVELS,
 } from "./settings-utils";
@@ -160,56 +166,43 @@ export function SettingsModelsSection({
           />
         </SettingsRow>
         {defaultValue && !defaultIsEnabled ? (
-          <div className="settings-row">
-            <span className="settings-warning">
-              Your default model ({defaultProvider}/{defaultModelId}) is turned off or its provider
-              is not connected. Choose a new default.
-            </span>
-          </div>
+          <SettingsNote tone="warning">
+            Your default model ({defaultProvider}/{defaultModelId}) is turned off or its provider is
+            not connected. Choose a new default.
+          </SettingsNote>
         ) : null}
       </SettingsGroup>
 
       <section className="settings-section">
-        <div className="settings-section__header">
-          <h3 className="settings-section__title">
-            Models{" "}
-            <span className="resource-list__count">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="settings-section__title flex items-center gap-2">
+            Models
+            <Badge variant="secondary">
               {enabledModels.length} of {pickerModels.length} enabled for chat
-            </span>
+            </Badge>
           </h3>
-          <label className="resource-search">
-            <SearchIcon />
-            <input
-              aria-label="Search models"
-              placeholder="Search models"
-              spellCheck={false}
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.currentTarget.value)}
-            />
-          </label>
+          <SearchField label="Search models" value={query} onChange={setQuery} />
         </div>
         <p className="settings-section__description">
           Only enabled chat and virtual models appear in model pickers. Image and classifier models
           stay listed for discovery and auth.
         </p>
-        <div className="settings-kind-filters" role="tablist" aria-label="Filter models by kind">
-          {KIND_FILTERS.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              role="tab"
-              aria-selected={kindFilter === filter.id}
-              className={
-                kindFilter === filter.id ? "button button--primary" : "button button--secondary"
-              }
-              data-testid={`settings-model-kind-${filter.id}`}
-              onClick={() => setKindFilter(filter.id)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          value={kindFilter}
+          onValueChange={(value: "all" | RuntimeModelKind) => setKindFilter(value)}
+        >
+          <TabsList aria-label="Filter models by kind">
+            {KIND_FILTERS.map((filter) => (
+              <TabsTrigger
+                data-testid={`settings-model-kind-${filter.id}`}
+                key={filter.id}
+                value={filter.id}
+              >
+                {filter.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {KIND_SECTIONS.filter((section) => kindFilter === "all" || kindFilter === section.kind).map(
           (section) => {
@@ -224,25 +217,21 @@ export function SettingsModelsSection({
             return (
               <div
                 key={section.kind}
-                className="settings-model-kind"
+                className="flex flex-col gap-2.5"
                 data-testid={`settings-model-kind-section-${section.kind}`}
               >
-                <div className="settings-section__header">
-                  <h4 className="settings-section__title">
-                    {section.title}{" "}
-                    <span className="resource-list__count">{sectionModels.length}</span>
-                  </h4>
-                </div>
+                <h4 className="settings-section__title flex items-center gap-2">
+                  {section.title}
+                  <Badge variant="secondary">{sectionModels.length}</Badge>
+                </h4>
                 <p className="settings-section__description">{section.description}</p>
-                <div className="settings-group" data-testid={`settings-model-list-${section.kind}`}>
+                <SettingsCard data-testid={`settings-model-list-${section.kind}`}>
                   {sectionModels.length === 0 ? (
-                    <div className="settings-row">
-                      <span className="settings-row__description">
-                        {availableModels.some((model) => model.kind === section.kind)
-                          ? `No ${section.title.toLowerCase()} models match “${query.trim()}”.`
-                          : `No connected ${section.title.toLowerCase()} models yet.`}
-                      </span>
-                    </div>
+                    <SettingsNote>
+                      {availableModels.some((model) => model.kind === section.kind)
+                        ? `No ${section.title.toLowerCase()} models match “${query.trim()}”.`
+                        : `No connected ${section.title.toLowerCase()} models yet.`}
+                    </SettingsNote>
                   ) : (
                     sectionModels.map((model) => {
                       const pattern = modelPattern(model);
@@ -267,39 +256,35 @@ export function SettingsModelsSection({
                       );
                     })
                   )}
-                </div>
+                </SettingsCard>
               </div>
             );
           },
         )}
 
         {visibleAvailable.length === 0 && availableModels.length === 0 ? (
-          <div className="settings-group" data-testid="settings-model-list">
-            <div className="settings-row">
-              <span className="settings-row__description">
-                No connected models available yet. Connect a provider to add models.
-              </span>
-            </div>
-          </div>
+          <SettingsCard data-testid="settings-model-list">
+            <SettingsNote>
+              No connected models available yet. Connect a provider to add models.
+            </SettingsNote>
+          </SettingsCard>
         ) : null}
       </section>
 
       {unconnectedModels.length > 0 && (!searching || visibleUnconnected.length > 0) ? (
-        <section className="settings-section">
-          <div className="settings-section__header">
-            <h3 className="settings-section__title">
-              Not connected{" "}
-              <span className="resource-list__count">{visibleUnconnected.length}</span>
-            </h3>
-            <button className="button button--secondary" type="button" onClick={onOpenProviders}>
+        <SettingsGroup
+          title="Not connected"
+          count={visibleUnconnected.length}
+          description="Models from providers you have not signed in to."
+          actions={
+            <Button size="sm" variant="secondary" onClick={onOpenProviders}>
               Connect a provider
-            </button>
-          </div>
-          <p className="settings-section__description">
-            Models from providers you have not signed in to.
-          </p>
+            </Button>
+          }
+          plain
+        >
           {searching || showUnconnected ? (
-            <div className="settings-group" data-testid="settings-unconnected-model-list">
+            <SettingsCard data-testid="settings-unconnected-model-list">
               {visibleUnconnected.map((model) => (
                 <ModelRow
                   isDefault={false}
@@ -307,17 +292,18 @@ export function SettingsModelsSection({
                   model={model}
                 />
               ))}
-            </div>
+            </SettingsCard>
           ) : (
-            <button
-              className="resource-list__more"
-              type="button"
+            <Button
+              className="justify-self-start"
+              size="sm"
+              variant="ghost"
               onClick={() => setShowUnconnected(true)}
             >
               Show {unconnectedModels.length} models
-            </button>
+            </Button>
           )}
-        </section>
+        </SettingsGroup>
       ) : null}
     </>
   );
@@ -333,23 +319,27 @@ function ModelRow({
   readonly children?: ReactNode;
 }) {
   return (
-    <div className="settings-row model-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">
+    <Item className="settings-row model-row">
+      <ItemContent className="min-w-0">
+        <ItemTitle className="settings-row__title">
           {model.label}
-          {isDefault ? <span className="model-row__badge">Default</span> : null}
+          {isDefault ? <Badge variant="secondary">Default</Badge> : null}
           {model.kind !== "chat" ? (
-            <span className="model-row__badge">{kindLabel(model.kind)}</span>
+            <Badge variant="secondary">{kindLabel(model.kind)}</Badge>
           ) : null}
-        </div>
-        <div className="settings-row__description">
+        </ItemTitle>
+        <ItemDescription className="line-clamp-none wrap-anywhere">
           {model.providerName} · {modelPattern(model)}
-          {model.reasoning ? <span className="model-row__tag">Reasoning</span> : null}
-          {model.supportsImages ? <span className="model-row__tag">Images</span> : null}
-        </div>
-      </div>
-      {children ? <div className="settings-row__control">{children}</div> : null}
-    </div>
+          {model.reasoning || model.supportsImages ? (
+            <span className="ms-1.5 inline-flex gap-1 align-middle">
+              {model.reasoning ? <Badge variant="outline">Reasoning</Badge> : null}
+              {model.supportsImages ? <Badge variant="outline">Images</Badge> : null}
+            </span>
+          ) : null}
+        </ItemDescription>
+      </ItemContent>
+      {children ? <ItemActions className="settings-row__control">{children}</ItemActions> : null}
+    </Item>
   );
 }
 
