@@ -10,10 +10,7 @@ import {
   seedAgentDir,
   waitForWorkspaceByPath,
 } from "../helpers/electron-app";
-import {
-  customHeaderFrontend,
-  writeRealPiExtension,
-} from "../helpers/real-pi-extension-fixtures";
+import { customHeaderFrontend, writeRealPiExtension } from "../helpers/real-pi-extension-fixtures";
 
 /**
  * Recorded Adapt-for-Desktop conversation through the normal Pi thread path.
@@ -130,7 +127,9 @@ test("Adapt for Desktop conversation runs the writer, reloads, and refreshes inv
     await window.getByLabel("New thread prompt", { exact: true }).fill("ping");
     await window.getByRole("button", { name: "Start thread", exact: true }).click();
     await expect(
-      window.locator(".timeline-item--assistant .message__content").filter({ hasText: "unexpected" }),
+      window
+        .locator(".timeline-item--assistant .message__content")
+        .filter({ hasText: "unexpected" }),
     ).toBeVisible({ timeout: 30_000 });
 
     await window.getByRole("button", { name: "Extensions", exact: true }).click();

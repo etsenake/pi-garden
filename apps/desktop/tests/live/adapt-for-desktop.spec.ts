@@ -10,10 +10,7 @@ import {
   makeWorkspace,
   waitForWorkspaceByPath,
 } from "../helpers/electron-app";
-import {
-  customHeaderFrontend,
-  writeRealPiExtension,
-} from "../helpers/real-pi-extension-fixtures";
+import { customHeaderFrontend, writeRealPiExtension } from "../helpers/real-pi-extension-fixtures";
 
 /**
  * Cloud-provider Adapt-for-Desktop soak: real Bedrock (or the seeded agent
@@ -32,15 +29,11 @@ function awsEnvOverrides(): NodeJS.ProcessEnv {
     ...(process.env.AWS_DEFAULT_REGION
       ? { AWS_DEFAULT_REGION: process.env.AWS_DEFAULT_REGION }
       : {}),
-    ...(process.env.AWS_ACCESS_KEY_ID
-      ? { AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID }
-      : {}),
+    ...(process.env.AWS_ACCESS_KEY_ID ? { AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID } : {}),
     ...(process.env.AWS_SECRET_ACCESS_KEY
       ? { AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY }
       : {}),
-    ...(process.env.AWS_SESSION_TOKEN
-      ? { AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN }
-      : {}),
+    ...(process.env.AWS_SESSION_TOKEN ? { AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN } : {}),
   };
 }
 

@@ -12,19 +12,19 @@ seed. Pi's theme schema rejects Garden documents (`additionalProperties: false`)
 pi-garden still loads them from the same theme discovery paths Pi uses.
 
 Use this skill to create or edit Garden theme files. Do not invent a parallel
-theme system. For extension UI that only *consumes* the active theme, follow
+theme system. For extension UI that only _consumes_ the active theme, follow
 `host.theme` / tones in **create-rich-surface** / **create-host-contribution**;
 still read the quick mapping below.
 
 ## Garden vs Pi
 
-| | Pi theme | Garden theme |
-| --- | --- | --- |
-| Format | `name` + `colors` (+ optional `vars` / `export`) | `format: "pi-garden.theme/v1"` |
+|              | Pi theme                                           | Garden theme                                                    |
+| ------------ | -------------------------------------------------- | --------------------------------------------------------------- |
+| Format       | `name` + `colors` (+ optional `vars` / `export`)   | `format: "pi-garden.theme/v1"`                                  |
 | Colour model | Large role map (text, borders, markdown, tools, …) | Seed: `surface`, `ink`, `accent`, `added`, `removed`, `warning` |
-| Syntax | Embedded in colour roles | Explicit `syntaxTheme` (bundled Shiki id) |
-| Pi CLI | Valid | Reported invalid |
-| Pi Garden | Mapped approximately from roles | First-class |
+| Syntax       | Embedded in colour roles                           | Explicit `syntaxTheme` (bundled Shiki id)                       |
+| Pi CLI       | Valid                                              | Reported invalid                                                |
+| Pi Garden    | Mapped approximately from roles                    | First-class                                                     |
 
 ## Document shape
 

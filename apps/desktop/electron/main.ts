@@ -1083,7 +1083,10 @@ app
           store.getRuntimeExtension(workspaceId, extensionPath),
         startThread: (input) => store.startThread(input),
       },
-      { helperPackageDir: extensionUiPackageDir, adaptWriterPath: path.join(bundledSkillsDir, "adapt-for-desktop", "apply.mjs") },
+      {
+        helperPackageDir: extensionUiPackageDir,
+        adaptWriterPath: path.join(bundledSkillsDir, "adapt-for-desktop", "apply.mjs"),
+      },
     );
     const desktopAuthoringService = new DesktopAuthoringService(
       {

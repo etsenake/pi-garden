@@ -59,3 +59,8 @@ patches/
 
 # Checked-in browser builds for the installable extension examples.
 /examples/desktop-extensions/*/dist/
+
+# Generated in place: esbuild bundle (build:adapt-writer) and the parity
+# signature baseline (JSON.stringify in extension-ui-parity.test.mjs).
+/apps/desktop/resources/skills/adapt-for-desktop/apply-desktop-adaptation.mjs
+/docs/pi-extension-ui-parity.signatures.json

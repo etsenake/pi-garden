@@ -242,10 +242,7 @@ export function SecondarySurfaces({
     }
   };
 
-  const handleRemoveMcpServer = async (
-    scope: "global" | "project",
-    name: string,
-  ) => {
+  const handleRemoveMcpServer = async (scope: "global" | "project", name: string) => {
     if (!settingsWorkspace) return "Select a workspace first.";
     try {
       await updateSnapshot(setSnapshot, () =>
@@ -270,9 +267,7 @@ export function SecondarySurfaces({
   const handleSetProjectTrust = async (trusted: boolean) => {
     if (!settingsWorkspace) return "Select a workspace first.";
     try {
-      await updateSnapshot(setSnapshot, () =>
-        api.setProjectTrust(settingsWorkspace.id, trusted),
-      );
+      await updateSnapshot(setSnapshot, () => api.setProjectTrust(settingsWorkspace.id, trusted));
       return undefined;
     } catch (error: unknown) {
       return settingsMutationError(error);
@@ -282,9 +277,7 @@ export function SecondarySurfaces({
   const handleSetDefaultTools = async (entries: readonly string[]) => {
     if (!settingsWorkspace) return "Select a workspace first.";
     try {
-      await updateSnapshot(setSnapshot, () =>
-        api.setDefaultTools(settingsWorkspace.id, entries),
-      );
+      await updateSnapshot(setSnapshot, () => api.setDefaultTools(settingsWorkspace.id, entries));
       return undefined;
     } catch (error: unknown) {
       return settingsMutationError(error);
@@ -397,7 +390,9 @@ export function SecondarySurfaces({
     kind: "host-contribution" | "rich-surface" | "desktop-view" | "theme",
   ) => {
     const workspaceId =
-      kind === "theme" ? (settingsWorkspace?.id ?? extensionsWorkspace?.id) : extensionsWorkspace?.id;
+      kind === "theme"
+        ? (settingsWorkspace?.id ?? extensionsWorkspace?.id)
+        : extensionsWorkspace?.id;
     if (!workspaceId) return;
     void updateSnapshot(setSnapshot, () =>
       api.startDesktopAuthoring({

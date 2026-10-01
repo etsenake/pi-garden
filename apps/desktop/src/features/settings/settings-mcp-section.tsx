@@ -4,10 +4,7 @@ import type {
   DesktopMcpServerRecord,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
-import type {
-  AddMcpServerInput,
-  UpdateMcpServerInput,
-} from "../../../contracts/ipc";
+import type { AddMcpServerInput, UpdateMcpServerInput } from "../../../contracts/ipc";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 
@@ -23,7 +20,10 @@ const EXPOSURE_OPTIONS: readonly { readonly value: DesktopMcpExposure; readonly 
 interface SettingsMcpSectionProps {
   readonly runtime?: RuntimeSnapshot;
   readonly onAddMcpServer: (input: AddMcpServerInput) => Promise<string | undefined>;
-  readonly onRemoveMcpServer: (scope: DesktopMcpServerRecord["scope"], name: string) => Promise<string | undefined>;
+  readonly onRemoveMcpServer: (
+    scope: DesktopMcpServerRecord["scope"],
+    name: string,
+  ) => Promise<string | undefined>;
   readonly onUpdateMcpServer: (input: UpdateMcpServerInput) => Promise<string | undefined>;
   readonly onSetProjectTrust: (trusted: boolean) => Promise<string | undefined>;
 }
@@ -65,9 +65,7 @@ export function SettingsMcpSection({
             config: {
               type: "stdio",
               command: command.trim(),
-              ...(argsText.trim()
-                ? { args: argsText.trim().split(/\s+/).filter(Boolean) }
-                : {}),
+              ...(argsText.trim() ? { args: argsText.trim().split(/\s+/).filter(Boolean) } : {}),
             },
           };
     const nextError = await onAddMcpServer(input);
@@ -134,7 +132,10 @@ export function SettingsMcpSection({
       </SettingsGroup>
 
       <SettingsGroup title="Add server">
-        <SettingsRow title="Scope" description="Project servers require trust and live in .pi/mcp.json.">
+        <SettingsRow
+          title="Scope"
+          description="Project servers require trust and live in .pi/mcp.json."
+        >
           <SettingsSelect
             label="Scope"
             value={scope}
@@ -222,7 +223,10 @@ function McpServerRow({
 }: {
   readonly server: DesktopMcpServerRecord;
   readonly onRemove: () => void;
-  readonly onUpdate: (patch: { readonly enabled?: boolean; readonly exposure?: DesktopMcpExposure }) => void;
+  readonly onUpdate: (patch: {
+    readonly enabled?: boolean;
+    readonly exposure?: DesktopMcpExposure;
+  }) => void;
 }) {
   return (
     <div className="settings-row">

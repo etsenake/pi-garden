@@ -56,7 +56,8 @@ const document = {
   format: "pi-garden.theme/v1",
   id: themeId,
   name,
-  description: "Garden seed theme. Edit surface/ink/accent/added/removed/warning; keep contrast ≥ 3:1.",
+  description:
+    "Garden seed theme. Edit surface/ink/accent/added/removed/warning; keep contrast ≥ 3:1.",
   variants: {
     light: {
       seed: {

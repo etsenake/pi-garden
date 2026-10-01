@@ -211,60 +211,67 @@ export function SettingsModelsSection({
           ))}
         </div>
 
-        {KIND_SECTIONS.filter(
-          (section) => kindFilter === "all" || kindFilter === section.kind,
-        ).map((section) => {
-          const sectionModels = visibleByKind(section.kind, visibleAvailable);
-          if (sectionModels.length === 0 && searching) return null;
-          if (sectionModels.length === 0 && availableModels.every((m) => m.kind !== section.kind)) {
-            return null;
-          }
-          return (
-            <div key={section.kind} className="settings-model-kind" data-testid={`settings-model-kind-section-${section.kind}`}>
-              <div className="settings-section__header">
-                <h4 className="settings-section__title">
-                  {section.title}{" "}
-                  <span className="resource-list__count">{sectionModels.length}</span>
-                </h4>
+        {KIND_SECTIONS.filter((section) => kindFilter === "all" || kindFilter === section.kind).map(
+          (section) => {
+            const sectionModels = visibleByKind(section.kind, visibleAvailable);
+            if (sectionModels.length === 0 && searching) return null;
+            if (
+              sectionModels.length === 0 &&
+              availableModels.every((m) => m.kind !== section.kind)
+            ) {
+              return null;
+            }
+            return (
+              <div
+                key={section.kind}
+                className="settings-model-kind"
+                data-testid={`settings-model-kind-section-${section.kind}`}
+              >
+                <div className="settings-section__header">
+                  <h4 className="settings-section__title">
+                    {section.title}{" "}
+                    <span className="resource-list__count">{sectionModels.length}</span>
+                  </h4>
+                </div>
+                <p className="settings-section__description">{section.description}</p>
+                <div className="settings-group" data-testid={`settings-model-list-${section.kind}`}>
+                  {sectionModels.length === 0 ? (
+                    <div className="settings-row">
+                      <span className="settings-row__description">
+                        {availableModels.some((model) => model.kind === section.kind)
+                          ? `No ${section.title.toLowerCase()} models match “${query.trim()}”.`
+                          : `No connected ${section.title.toLowerCase()} models yet.`}
+                      </span>
+                    </div>
+                  ) : (
+                    sectionModels.map((model) => {
+                      const pattern = modelPattern(model);
+                      const enabled = activeSet.has(pattern);
+                      return (
+                        <ModelRow
+                          isDefault={
+                            model.providerId === defaultProvider && model.modelId === defaultModelId
+                          }
+                          key={`${model.kind}:${pattern}`}
+                          model={model}
+                        >
+                          {section.enableable ? (
+                            <SettingsSwitch
+                              checked={enabled}
+                              disabled={enabled && activePatterns.length <= 1}
+                              label={`Enable ${pattern}`}
+                              onChange={(next) => setEnabled(pattern, next)}
+                            />
+                          ) : null}
+                        </ModelRow>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-              <p className="settings-section__description">{section.description}</p>
-              <div className="settings-group" data-testid={`settings-model-list-${section.kind}`}>
-                {sectionModels.length === 0 ? (
-                  <div className="settings-row">
-                    <span className="settings-row__description">
-                      {availableModels.some((model) => model.kind === section.kind)
-                        ? `No ${section.title.toLowerCase()} models match “${query.trim()}”.`
-                        : `No connected ${section.title.toLowerCase()} models yet.`}
-                    </span>
-                  </div>
-                ) : (
-                  sectionModels.map((model) => {
-                    const pattern = modelPattern(model);
-                    const enabled = activeSet.has(pattern);
-                    return (
-                      <ModelRow
-                        isDefault={
-                          model.providerId === defaultProvider && model.modelId === defaultModelId
-                        }
-                        key={`${model.kind}:${pattern}`}
-                        model={model}
-                      >
-                        {section.enableable ? (
-                          <SettingsSwitch
-                            checked={enabled}
-                            disabled={enabled && activePatterns.length <= 1}
-                            label={`Enable ${pattern}`}
-                            onChange={(next) => setEnabled(pattern, next)}
-                          />
-                        ) : null}
-                      </ModelRow>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          },
+        )}
 
         {visibleAvailable.length === 0 && availableModels.length === 0 ? (
           <div className="settings-group" data-testid="settings-model-list">

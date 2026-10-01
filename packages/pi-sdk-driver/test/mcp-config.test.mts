@@ -11,9 +11,7 @@ import {
   updateMcpServer,
 } from "../dist/mcp-config.js";
 
-async function withDirs(
-  run: (agentDir: string, cwd: string) => Promise<void>,
-): Promise<void> {
+async function withDirs(run: (agentDir: string, cwd: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(join(tmpdir(), "pi-mcp-config-"));
   const agentDir = join(root, "agent");
   const cwd = join(root, "project");
@@ -49,10 +47,7 @@ await test("loads global and trusted project servers with project overriding glo
 
     const trusted = loadDesktopMcpConfig({ agentDir, cwd, projectTrusted: true });
     assert.equal(trusted.autoEnableCodemode, true);
-    assert.deepEqual(
-      trusted.servers.map((server) => server.name).sort(),
-      ["onlyGlobal", "shared"],
-    );
+    assert.deepEqual(trusted.servers.map((server) => server.name).sort(), ["onlyGlobal", "shared"]);
     const shared = trusted.servers.find((server) => server.name === "shared");
     assert.equal(shared?.scope, "project");
     assert.equal(shared?.enabled, false);
@@ -61,10 +56,10 @@ await test("loads global and trusted project servers with project overriding glo
 
     const untrusted = loadDesktopMcpConfig({ agentDir, cwd, projectTrusted: false });
     assert.equal(untrusted.autoEnableCodemode, false);
-    assert.deepEqual(
-      untrusted.servers.map((server) => server.name).sort(),
-      ["onlyGlobal", "shared"],
-    );
+    assert.deepEqual(untrusted.servers.map((server) => server.name).sort(), [
+      "onlyGlobal",
+      "shared",
+    ]);
     assert.equal(untrusted.servers.find((server) => server.name === "shared")?.scope, "global");
   });
 });
@@ -90,10 +85,7 @@ await test("add, update, and remove preserve unrelated json and indentation", as
       }),
       false,
     );
-    assert.equal(
-      addMcpServer(path, "docs", { url: "https://docs.example/mcp/v2" }),
-      true,
-    );
+    assert.equal(addMcpServer(path, "docs", { url: "https://docs.example/mcp/v2" }), true);
 
     updateMcpServer(path, "docs", { enabled: false, exposure: "direct" });
     const afterUpdate = JSON.parse(await readFile(path, "utf8")) as {

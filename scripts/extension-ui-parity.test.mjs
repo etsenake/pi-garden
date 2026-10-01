@@ -246,22 +246,27 @@ test("ExtensionUIContext and customization ExtensionAPI signatures match the rev
 });
 
 test("negative: renamed ExtensionUIContext member fails the owner table", () => {
-  const mutated = typesSource.replace(
-    "export interface ExtensionUIContext {",
-    "export interface ExtensionUIContext {\n    renamedSelect(title: string, options: string[]): Promise<string | undefined>;",
-  ).replace(/^\s*select\(title: string, options: string\[\].*$/m, "");
+  const mutated = typesSource
+    .replace(
+      "export interface ExtensionUIContext {",
+      "export interface ExtensionUIContext {\n    renamedSelect(title: string, options: string[]): Promise<string | undefined>;",
+    )
+    .replace(/^\s*select\(title: string, options: string\[\].*$/m, "");
   const declared = declaredMemberCounts(interfaceMembers(mutated, "ExtensionUIContext"));
   assert.equal(declared.has("select"), false);
   assert.equal(declared.has("renamedSelect"), true);
   const rows = manifestRows(manifest);
   assert.ok(rows.some((row) => row.member === "select"));
-  assert.ok(!declared.has("select") || (rows.find((row) => row.member === "select") && !declared.has("select")));
+  assert.ok(
+    !declared.has("select") ||
+      (rows.find((row) => row.member === "select") && !declared.has("select")),
+  );
 });
 
 test("negative: same-name signature change fails the baseline", () => {
   const mutated = typesSource.replace(
-    "notify(message: string, type?: \"info\" | \"warning\" | \"error\"): void;",
-    "notify(message: string, type?: \"info\" | \"warning\" | \"error\" | \"success\"): void;",
+    'notify(message: string, type?: "info" | "warning" | "error"): void;',
+    'notify(message: string, type?: "info" | "warning" | "error" | "success"): void;',
   );
   const current = currentSignatureSnapshot(mutated);
   const baseline = loadSignatureBaseline();

@@ -8,7 +8,9 @@ import {
 } from "../../contracts/desktop-authoring";
 
 export interface DesktopAuthoringHost {
-  workspaceFor(workspaceId: string): { readonly workspaceId: string; readonly path: string } | undefined;
+  workspaceFor(
+    workspaceId: string,
+  ): { readonly workspaceId: string; readonly path: string } | undefined;
   startThread(input: StartThreadInput): Promise<DesktopAppState>;
 }
 

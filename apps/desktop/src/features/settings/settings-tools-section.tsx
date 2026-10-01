@@ -82,7 +82,7 @@ export function SettingsToolsSection({
       <SettingsGroup title="Default tools">
         <SettingsRow
           title="Tool list"
-          description='One name per line. Use +name or -name to add or remove without replacing defaults, for example +codemode. Leave empty to use Pi defaults (read, bash, edit, write).'
+          description="One name per line. Use +name or -name to add or remove without replacing defaults, for example +codemode. Leave empty to use Pi defaults (read, bash, edit, write)."
         >
           <textarea
             className="settings-textarea"

@@ -1953,10 +1953,7 @@ export class DesktopAppStore {
     );
   }
 
-  async setDefaultTools(
-    workspaceId: string,
-    entries: readonly string[],
-  ): Promise<DesktopAppState> {
+  async setDefaultTools(workspaceId: string, entries: readonly string[]): Promise<DesktopAppState> {
     return this.withRuntimeUpdate(
       workspaceId,
       (ws) => this.driver.runtimeSupervisor.setDefaultTools(ws, entries),

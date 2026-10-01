@@ -16,14 +16,14 @@ documents (`pi-garden.theme/v1`), use **theme-pi-garden**.
 
 ## Choose the API
 
-| Need | Call |
-| --- | --- |
-| Conversation header chip | `registerHeaderBadge` |
-| Primary sidebar body | `registerSidebarSection` |
-| Sidebar footer | `registerSidebarFooter` |
-| Above the composer | `registerComposerBefore` |
-| Below the composer | `registerComposerAfter` |
-| Topbar status chrome | `registerStatusChrome` |
+| Need                                | Call                                                     |
+| ----------------------------------- | -------------------------------------------------------- |
+| Conversation header chip            | `registerHeaderBadge`                                    |
+| Primary sidebar body                | `registerSidebarSection`                                 |
+| Sidebar footer                      | `registerSidebarFooter`                                  |
+| Above the composer                  | `registerComposerBefore`                                 |
+| Below the composer                  | `registerComposerAfter`                                  |
+| Topbar status chrome                | `registerStatusChrome`                                   |
 | Palette / shortcut / button handler | `registerAction` + optional `actionId` on a contribution |
 
 Each contribution: stable `id` (`^[a-z][a-z0-9._-]{0,63}$`), `text` (max 32),

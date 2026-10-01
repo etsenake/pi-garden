@@ -238,13 +238,7 @@ export function deriveThemeTokens(seedValue: ThemeSeed, variant: ResolvedTheme):
   const mutedSoft = fade(0.41, 0.42, 4);
   // Disabled primary CTAs paint ink on `lineStrong`, not the sidebar; keep WCAG
   // AA for UI icons (≥3:1) without changing the Garden seed palette.
-  const buttonPrimaryDisabledInk = fadeWithContrast(
-    ink,
-    s,
-    pick(0.32, 0.34),
-    3.2,
-    lineStrong,
-  );
+  const buttonPrimaryDisabledInk = fadeWithContrast(ink, s, pick(0.32, 0.34), 3.2, lineStrong);
   const shadow = light ? ink : "#000000";
   const warningInk = mix(warning, ink, pick(0.3, 0.35));
 

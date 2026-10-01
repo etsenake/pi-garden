@@ -173,7 +173,10 @@ function titleCase(id) {
 
 async function vendorHelper(directory, helperPackageDir) {
   const target = path.join(directory, "node_modules", "@pi-garden", "extension-ui");
-  if ((await isFile(path.join(target, "package.json"))) && (await isFile(path.join(target, "dist", "index.js")))) {
+  if (
+    (await isFile(path.join(target, "package.json"))) &&
+    (await isFile(path.join(target, "dist", "index.js")))
+  ) {
     return false;
   }
   await mkdir(target, { recursive: true });
@@ -183,8 +186,13 @@ async function vendorHelper(directory, helperPackageDir) {
 }
 
 async function assertHelper(helperPackageDir) {
-  if (!(await isFile(path.join(helperPackageDir, "package.json"))) || !(await isFile(path.join(helperPackageDir, "dist", "index.js")))) {
-    throw new Error(`@pi-garden/extension-ui package directory must contain package.json and dist: ${helperPackageDir}`);
+  if (
+    !(await isFile(path.join(helperPackageDir, "package.json"))) ||
+    !(await isFile(path.join(helperPackageDir, "dist", "index.js")))
+  ) {
+    throw new Error(
+      `@pi-garden/extension-ui package directory must contain package.json and dist: ${helperPackageDir}`,
+    );
   }
 }
 

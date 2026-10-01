@@ -115,11 +115,7 @@ export interface ModelSettingsSnapshot {
 /** Browser-safe MCP server list row for Settings; Node-only config CRUD stays in the driver. */
 export type DesktopMcpScope = "global" | "project";
 export type DesktopMcpExposure =
-  | "codemode"
-  | "codemode-deferred"
-  | "deferred"
-  | "direct"
-  | "hidden";
+  "codemode" | "codemode-deferred" | "deferred" | "direct" | "hidden";
 
 export interface DesktopMcpServerRecord {
   readonly name: string;

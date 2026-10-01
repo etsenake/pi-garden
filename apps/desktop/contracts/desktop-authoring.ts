@@ -8,11 +8,7 @@ export const CREATE_RICH_SURFACE_SKILL = "create-rich-surface";
 export const CREATE_DESKTOP_VIEW_SKILL = "create-desktop-view";
 export const THEME_PI_GARDEN_SKILL = "theme-pi-garden";
 
-export type DesktopAuthoringKind =
-  | "host-contribution"
-  | "rich-surface"
-  | "desktop-view"
-  | "theme";
+export type DesktopAuthoringKind = "host-contribution" | "rich-surface" | "desktop-view" | "theme";
 
 export interface DesktopAuthoringPaths {
   readonly helperPackageDir: string;

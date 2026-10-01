@@ -73,7 +73,9 @@ export function ModelSelector({
   const shouldRenderModelControl = hasModelControl || showEmptyModelControl;
   const selectionLabel = provider && modelId ? `${provider}:${modelId}` : undefined;
   const routedLabel =
-    routedModel && selectionLabel && `${routedModel.provider}:${routedModel.model}` !== selectionLabel
+    routedModel &&
+    selectionLabel &&
+    `${routedModel.provider}:${routedModel.model}` !== selectionLabel
       ? `${routedModel.provider}:${routedModel.model}`
       : undefined;
   const modelBadgeLabel = selectionLabel

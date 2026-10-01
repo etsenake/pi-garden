@@ -13,12 +13,12 @@ terminal UI, use **adapt-for-desktop**.
 
 ## Placement
 
-| `surface` | Rule |
-| --- | --- |
-| `composer-before`, `composer-after`, `sidebar`, `thread-header`, `settings` | Additive; optional `order` |
-| `overlay` | Registered only; open with `host.actions.presentOverlay(id)` |
-| `app-header`, `app-footer` | Singleton (lowest extension id + id wins) |
-| `workbench` / `tool` | Prefer **create-desktop-view** / `registerDesktopToolRenderer` |
+| `surface`                                                                   | Rule                                                           |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `composer-before`, `composer-after`, `sidebar`, `thread-header`, `settings` | Additive; optional `order`                                     |
+| `overlay`                                                                   | Registered only; open with `host.actions.presentOverlay(id)`   |
+| `app-header`, `app-footer`                                                  | Singleton (lowest extension id + id wins)                      |
+| `workbench` / `tool`                                                        | Prefer **create-desktop-view** / `registerDesktopToolRenderer` |
 
 ## Procedure
 

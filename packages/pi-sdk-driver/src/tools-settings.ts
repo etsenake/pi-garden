@@ -7,12 +7,7 @@ import { setPiDefaultTools } from "./compat/pi-tools-settings.js";
 export const DEFAULT_TOOL_NAMES = ["read", "bash", "edit", "write"] as const;
 
 /** Pi built-ins toggled via `-builtin:<name>` / `+builtin:<name>` in `extensions`. */
-export const PI_TOGGLEABLE_BUILTIN_NAMES = [
-  "mcp",
-  "codemode",
-  "tool-search",
-  "llama.cpp",
-] as const;
+export const PI_TOGGLEABLE_BUILTIN_NAMES = ["mcp", "codemode", "tool-search", "llama.cpp"] as const;
 
 export type PiToggleableBuiltinName = (typeof PI_TOGGLEABLE_BUILTIN_NAMES)[number];
 
@@ -23,9 +18,7 @@ export function isPiToggleableBuiltinName(name: string): name is PiToggleableBui
 export function getToolsSettings(settingsManager: SettingsManager): RuntimeToolsSettings {
   const raw = settingsManager.getSettings().defaultTools;
   const defaultTools =
-    Array.isArray(raw) && raw.every((entry) => typeof entry === "string")
-      ? [...raw]
-      : undefined;
+    Array.isArray(raw) && raw.every((entry) => typeof entry === "string") ? [...raw] : undefined;
   const resolved = settingsManager.getDefaultTools();
   return {
     defaultTools,

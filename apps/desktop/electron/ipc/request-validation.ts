@@ -368,10 +368,7 @@ function expectMcpExposure(value: unknown, name: string): DesktopMcpExposure {
   return value as DesktopMcpExposure;
 }
 
-function expectStringRecord(
-  value: unknown,
-  name: string,
-): Readonly<Record<string, string>> {
+function expectStringRecord(value: unknown, name: string): Readonly<Record<string, string>> {
   const record = expectRecord(value, name);
   const result: Record<string, string> = {};
   for (const [key, entry] of Object.entries(record)) {
@@ -412,9 +409,7 @@ export function expectDesktopMcpServerConfig(value: unknown): DesktopMcpServerCo
     ...(record.env === undefined
       ? {}
       : { env: { ...expectStringRecord(record.env, "config.env") } }),
-    ...(record.cwd === undefined
-      ? {}
-      : { cwd: expectNonEmptyString(record.cwd, "config.cwd") }),
+    ...(record.cwd === undefined ? {} : { cwd: expectNonEmptyString(record.cwd, "config.cwd") }),
     ...(enabled === undefined ? {} : { enabled }),
     ...(exposure === undefined ? {} : { exposure }),
   };

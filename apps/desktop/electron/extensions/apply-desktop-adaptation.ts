@@ -91,15 +91,13 @@ export async function applyDesktopAdaptation(
   const pairs = mergePairs(
     existingPairs,
     newPlans.flatMap((plan) =>
-      plan.capabilities.map(
-        (capability): DesktopAdaptationPair => ({
-          capability,
-          api: plan.api,
-          id: plan.id,
-          ...(plan.surface ? { surface: plan.surface } : {}),
-          ...(plan.toolName ? { toolName: plan.toolName } : {}),
-        }),
-      ),
+      plan.capabilities.map((capability): DesktopAdaptationPair => ({
+        capability,
+        api: plan.api,
+        id: plan.id,
+        ...(plan.surface ? { surface: plan.surface } : {}),
+        ...(plan.toolName ? { toolName: plan.toolName } : {}),
+      })),
     ),
   );
 

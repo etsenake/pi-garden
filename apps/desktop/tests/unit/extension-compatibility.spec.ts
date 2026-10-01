@@ -358,10 +358,13 @@ export default function fixture(pi) {
     const incremental = await applyDesktopAdaptation(headerOnly, helper);
     expect(incremental.changed).toBe(true);
     expect(await readFile(headerFrontend, "utf8")).toBe(headerSemantic);
-    expect(await readFile(path.join(path.dirname(headerOnly), "pi-garden-desktop", "footer.js"), "utf8")).toMatch(
-      /adapted ui\.setFooter/,
+    expect(
+      await readFile(path.join(path.dirname(headerOnly), "pi-garden-desktop", "footer.js"), "utf8"),
+    ).toMatch(/adapted ui\.setFooter/);
+    const desktop = await readFile(
+      path.join(path.dirname(headerOnly), "pi-garden-desktop.ts"),
+      "utf8",
     );
-    const desktop = await readFile(path.join(path.dirname(headerOnly), "pi-garden-desktop.ts"), "utf8");
     expect(desktop).toMatch(/registerRichSurface/);
     expect(desktop.match(/surface: "app-footer"/g)?.length ?? 0).toBe(1);
     expect(desktop.match(/surface: "app-header"/g)?.length ?? 0).toBe(1);
@@ -621,7 +624,10 @@ test.describe("adapt for desktop invocation", () => {
           return { ok: true } as never;
         },
       },
-      { helperPackageDir: "/helper", adaptWriterPath: "/helper/skills/adapt-for-desktop/apply.mjs" },
+      {
+        helperPackageDir: "/helper",
+        adaptWriterPath: "/helper/skills/adapt-for-desktop/apply.mjs",
+      },
     );
     await expect(service.adapt({ workspaceId: "ws", extensionPath: entry })).rejects.toThrow(
       /trust/i,

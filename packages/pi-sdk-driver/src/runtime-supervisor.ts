@@ -874,9 +874,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
           ...(oauthProvider?.auth.oauth?.loginLabel
             ? { oauthLoginLabel: oauthProvider.auth.oauth.loginLabel }
             : {}),
-          ...(oauthProvider?.auth.oauth?.isSubscription
-            ? { oauthIsSubscription: true }
-            : {}),
+          ...(oauthProvider?.auth.oauth?.isSubscription ? { oauthIsSubscription: true } : {}),
         };
       });
   }
@@ -920,9 +918,9 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
 
     // getModels() is the chat catalog (includes virtual). Image/classifier live only on
     // getModelsOfType — same upstream id can exist as both chat and image.
-    const chatAndVirtual = runtime.getModels().map((model) =>
-      toRecord(model, isVirtualCatalogModel(model) ? "virtual" : "chat"),
-    );
+    const chatAndVirtual = runtime
+      .getModels()
+      .map((model) => toRecord(model, isVirtualCatalogModel(model) ? "virtual" : "chat"));
     const image = runtime.getModelsOfType("image").map((model) => toRecord(model, "image"));
     const classifier = runtime
       .getModelsOfType("classifier")

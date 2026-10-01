@@ -127,9 +127,7 @@ export function ContextMeter({ usage }: ContextMeterProps) {
                   <Row
                     key={`${entry.provider}/${entry.model}`}
                     label={`${entry.provider}/${entry.model}`}
-                    value={
-                      usage.subscription ? "Subscription" : `$${entry.cost.toFixed(2)}`
-                    }
+                    value={usage.subscription ? "Subscription" : `$${entry.cost.toFixed(2)}`}
                   />
                 ))
               : null}

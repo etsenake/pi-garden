@@ -15,16 +15,16 @@ Companion sources:
 
 ## Scope (in)
 
-| Family | Contract |
-| --- | --- |
-| Surface Registry | Host-rendered text/tone/badge/button contributions; no iframe |
-| Rich surfaces | Sandboxed iframe + Chord; placements in helper README |
-| Tool renderers | `registerDesktopToolRenderer`; built-in row on conflict/failure |
-| Custom editors | `registerDesktopEditor` replaces only the text-editor region |
-| Autocomplete | Stacked Pi providers coexisting with slash/mentions |
-| Themes | Live theme snapshot into frames; catalog via `ctx.ui` theme APIs |
-| Commands / shortcuts / actions | Pi registrations + `registerAction`; host palette/shortcut routing |
-| Adapt for Desktop | Additive pairing via `desktop-adaptation.json`; terminal path remains |
+| Family                         | Contract                                                              |
+| ------------------------------ | --------------------------------------------------------------------- |
+| Surface Registry               | Host-rendered text/tone/badge/button contributions; no iframe         |
+| Rich surfaces                  | Sandboxed iframe + Chord; placements in helper README                 |
+| Tool renderers                 | `registerDesktopToolRenderer`; built-in row on conflict/failure       |
+| Custom editors                 | `registerDesktopEditor` replaces only the text-editor region          |
+| Autocomplete                   | Stacked Pi providers coexisting with slash/mentions                   |
+| Themes                         | Live theme snapshot into frames; catalog via `ctx.ui` theme APIs      |
+| Commands / shortcuts / actions | Pi registrations + `registerAction`; host palette/shortcut routing    |
+| Adapt for Desktop              | Additive pairing via `desktop-adaptation.json`; terminal path remains |
 
 ## Scope (out of first version)
 
@@ -36,13 +36,13 @@ Companion sources:
 
 ## Ownership
 
-| Concern | Owner |
-| --- | --- |
-| Canonical draft, submit, attachments, queue, model/reasoning/send | Desktop conversation host |
-| Runtime, tools, commands, session truth | Pi |
-| Rich UI process isolation | Extension view owner + opaque-origin iframe |
-| Compatibility inventory | Extension compatibility owner (source ≠ runtime ≠ pairing) |
-| Small contributions | Surface Registry |
+| Concern                                                           | Owner                                                      |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- |
+| Canonical draft, submit, attachments, queue, model/reasoning/send | Desktop conversation host                                  |
+| Runtime, tools, commands, session truth                           | Pi                                                         |
+| Rich UI process isolation                                         | Extension view owner + opaque-origin iframe                |
+| Compatibility inventory                                           | Extension compatibility owner (source ≠ runtime ≠ pairing) |
+| Small contributions                                               | Surface Registry                                           |
 
 ## Lifecycle
 

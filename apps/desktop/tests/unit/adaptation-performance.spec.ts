@@ -54,7 +54,9 @@ test("adaptation writer and ordinary-Pi reload stay within evidence thresholds",
   const extensionsDir = path.join(agentDir, "extensions");
   const entries: string[] = [];
   for (let i = 0; i < 8; i++) {
-    entries.push(await writeCompatibilityFixture("native-only", path.join(extensionsDir, `native-${i}`)));
+    entries.push(
+      await writeCompatibilityFixture("native-only", path.join(extensionsDir, `native-${i}`)),
+    );
   }
   const terminal = await writeCompatibilityFixture("terminal-heavy", extensionsDir);
   entries.push(terminal);

@@ -339,10 +339,7 @@ async function commandNames(window: import("@playwright/test").Page, sessionKey:
   );
 }
 
-async function projectExtensionNames(
-  window: import("@playwright/test").Page,
-  workspaceId: string,
-) {
+async function projectExtensionNames(window: import("@playwright/test").Page, workspaceId: string) {
   const state = await getDesktopState(window);
   return (
     state.runtimeByWorkspace[workspaceId]?.extensions

@@ -107,7 +107,10 @@ test("create-host-contribution writer scaffolds an extension", async () => {
 test("theme-pi-garden writer scaffolds a parseable Garden document", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "pi-author-theme-"));
   try {
-    const result = await runNode(path.join(skillsDir, "theme-pi-garden", "apply.mjs"), [root, "coast"]);
+    const result = await runNode(path.join(skillsDir, "theme-pi-garden", "apply.mjs"), [
+      root,
+      "coast",
+    ]);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("created");
     const raw = JSON.parse(await readFile(path.join(root, "coast.json"), "utf8"));

@@ -91,11 +91,7 @@ export function loadDesktopMcpConfig(options: {
   };
 }
 
-export function addMcpServer(
-  path: string,
-  name: string,
-  config: DesktopMcpServerConfig,
-): boolean {
+export function addMcpServer(path: string, name: string, config: DesktopMcpServerConfig): boolean {
   const validated = validateDesktopMcpServerConfig(name, config);
   if (typeof validated === "string") {
     throw new Error(validated);
@@ -123,11 +119,7 @@ export function removeMcpServer(path: string, name: string): boolean {
   return removed;
 }
 
-export function updateMcpServer(
-  path: string,
-  name: string,
-  patch: DesktopMcpConfigPatch,
-): void {
+export function updateMcpServer(path: string, name: string, patch: DesktopMcpConfigPatch): void {
   editMcpServers(path, (servers) => {
     const server = servers?.[name];
     if (!isRecord(server)) {
@@ -240,10 +232,7 @@ function summarizeMcpTransport(config: McpServerConfig): string {
 
 function editMcpServers(
   path: string,
-  edit: (
-    servers: Record<string, unknown> | undefined,
-    parsed: Record<string, unknown>,
-  ) => boolean,
+  edit: (servers: Record<string, unknown> | undefined, parsed: Record<string, unknown>) => boolean,
 ): void {
   const text = existsSync(path) ? readFileSync(path, "utf8") : undefined;
   const parsed: unknown = text === undefined ? {} : JSON.parse(text);

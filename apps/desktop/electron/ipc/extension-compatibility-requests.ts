@@ -17,12 +17,7 @@ function decodeRequest(raw: unknown): ExtensionCompatibilityRequest {
   };
 }
 
-const AUTHORING_KINDS = new Set([
-  "host-contribution",
-  "rich-surface",
-  "desktop-view",
-  "theme",
-]);
+const AUTHORING_KINDS = new Set(["host-contribution", "rich-surface", "desktop-view", "theme"]);
 
 function decodeAuthoring(raw: unknown): StartDesktopAuthoringInput {
   const input = expectRecord(raw, "desktop authoring request");
