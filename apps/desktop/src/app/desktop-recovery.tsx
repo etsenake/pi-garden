@@ -1,5 +1,15 @@
 import { Component, Fragment, type ReactNode } from "react";
 import type { DesktopAppView, StateHydrationFailure } from "./desktop-app-state";
+import { Button } from "@/ui/shadcn/button";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/ui/shadcn/card";
+import { Spinner } from "@/ui/shadcn/spinner";
 
 export type DesktopStartupSurfaceState =
   | { readonly kind: "loading" }
@@ -74,39 +84,38 @@ export function DesktopStartupSurface({ state, onRetry, onRelaunch }: DesktopSta
 
   return (
     <div className="shell shell--loading">
-      <main
-        className="loading-card"
-        data-testid="shell-status-card"
-        data-status={copy.status}
-        data-retrying={retrying ? "true" : "false"}
-        data-failure={state.kind === "failed" ? state.failure.code : undefined}
-      >
-        <div className="loading-card__eyebrow">pi-garden</div>
-        <h1>{copy.title}</h1>
-        <p>{copy.body}</p>
-        {showActions ? (
-          <div className="loading-card__actions">
-            <button
-              className="button button--primary"
-              data-testid="hydrate-retry"
-              type="button"
-              disabled={retrying}
-              onClick={onRetry}
-            >
-              {retrying ? "Retrying…" : "Retry"}
-            </button>
-            {showRelaunch ? (
-              <button
-                className="button button--ghost"
-                data-testid="hydrate-relaunch"
-                type="button"
-                onClick={onRelaunch}
-              >
-                Relaunch pi-garden
-              </button>
+      <main className="w-full max-w-md px-6">
+        <Card
+          data-testid="shell-status-card"
+          data-status={copy.status}
+          data-retrying={retrying ? "true" : "false"}
+          data-failure={state.kind === "failed" ? state.failure.code : undefined}
+        >
+          <CardHeader>
+            <CardTitle aria-level={1} role="heading">
+              {copy.title}
+            </CardTitle>
+            <CardDescription>{copy.body}</CardDescription>
+            {copy.status === "loading" ? (
+              <CardAction>
+                <Spinner />
+              </CardAction>
             ) : null}
-          </div>
-        ) : null}
+          </CardHeader>
+          {showActions ? (
+            <CardFooter className="gap-2">
+              <Button data-testid="hydrate-retry" disabled={retrying} onClick={onRetry}>
+                {retrying ? <Spinner data-icon="inline-start" /> : null}
+                {retrying ? "Retrying…" : "Retry"}
+              </Button>
+              {showRelaunch ? (
+                <Button data-testid="hydrate-relaunch" variant="ghost" onClick={onRelaunch}>
+                  Relaunch pi-garden
+                </Button>
+              ) : null}
+            </CardFooter>
+          ) : null}
+        </Card>
       </main>
     </div>
   );

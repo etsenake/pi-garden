@@ -1,5 +1,7 @@
 import type { StartupDiagnostic, WorkspaceRecord } from "../../contracts/desktop-state";
 import { CloseIcon } from "../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 interface StartupDiagnosticsBannerProps {
   readonly diagnostics: readonly StartupDiagnostic[];
@@ -37,27 +39,28 @@ export function StartupDiagnosticsBanner({
             >
               {workspaceName ? `${workspaceName} is unavailable.` : diagnostic.message}
               {savedWorkspace ? (
-                <button
-                  className="startup-diagnostics__action"
-                  type="button"
+                <Button
+                  size="xs"
+                  variant="outline"
                   onClick={() => onRemoveWorkspace(savedWorkspace)}
                 >
                   Remove folder
-                </button>
+                </Button>
               ) : null}
             </span>
           );
         })}
       </div>
-      <button
-        aria-label="Dismiss"
-        className="icon-button startup-diagnostics__dismiss"
-        title="Dismiss"
-        type="button"
-        onClick={onDismiss}
-      >
-        <CloseIcon />
-      </button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button aria-label="Dismiss" size="icon-sm" variant="ghost" onClick={onDismiss} />
+          }
+        >
+          <CloseIcon />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Dismiss</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

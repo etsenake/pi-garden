@@ -66,6 +66,7 @@ import {
 import { useThreadSwitcher } from "../features/threads/hooks/use-thread-switcher";
 import { SidebarToggleButton } from "../features/threads/sidebar-toggle-button";
 import { Topbar } from "./topbar";
+import { WorkspaceEmptyState } from "./workspace-empty-state";
 import { TerminalPanel } from "../features/workbench/terminal-panel";
 import { ConversationTimeline } from "../features/conversation/conversation-timeline";
 import { ScheduledTasksView } from "../features/scheduled-tasks/scheduled-tasks-view";
@@ -1143,13 +1144,10 @@ export default function App() {
                 onSubmit={newThread.startThread}
               />
             ) : (
-              <section className="canvas canvas--empty">
-                <div className="empty-panel">
-                  <div className="session-header__eyebrow">Workspace</div>
-                  <h1>Open a folder to start</h1>
-                  <p>Add a project folder before creating a new thread.</p>
-                </div>
-              </section>
+              <WorkspaceEmptyState
+                title="Open a folder to start"
+                description="Add a project folder before creating a new thread."
+              />
             )
           ) : selectedWorkspace && selectedSession ? (
             <>
@@ -1166,14 +1164,14 @@ export default function App() {
                         This session was written by a newer version of pi — some content may not
                         display. Update pi-garden (or open it with the pi CLI) to see everything.
                       </span>
-                      <button
-                        type="button"
-                        className="schema-skew-notice__dismiss"
+                      <Button
                         aria-label="Dismiss notice"
+                        size="sm"
+                        variant="ghost"
                         onClick={() => dismissSchemaSkewNotice(selectedSessionKey)}
                       >
                         Dismiss
-                      </button>
+                      </Button>
                     </div>
                   ) : null}
 
@@ -1307,37 +1305,26 @@ export default function App() {
               ) : null}
             </>
           ) : selectedWorkspace ? (
-            <section className="canvas canvas--empty">
-              <div className="empty-panel">
-                <div className="session-header__eyebrow">Workspace</div>
-                <h1>{selectedWorkspace.name}</h1>
-                <p>Create a thread for this folder, then jump between sessions from the sidebar.</p>
-                <div className="empty-panel__actions">
-                  <button
-                    className="button button--primary"
-                    type="button"
-                    onClick={() =>
-                      newThread.openSurface(
-                        selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id,
-                      )
-                    }
-                  >
-                    New thread
-                  </button>
-                </div>
-              </div>
-            </section>
+            <WorkspaceEmptyState
+              title={selectedWorkspace.name}
+              description="Create a thread for this folder, then jump between sessions from the sidebar."
+              action={
+                <Button
+                  onClick={() =>
+                    newThread.openSurface(
+                      selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id,
+                    )
+                  }
+                >
+                  New thread
+                </Button>
+              }
+            />
           ) : (
-            <section className="canvas canvas--empty">
-              <div className="empty-panel">
-                <div className="session-header__eyebrow">Workspace</div>
-                <h1>Open a folder to start</h1>
-                <p>
-                  Add project folders, group sessions under them, and jump between threads from the
-                  sidebar.
-                </p>
-              </div>
-            </section>
+            <WorkspaceEmptyState
+              title="Open a folder to start"
+              description="Add project folders, group sessions under them, and jump between threads from the sidebar."
+            />
           )}
         </>
         {sidePanelVisible && selectedWorkspace && selectedSession ? (
