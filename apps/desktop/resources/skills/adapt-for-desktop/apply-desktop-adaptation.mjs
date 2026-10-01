@@ -6377,15 +6377,13 @@ async function applyDesktopAdaptation(entryPath, helperPackageDir) {
   const pairs = mergePairs(
     existingPairs,
     newPlans.flatMap(
-      (plan) => plan.capabilities.map(
-        (capability) => ({
-          capability,
-          api: plan.api,
-          id: plan.id,
-          ...plan.surface ? { surface: plan.surface } : {},
-          ...plan.toolName ? { toolName: plan.toolName } : {}
-        })
-      )
+      (plan) => plan.capabilities.map((capability) => ({
+        capability,
+        api: plan.api,
+        id: plan.id,
+        ...plan.surface ? { surface: plan.surface } : {},
+        ...plan.toolName ? { toolName: plan.toolName } : {}
+      }))
     )
   );
   let changed = await vendorHelper(directory, path2.resolve(helperPackageDir));
