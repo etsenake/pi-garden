@@ -11,6 +11,26 @@ import {
 import type { PiDesktopApi } from "../../../contracts/ipc";
 import type { Dispatch, SetStateAction } from "react";
 import type { ScheduledEditorState } from "./scheduled-task-editor";
+import { Button } from "@/ui/shadcn/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/shadcn/dropdown-menu";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/shadcn/empty";
+import { Input } from "@/ui/shadcn/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/ui/shadcn/item";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
+import { MoreHorizontalIcon } from "lucide-react";
 
 interface ScheduledTasksViewProps {
   readonly tasks: readonly ScheduledTaskRecord[];
@@ -43,9 +63,14 @@ export function ScheduledTasksView({
 }: ScheduledTasksViewProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ScheduledTaskFilter>("all");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [menuTaskId, setMenuTaskId] = useState<string | undefined>();
   const visible = useMemo(() => filterScheduledTasks(tasks, filter, query), [tasks, filter, query]);
+  const setStatus = (task: ScheduledTaskRecord, status: "active" | "paused") => {
+    void updateSnapshot(setSnapshot, () => api.updateScheduledTask(task.id, { status })).catch(
+      (error: unknown) => {
+        console.error("[renderer] updateScheduledTask failed", error);
+      },
+    );
+  };
 
   return (
     <section className="canvas scheduled-tasks-view" data-testid="scheduled-tasks-view">
@@ -57,163 +82,120 @@ export function ScheduledTasksView({
           </p>
         </div>
         <div className="view-header__actions">
-          <div className="scheduled-create">
-            <button
-              className="button button--primary"
-              data-testid="scheduled-task-create"
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={createOpen}
-              onClick={() => setCreateOpen((open) => !open)}
-            >
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button data-testid="scheduled-task-create" />}>
               Create
-            </button>
-            {createOpen ? (
-              <div className="workspace-menu scheduled-create__menu" role="menu">
-                <button
-                  className="workspace-menu__item"
-                  data-testid="scheduled-task-create-with-pi"
-                  type="button"
-                  onClick={() => {
-                    setCreateOpen(false);
-                    onCreateWithPi();
-                  }}
-                >
-                  Create with pi
-                </button>
-                <button
-                  className="workspace-menu__item"
-                  data-testid="scheduled-task-setup-manually"
-                  type="button"
-                  onClick={() => {
-                    setCreateOpen(false);
-                    onOpenEditor({ mode: "create" });
-                  }}
-                >
-                  Set up manually
-                </button>
-              </div>
-            ) : null}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-auto min-w-44">
+              <DropdownMenuItem
+                data-testid="scheduled-task-create-with-pi"
+                onClick={onCreateWithPi}
+              >
+                Create with pi
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                data-testid="scheduled-task-setup-manually"
+                onClick={() => onOpenEditor({ mode: "create" })}
+              >
+                Set up manually
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
-      <div className="scheduled-toolbar">
-        <input
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Input
           aria-label="Search scheduled tasks"
-          className="skills-search"
+          className="w-auto min-w-0 flex-1 basis-56"
           data-testid="scheduled-task-search"
           placeholder="Search"
+          type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <div className="scheduled-tabs" role="tablist">
-          {FILTERS.map((entry) => (
-            <button
-              className={`scheduled-tabs__item${filter === entry.id ? " scheduled-tabs__item--active" : ""}`}
-              data-testid={`scheduled-task-filter-${entry.id}`}
-              key={entry.id}
-              role="tab"
-              type="button"
-              aria-selected={filter === entry.id}
-              onClick={() => setFilter(entry.id)}
-            >
-              {entry.label}
-            </button>
-          ))}
-        </div>
+        <Tabs value={filter} onValueChange={(value) => setFilter(value as ScheduledTaskFilter)}>
+          <TabsList>
+            {FILTERS.map((entry) => (
+              <TabsTrigger
+                data-testid={`scheduled-task-filter-${entry.id}`}
+                key={entry.id}
+                value={entry.id}
+              >
+                {entry.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       {lastError ? <p className="error-banner">{lastError}</p> : null}
 
       {visible.length === 0 ? (
-        <div className="empty-panel" data-testid="scheduled-tasks-empty">
-          <h2>{filter === "active" ? "No active scheduled tasks" : "No scheduled tasks"}</h2>
-          <p>
-            {filter === "active"
-              ? "Scheduled tasks run on this device while pi-garden is open. They do not run in the cloud or after you quit."
-              : "Create a task manually or ask pi to set one up."}
-          </p>
-        </div>
+        <Empty className="border" data-testid="scheduled-tasks-empty">
+          <EmptyHeader>
+            <EmptyTitle>
+              {filter === "active" ? "No active scheduled tasks" : "No scheduled tasks"}
+            </EmptyTitle>
+            <EmptyDescription>
+              {filter === "active"
+                ? "Scheduled tasks run on this device while pi-garden is open. They do not run in the cloud or after you quit."
+                : "Create a task manually or ask pi to set one up."}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <div className="scheduled-task-list">
+        <ItemGroup className="gap-2">
           {visible.map((task) => (
-            <article
-              className="scheduled-task-row"
+            <Item
               data-testid="scheduled-task-row"
               data-task-id={task.id}
               key={task.id}
+              render={<article role="listitem" />}
+              variant="outline"
             >
-              <button
-                className="scheduled-task-row__body"
-                type="button"
-                onClick={() => onOpenEditor({ mode: "edit", taskId: task.id })}
-              >
-                <strong className="scheduled-task-row__title">{task.title}</strong>
-                <span className="scheduled-task-row__meta">{formatScheduledTaskRowMeta(task)}</span>
-              </button>
-              <span className="scheduled-task-row__menu-wrap">
+              <ItemContent className="min-w-0">
                 <button
-                  className="icon-button"
+                  className="flex w-full flex-col gap-1 text-left"
                   type="button"
-                  aria-label={`Actions for ${task.title}`}
-                  aria-haspopup="menu"
-                  aria-expanded={menuTaskId === task.id}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setMenuTaskId((current) => (current === task.id ? undefined : task.id));
-                  }}
+                  onClick={() => onOpenEditor({ mode: "edit", taskId: task.id })}
                 >
-                  …
+                  <ItemTitle>{task.title}</ItemTitle>
+                  <ItemDescription>{formatScheduledTaskRowMeta(task)}</ItemDescription>
                 </button>
-                {menuTaskId === task.id ? (
-                  <div className="workspace-menu scheduled-task-row__menu" role="menu">
+              </ItemContent>
+              <ItemActions>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        aria-label={`Actions for ${task.title}`}
+                        size="icon-sm"
+                        variant="ghost"
+                      />
+                    }
+                  >
+                    <MoreHorizontalIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-auto min-w-36">
                     {task.status === "paused" ? (
-                      <button
-                        className="workspace-menu__item"
-                        type="button"
-                        onClick={() => {
-                          setMenuTaskId(undefined);
-                          void updateSnapshot(setSnapshot, () =>
-                            api.updateScheduledTask(task.id, { status: "active" }),
-                          ).catch((error: unknown) => {
-                            console.error("[renderer] updateScheduledTask failed", error);
-                          });
-                        }}
-                      >
+                      <DropdownMenuItem onClick={() => setStatus(task, "active")}>
                         Resume
-                      </button>
+                      </DropdownMenuItem>
                     ) : task.status !== "completed" ? (
-                      <button
-                        className="workspace-menu__item"
-                        type="button"
-                        onClick={() => {
-                          setMenuTaskId(undefined);
-                          void updateSnapshot(setSnapshot, () =>
-                            api.updateScheduledTask(task.id, { status: "paused" }),
-                          ).catch((error: unknown) => {
-                            console.error("[renderer] updateScheduledTask failed", error);
-                          });
-                        }}
-                      >
+                      <DropdownMenuItem onClick={() => setStatus(task, "paused")}>
                         Pause
-                      </button>
+                      </DropdownMenuItem>
                     ) : null}
-                    <button
-                      className="workspace-menu__item"
-                      type="button"
-                      onClick={() => {
-                        setMenuTaskId(undefined);
-                        onOpenEditor({ mode: "edit", taskId: task.id });
-                      }}
+                    <DropdownMenuItem
+                      onClick={() => onOpenEditor({ mode: "edit", taskId: task.id })}
                     >
                       Edit
-                    </button>
-                    <button
-                      className="workspace-menu__item workspace-menu__item--danger"
-                      type="button"
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
                       onClick={() => {
-                        setMenuTaskId(undefined);
                         void updateSnapshot(setSnapshot, () =>
                           api.deleteScheduledTask(task.id),
                         ).catch((error: unknown) => {
@@ -222,13 +204,13 @@ export function ScheduledTasksView({
                       }}
                     >
                       Delete
-                    </button>
-                  </div>
-                ) : null}
-              </span>
-            </article>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ItemActions>
+            </Item>
           ))}
-        </div>
+        </ItemGroup>
       )}
     </section>
   );

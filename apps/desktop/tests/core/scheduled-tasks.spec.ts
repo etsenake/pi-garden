@@ -30,7 +30,10 @@ test("manual create, tabs, pause, and restart keep scheduled tasks", async () =>
     await expect(window.getByTestId("scheduled-task-editor")).toBeVisible();
     await window.getByTestId("scheduled-task-title").fill("Standup ping");
     await window.getByTestId("scheduled-task-instruction").fill("Ask for yesterday's work");
-    await window.getByTestId("scheduled-task-frequency").selectOption("interval");
+    await window
+      .getByTestId("scheduled-task-frequency")
+      .getByRole("button", { name: "Interval" })
+      .click();
     await window.getByTestId("scheduled-task-interval").fill("10");
     await window.getByTestId("scheduled-task-save").click();
     await expect(window.getByTestId("scheduled-task-editor")).toHaveCount(0);
@@ -42,7 +45,7 @@ test("manual create, tabs, pause, and restart keep scheduled tasks", async () =>
     const created = await getDesktopState(window);
     expect(created.scheduledTasks).toHaveLength(1);
     await window.getByRole("button", { name: "Actions for Standup ping" }).click();
-    await window.getByRole("button", { name: "Pause" }).click();
+    await window.getByRole("menuitem", { name: "Pause" }).click();
     await expect
       .poll(async () => (await getDesktopState(window)).scheduledTasks[0]?.status)
       .toBe("paused");
