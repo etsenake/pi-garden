@@ -1,11 +1,37 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   CUSTOM_PROVIDER_ID_PATTERN,
   isValidHttpBaseUrl,
 } from "@pi-garden/pi-sdk-driver/custom-provider-types";
-import { trapDialogFocus } from "../../ui/dialog-focus";
 import type { CustomProviderConfig, CustomProviderModelConfig } from "../../../contracts/ipc";
-import { SettingsGroup } from "./settings-utils";
+import { Button } from "@/ui/shadcn/button";
+import { Checkbox } from "@/ui/shadcn/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/shadcn/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/ui/shadcn/field";
+import { Input } from "@/ui/shadcn/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/ui/shadcn/input-group";
+import { Item } from "@/ui/shadcn/item";
+import { Label } from "@/ui/shadcn/label";
+import { SettingsGroup, SettingsNote, SettingsRow } from "./settings-utils";
 
 interface SettingsCustomEndpointsSectionProps {
   readonly existingProviderIds: readonly string[];
@@ -81,61 +107,47 @@ export function SettingsCustomEndpointsSection({
         title="Custom endpoints"
         description="Add OpenAI-compatible endpoints (Ollama, vLLM, or your own server). Stored in ~/.pi/agent/models.json."
       >
-        {loadError ? (
-          <div className="settings-row">
-            <span className="settings-row__description settings-warning">{loadError}</span>
-          </div>
-        ) : null}
+        {loadError ? <SettingsNote tone="warning">{loadError}</SettingsNote> : null}
         {entries.length === 0 ? (
-          <div className="settings-row">
-            <span className="settings-row__description">No custom endpoints yet.</span>
-          </div>
+          <SettingsNote>No custom endpoints yet.</SettingsNote>
         ) : (
           entries.map((entry) => (
-            <div key={entry.providerId} className="settings-row">
-              <div className="settings-row__label">
-                <div className="settings-row__title">{entry.providerId}</div>
-                <div className="settings-row__description">
-                  {entry.baseUrl} · {entry.models.length} model
-                  {entry.models.length === 1 ? "" : "s"}
-                </div>
-              </div>
-              <div className="settings-row__control">
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  onClick={() => setDialog({ kind: "edit", original: entry })}
-                >
-                  Edit
-                </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  onClick={() =>
-                    void handleDelete(entry.providerId).catch((error: unknown) => {
-                      setLoadError(error instanceof Error ? error.message : String(error));
-                    })
-                  }
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
+            <SettingsRow
+              key={entry.providerId}
+              title={entry.providerId}
+              description={`${entry.baseUrl} · ${entry.models.length} model${
+                entry.models.length === 1 ? "" : "s"
+              }`}
+            >
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setDialog({ kind: "edit", original: entry })}
+              >
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  void handleDelete(entry.providerId).catch((error: unknown) => {
+                    setLoadError(error instanceof Error ? error.message : String(error));
+                  })
+                }
+              >
+                Remove
+              </Button>
+            </SettingsRow>
           ))
         )}
-        <div className="settings-row">
-          <div className="settings-row__label">
-            <div className="settings-row__title">Add endpoint</div>
-            <div className="settings-row__description">
-              Register a local or custom OpenAI-compatible server.
-            </div>
-          </div>
-          <div className="settings-row__control">
-            <button className="button" type="button" onClick={() => setDialog({ kind: "create" })}>
-              Add endpoint
-            </button>
-          </div>
-        </div>
+        <SettingsRow
+          title="Add endpoint"
+          description="Register a local or custom OpenAI-compatible server."
+        >
+          <Button size="sm" variant="secondary" onClick={() => setDialog({ kind: "create" })}>
+            Add endpoint
+          </Button>
+        </SettingsRow>
       </SettingsGroup>
 
       {dialog.kind !== "closed" ? (
@@ -163,7 +175,6 @@ function CustomEndpointDialog({
   onClose,
   onSave,
 }: CustomEndpointDialogProps) {
-  const titleId = useId();
   const initial = mode.kind === "edit" ? mode.original : undefined;
   const [providerId, setProviderId] = useState(initial?.providerId ?? "");
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? "");
@@ -176,9 +187,9 @@ function CustomEndpointDialog({
   const [probePending, setProbePending] = useState(false);
   const [formError, setFormError] = useState<string | undefined>();
   const [savePending, setSavePending] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const probeButtonRef = useRef<HTMLButtonElement>(null);
-  const restoreProbeFocusRef = useRef(false);
+  const providerIdInputId = useId();
+  const baseUrlInputId = useId();
+  const apiKeyInputId = useId();
 
   const selectedModelIds = useMemo(() => new Set(models.map((model) => model.id)), [models]);
   const isEdit = mode.kind === "edit";
@@ -187,18 +198,6 @@ function CustomEndpointDialog({
     () => validateProviderId(providerId, existingProviderIds, initial?.providerId),
     [providerId, existingProviderIds, initial?.providerId],
   );
-
-  useEffect(() => {
-    if (!probePending && restoreProbeFocusRef.current) {
-      restoreProbeFocusRef.current = false;
-      if (
-        document.activeElement === document.body ||
-        document.activeElement === probeButtonRef.current
-      ) {
-        probeButtonRef.current?.focus();
-      }
-    }
-  }, [probePending]);
 
   const handleProbe = async () => {
     const api = window.piApp;
@@ -210,7 +209,6 @@ function CustomEndpointDialog({
       setProbeError("Base URL must start with http:// or https://");
       return;
     }
-    restoreProbeFocusRef.current = document.activeElement === probeButtonRef.current;
     setProbePending(true);
     setProbeError(undefined);
     const result = await api.probeCustomProviderModels({
@@ -276,159 +274,139 @@ function CustomEndpointDialog({
     onClose();
   };
 
+  const showIdError = Boolean(idValidationError) && providerId.length > 0;
+
   return (
-    <div className="extension-dialog-backdrop">
-      <div
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="extension-dialog custom-endpoint-dialog"
+    <Dialog
+      open
+      disablePointerDismissal
+      onOpenChange={(open) => {
+        if (!open && !savePending) onClose();
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden sm:max-w-xl"
         data-testid="custom-endpoint-dialog"
-        onKeyDown={(event) => {
-          if (event.key === "Escape" && !savePending) {
-            event.preventDefault();
-            onClose();
-            return;
-          }
-          if (event.key === "Tab") {
-            trapDialogFocus(event, dialogRef.current);
-          }
-        }}
-        ref={dialogRef}
-        role="dialog"
+        showCloseButton={false}
       >
         <div
-          className="custom-endpoint-dialog__content"
+          className="custom-endpoint-dialog__content -mx-4 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-1"
           data-testid="custom-endpoint-dialog-content"
         >
-          <div className="extension-dialog__title" id={titleId}>
-            {isEdit ? "Edit custom endpoint" : "Add custom endpoint"}
-          </div>
-          <p className="extension-dialog__body">
-            Configure an OpenAI-compatible server. The endpoint and API key are stored in plaintext
-            at
-            <code> ~/.pi/agent/models.json</code>.
-          </p>
-          <label className="settings-field">
-            <span>Provider ID</span>
-            <input
-              aria-label="Provider ID"
-              autoFocus={!isEdit}
-              className="settings-search"
-              disabled={isEdit || savePending}
-              placeholder="ollama-local"
-              value={providerId}
-              onChange={(event) => setProviderId(event.target.value.trim().toLowerCase())}
-            />
-            {idValidationError ? (
-              <span className="settings-row__description settings-warning">
-                {idValidationError}
-              </span>
-            ) : (
-              <span className="settings-row__description">
-                Lowercase letters, digits, and dashes. Cannot be changed later.
-              </span>
-            )}
-          </label>
-          <label className="settings-field">
-            <span>Base URL</span>
-            <input
-              aria-label="Base URL"
-              className="settings-search"
-              disabled={savePending}
-              placeholder="http://localhost:11434/v1"
-              value={baseUrl}
-              onChange={(event) => setBaseUrl(event.target.value)}
-            />
-            <span className="settings-row__description">
-              Include the <code>/v1</code> suffix. Ollama: <code>http://localhost:11434/v1</code>.
-              vLLM: <code>http://localhost:8000/v1</code>.
-            </span>
-          </label>
-          <label className="settings-field">
-            <span>API key</span>
-            <input
-              aria-label="API key"
-              className="settings-search"
-              disabled={savePending}
-              placeholder="vLLM: pass through; Ollama: leave blank"
-              type="password"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-            />
-            <span className="settings-row__description">
-              Required by the storage format. For vLLM started with <code>--api-key</code>, enter
-              that key. For Ollama or other servers without auth, leave blank and a placeholder is
-              saved.
-            </span>
-          </label>
-
-          <div className="settings-field">
-            <div className="settings-field__header">
-              <span>Models</span>
-              <button
-                className="button button--secondary"
-                disabled={probePending || savePending}
-                ref={probeButtonRef}
-                type="button"
-                onClick={() =>
-                  void handleProbe().catch((error: unknown) => {
-                    setProbePending(false);
-                    setProbeError(error instanceof Error ? error.message : String(error));
-                  })
-                }
-              >
-                {probePending ? "Detecting…" : "Detect models"}
-              </button>
-            </div>
-            {probeError ? (
-              <p className="settings-row__description settings-warning">{probeError}</p>
-            ) : null}
-            <ModelChecklist
-              probed={probeCandidates}
-              selected={models}
-              onToggle={toggleModel}
-              onManualAdd={handleManualAdd}
-              disabled={savePending}
-            />
-            <p className="settings-row__description">
-              Tool calling is required. Smaller models (&lt; 7B) often do not emit OpenAI-style
-              function calls cleanly.
-            </p>
-          </div>
+          <DialogHeader>
+            <DialogTitle>{isEdit ? "Edit custom endpoint" : "Add custom endpoint"}</DialogTitle>
+            <DialogDescription>
+              Configure an OpenAI-compatible server. The endpoint and API key are stored in
+              plaintext at <code>~/.pi/agent/models.json</code>.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field data-invalid={showIdError ? true : undefined}>
+              <FieldLabel htmlFor={providerIdInputId}>Provider ID</FieldLabel>
+              <Input
+                aria-invalid={showIdError ? true : undefined}
+                disabled={isEdit || savePending}
+                id={providerIdInputId}
+                placeholder="ollama-local"
+                value={providerId}
+                onChange={(event) => setProviderId(event.target.value.trim().toLowerCase())}
+              />
+              {showIdError ? (
+                <FieldError>{idValidationError}</FieldError>
+              ) : (
+                <FieldDescription>
+                  Lowercase letters, digits, and dashes. Cannot be changed later.
+                </FieldDescription>
+              )}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={baseUrlInputId}>Base URL</FieldLabel>
+              <Input
+                disabled={savePending}
+                id={baseUrlInputId}
+                placeholder="http://localhost:11434/v1"
+                value={baseUrl}
+                onChange={(event) => setBaseUrl(event.target.value)}
+              />
+              <FieldDescription>
+                Include the <code>/v1</code> suffix. Ollama: <code>http://localhost:11434/v1</code>.
+                vLLM: <code>http://localhost:8000/v1</code>.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={apiKeyInputId}>API key</FieldLabel>
+              <Input
+                disabled={savePending}
+                id={apiKeyInputId}
+                placeholder="vLLM: pass through; Ollama: leave blank"
+                type="password"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+              />
+              <FieldDescription>
+                Required by the storage format. For vLLM started with <code>--api-key</code>, enter
+                that key. For Ollama or other servers without auth, leave blank and a placeholder is
+                saved.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <div className="flex items-center justify-between gap-3">
+                <FieldTitle>Models</FieldTitle>
+                <Button
+                  disabled={probePending || savePending}
+                  focusableWhenDisabled
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void handleProbe().catch((error: unknown) => {
+                      setProbePending(false);
+                      setProbeError(error instanceof Error ? error.message : String(error));
+                    })
+                  }
+                >
+                  {probePending ? "Detecting…" : "Detect models"}
+                </Button>
+              </div>
+              {probeError ? <FieldError>{probeError}</FieldError> : null}
+              <ModelChecklist
+                probed={probeCandidates}
+                selected={models}
+                onToggle={toggleModel}
+                onManualAdd={handleManualAdd}
+                disabled={savePending}
+              />
+              <FieldDescription>
+                Tool calling is required. Smaller models (&lt; 7B) often do not emit OpenAI-style
+                function calls cleanly.
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
         </div>
 
-        <div className="custom-endpoint-dialog__footer" data-testid="custom-endpoint-dialog-footer">
-          {formError ? (
-            <p className="extension-dialog__body settings-warning">{formError}</p>
-          ) : null}
-          <div className="extension-dialog__actions">
-            <button
-              className="button button--secondary"
-              disabled={savePending}
-              type="button"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              className="button"
-              disabled={
-                savePending || Boolean(idValidationError) || models.length === 0 || !baseUrl.trim()
-              }
-              type="button"
-              onClick={() =>
-                void handleSave().catch((error: unknown) => {
-                  setSavePending(false);
-                  setFormError(error instanceof Error ? error.message : String(error));
-                })
-              }
-            >
-              {isEdit ? "Save changes" : "Add endpoint"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <DialogFooter
+          className="custom-endpoint-dialog__footer sm:items-center"
+          data-testid="custom-endpoint-dialog-footer"
+        >
+          {formError ? <FieldError className="sm:mr-auto">{formError}</FieldError> : null}
+          <Button disabled={savePending} variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={
+              savePending || Boolean(idValidationError) || models.length === 0 || !baseUrl.trim()
+            }
+            onClick={() =>
+              void handleSave().catch((error: unknown) => {
+                setSavePending(false);
+                setFormError(error instanceof Error ? error.message : String(error));
+              })
+            }
+          >
+            {isEdit ? "Save changes" : "Add endpoint"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -460,35 +438,37 @@ function ModelChecklist({
   };
 
   return (
-    <div className="settings-disclosure__body">
+    <div className="flex flex-col gap-2">
       {knownIds.size === 0 ? (
-        <p className="settings-row__description">
+        <FieldDescription>
           Click &ldquo;Detect models&rdquo; or type a model ID below to add one manually.
-        </p>
+        </FieldDescription>
       ) : (
-        <ul className="settings-list custom-endpoint-model-list">
+        <ul className="custom-endpoint-model-list flex flex-col">
           {[...knownIds]
             .sort((a, b) => a.localeCompare(b))
             .map((id) => (
-              <li key={id} className="settings-row">
-                <label className="custom-endpoint-model-list__item">
-                  <input
+              <Item key={id} render={<li />} size="xs">
+                {/* A native button keeps the explicit "Enable <id>" name; Base UI would
+                    otherwise name a span checkbox from its wrapping label. */}
+                <Label>
+                  <Checkbox
                     aria-label={`Enable ${id}`}
-                    type="checkbox"
                     checked={selectedIds.has(id)}
                     disabled={disabled}
-                    onChange={() => onToggle(id)}
+                    nativeButton
+                    onCheckedChange={() => onToggle(id)}
+                    render={<button type="button" />}
                   />
-                  <span className="settings-row__title">{id}</span>
-                </label>
-              </li>
+                  {id}
+                </Label>
+              </Item>
             ))}
         </ul>
       )}
-      <div className="settings-row">
-        <input
+      <InputGroup>
+        <InputGroupInput
           aria-label="Add model ID manually"
-          className="settings-search"
           disabled={disabled}
           placeholder="Add model ID manually"
           value={manualDraft}
@@ -500,15 +480,15 @@ function ModelChecklist({
             }
           }}
         />
-        <button
-          className="button button--secondary"
-          disabled={disabled || manualDraft.trim().length === 0}
-          type="button"
-          onClick={submitManual}
-        >
-          Add
-        </button>
-      </div>
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            disabled={disabled || manualDraft.trim().length === 0}
+            onClick={submitManual}
+          >
+            Add
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
     </div>
   );
 }
