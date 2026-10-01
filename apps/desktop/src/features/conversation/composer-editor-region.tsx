@@ -7,6 +7,8 @@ import type { ActiveTheme } from "../../ui/active-theme";
 import { DesktopEditorFrame } from "../extensions/desktop-editor-frame";
 import { readComposerAttachmentsFromFiles } from "./composer-attachments";
 import type { ComposerEditorHandle } from "./composer-editor";
+import { ComposerMenuPopover } from "./composer-menu-popover";
+import { CommandItem } from "@/ui/shadcn/command";
 import {
   useEditorAutocomplete,
   type EditorAutocompleteMenu as EditorAutocompleteMenuState,
@@ -160,21 +162,29 @@ function EditorAutocompleteMenu({
 }) {
   if (!menu.open) return null;
   return (
-    <div className="slash-menu" data-testid="editor-autocomplete-menu">
+    <ComposerMenuPopover
+      label="Suggestions"
+      selectedValue={String(menu.selectedIndex)}
+      testId="editor-autocomplete-menu"
+    >
       {menu.items.map((item, index) => (
-        <button
+        <CommandItem
           className={`slash-menu__option ${index === menu.selectedIndex ? "slash-menu__option--active" : ""}`}
           key={`${item.value}:${index}`}
-          type="button"
-          onClick={() => onAccept(item)}
+          value={String(index)}
+          onSelect={() => onAccept(item)}
         >
-          <span className="slash-menu__option-title">{item.label}</span>
-          {item.description ? (
-            <span className="slash-menu__option-description">{item.description}</span>
-          ) : null}
-        </button>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="slash-menu__option-title truncate">{item.label}</span>
+            {item.description ? (
+              <span className="slash-menu__option-description truncate text-xs text-muted-foreground">
+                {item.description}
+              </span>
+            ) : null}
+          </span>
+        </CommandItem>
       ))}
-    </div>
+    </ComposerMenuPopover>
   );
 }
 

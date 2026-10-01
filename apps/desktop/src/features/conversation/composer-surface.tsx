@@ -38,6 +38,8 @@ import {
 import { XIcon } from "lucide-react";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
+import { CommandEmpty, CommandGroup, CommandItem, CommandShortcut } from "@/ui/shadcn/command";
+import { ComposerMenuPopover } from "./composer-menu-popover";
 import type { ComposerEditorHandle } from "./composer-editor";
 import { bindTextareaEditor } from "./composer-editor";
 import { ImageAttachmentThumb } from "./image-attachment-thumb";
@@ -279,118 +281,98 @@ export function ComposerSurface({
       <div className="composer__editor">
         {topNotice}
         {showMentionMenu ? (
-          <div className="composer__menus">
-            <div
-              className="mention-menu"
-              data-testid="mention-menu"
-              onWheel={(event) => event.stopPropagation()}
-            >
-              <MentionMenuSections
-                options={mentionOptions}
-                selectedIndex={selectedMentionIndex}
-                onSelect={onSelectMention}
-                onEnableExtension={onEnableMentionExtension}
-              />
-            </div>
-          </div>
-        ) : null}
-        {showSlashMenu || (showSlashOptionMenu && selectedSlashCommand) ? (
-          <div className="composer__menus">
-            {showSlashMenu ? (
-              <div
-                className="slash-menu"
-                data-testid="slash-menu"
-                onWheel={(event) => event.stopPropagation()}
+          <ComposerMenuPopover
+            label="Mentions"
+            selectedValue={mentionOptions[selectedMentionIndex]?.id}
+            testId="mention-menu"
+          >
+            <MentionMenuSections
+              options={mentionOptions}
+              onSelect={onSelectMention}
+              onEnableExtension={onEnableMentionExtension}
+            />
+          </ComposerMenuPopover>
+        ) : showSlashMenu ? (
+          <ComposerMenuPopover
+            label="Slash commands"
+            selectedValue={selectedSlashCommand?.id}
+            testId="slash-menu"
+          >
+            {slashSections.map((section) => (
+              <CommandGroup
+                heading={
+                  section.title ? (
+                    <span className="flex items-center gap-2">
+                      {section.id === "runtime" ? <SparkIcon /> : <SettingsIcon />}
+                      {section.title}
+                    </span>
+                  ) : undefined
+                }
+                key={section.id}
               >
-                {slashSections.map((section) => (
-                  <div className="slash-menu__section" key={section.id}>
-                    {section.title ? (
-                      <div
-                        className={`slash-menu__section-title slash-menu__section-title--${section.id}`}
-                      >
-                        <span className="slash-menu__section-icon" aria-hidden="true">
-                          {section.id === "runtime" ? <SparkIcon /> : <SettingsIcon />}
+                {section.items.map((command) => (
+                  <CommandItem
+                    className="slash-menu__item"
+                    key={command.id}
+                    value={command.id}
+                    onSelect={() => onSelectSlashCommand(command)}
+                  >
+                    <SlashCommandIcon command={command} />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-medium">{command.title}</span>
+                        {command.section === "runtime" && command.sourceLabel ? (
+                          <Badge variant="secondary">{command.sourceLabel}</Badge>
+                        ) : null}
+                        {command.section === "runtime" &&
+                        command.compatibility?.status === "terminal-only" ? (
+                          <Badge variant="outline">Terminal-only</Badge>
+                        ) : null}
+                      </span>
+                      {command.description ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {command.description}
                         </span>
-                        <span>{section.title}</span>
-                      </div>
-                    ) : null}
-                    {section.items.map((command) => (
-                      <button
-                        className={`slash-menu__item ${command.section === "runtime" ? "slash-menu__item--skill" : ""} ${selectedSlashCommand?.id === command.id ? "slash-menu__item--active" : ""}`}
-                        key={command.id}
-                        type="button"
-                        onClick={() => onSelectSlashCommand(command)}
-                      >
-                        <span className="slash-menu__icon" aria-hidden="true">
-                          <SlashCommandIcon command={command} />
-                        </span>
-                        {command.section === "runtime" ? (
-                          <span className="slash-menu__content slash-menu__content--skill">
-                            <span className="slash-menu__line">
-                              <span className="slash-menu__title">{command.title}</span>
-                              {command.sourceLabel ? (
-                                <span className="slash-menu__skill-badge">
-                                  {command.sourceLabel}
-                                </span>
-                              ) : null}
-                              {command.compatibility?.status === "terminal-only" ? (
-                                <span className="slash-menu__skill-badge slash-menu__skill-badge--warning">
-                                  Terminal-only
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="slash-menu__description">{command.description}</span>
-                            <span className="slash-menu__meta">
-                              <span className="slash-menu__command slash-menu__command--skill">
-                                {command.command}
-                              </span>
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="slash-menu__content">
-                            <span className="slash-menu__line">
-                              <span className="slash-menu__title">{command.title}</span>
-                              <span className="slash-menu__command">{command.command}</span>
-                            </span>
-                            <span className="slash-menu__description">{command.description}</span>
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                      ) : null}
+                    </span>
+                    <CommandShortcut>{command.command}</CommandShortcut>
+                  </CommandItem>
                 ))}
-              </div>
+              </CommandGroup>
+            ))}
+          </ComposerMenuPopover>
+        ) : showSlashOptionMenu && selectedSlashCommand ? (
+          <ComposerMenuPopover
+            label={selectedSlashCommand.title}
+            selectedValue={selectedSlashOption?.value}
+            testId="slash-options-menu"
+          >
+            <CommandGroup heading={selectedSlashCommand.title}>
+              {slashOptions.map((option) => (
+                <CommandItem
+                  className={`slash-menu__option ${selectedSlashOption?.value === option.value ? "slash-menu__option--active" : ""}`}
+                  key={option.value}
+                  value={option.value}
+                  onSelect={() => onSelectSlashOption(option)}
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="slash-menu__option-title truncate">{option.label}</span>
+                    {option.description ? (
+                      <span className="slash-menu__option-description truncate text-xs text-muted-foreground">
+                        {option.description}
+                      </span>
+                    ) : null}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {slashOptions.length === 0 && slashOptionEmptyState ? (
+              <CommandEmpty className="px-2 py-3 text-left">
+                <div className="font-medium">{slashOptionEmptyState.title}</div>
+                <div className="text-muted-foreground">{slashOptionEmptyState.description}</div>
+              </CommandEmpty>
             ) : null}
-            {showSlashOptionMenu && selectedSlashCommand ? (
-              <div
-                className="slash-menu slash-menu--options"
-                data-testid="slash-options-menu"
-                onWheel={(event) => event.stopPropagation()}
-              >
-                <div className="slash-menu__search">{selectedSlashCommand.title}</div>
-                {slashOptions.length > 0 ? (
-                  slashOptions.map((option) => (
-                    <button
-                      className={`slash-menu__option ${selectedSlashOption?.value === option.value ? "slash-menu__option--active" : ""}`}
-                      key={option.value}
-                      type="button"
-                      onClick={() => onSelectSlashOption(option)}
-                    >
-                      <span className="slash-menu__option-title">{option.label}</span>
-                      <span className="slash-menu__option-description">{option.description}</span>
-                    </button>
-                  ))
-                ) : slashOptionEmptyState ? (
-                  <div className="slash-menu__empty">
-                    <div className="slash-menu__empty-title">{slashOptionEmptyState.title}</div>
-                    <div className="slash-menu__empty-description">
-                      {slashOptionEmptyState.description}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          </ComposerMenuPopover>
         ) : null}
         <ExtensionWidgets
           placement="above"
@@ -433,12 +415,10 @@ export function ComposerSurface({
 
 function MentionMenuSections({
   options,
-  selectedIndex,
   onSelect,
   onEnableExtension,
 }: {
   readonly options: readonly MentionOption[];
-  readonly selectedIndex: number;
   readonly onSelect: (option: MentionOption) => void;
   readonly onEnableExtension: (option: ExtensionMentionOption) => void;
 }) {
@@ -452,135 +432,102 @@ function MentionMenuSections({
   return (
     <>
       {extensionOptions.length > 0 ? (
-        <MentionMenuSection
-          title="Extensions"
-          options={extensionOptions}
-          selectedIndex={selectedIndex}
-          allOptions={options}
-          onSelect={onSelect}
-          onEnableExtension={onEnableExtension}
-        />
+        <CommandGroup
+          className="mention-menu__section"
+          heading={<span className="mention-menu__section-title">Extensions</span>}
+        >
+          {extensionOptions.map((option) => (
+            <ExtensionMentionItem
+              key={option.id}
+              option={option}
+              onSelect={onSelect}
+              onEnableExtension={onEnableExtension}
+            />
+          ))}
+        </CommandGroup>
       ) : null}
       {fileOptions.length > 0 ? (
-        <MentionMenuSection
-          title="Files"
-          options={fileOptions}
-          selectedIndex={selectedIndex}
-          allOptions={options}
-          onSelect={onSelect}
-          onEnableExtension={onEnableExtension}
-        />
+        <CommandGroup
+          className="mention-menu__section"
+          heading={<span className="mention-menu__section-title">Files</span>}
+        >
+          {fileOptions.map((option) => (
+            <FileMentionItem key={option.id} option={option} onSelect={onSelect} />
+          ))}
+        </CommandGroup>
       ) : null}
     </>
   );
 }
 
-function MentionMenuSection({
-  title,
-  options,
-  selectedIndex,
-  allOptions,
+function ExtensionMentionItem({
+  option,
   onSelect,
   onEnableExtension,
 }: {
-  readonly title: string;
-  readonly options: readonly MentionOption[];
-  readonly selectedIndex: number;
-  readonly allOptions: readonly MentionOption[];
+  readonly option: ExtensionMentionOption;
   readonly onSelect: (option: MentionOption) => void;
   readonly onEnableExtension: (option: ExtensionMentionOption) => void;
 }) {
   return (
-    <div className="mention-menu__section">
-      <div className="mention-menu__section-title">{title}</div>
-      {options.map((option) => (
-        <MentionMenuItem
-          key={option.id}
-          option={option}
-          active={allOptions[selectedIndex]?.id === option.id}
-          onSelect={onSelect}
-          onEnableExtension={onEnableExtension}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MentionMenuItem({
-  option,
-  active,
-  onSelect,
-  onEnableExtension,
-}: {
-  readonly option: MentionOption;
-  readonly active: boolean;
-  readonly onSelect: (option: MentionOption) => void;
-  readonly onEnableExtension: (option: ExtensionMentionOption) => void;
-}) {
-  if (option.kind === "extension") {
-    return (
-      <div
-        className={`mention-menu__item mention-menu__item--extension ${active ? "mention-menu__item--active" : ""} ${option.enabled ? "" : "mention-menu__item--disabled"}`}
-      >
-        <button
-          className="mention-menu__item-main"
+    <CommandItem
+      className="mention-menu__item"
+      disabled={option.enabling}
+      value={option.id}
+      onSelect={() => {
+        if (option.enabled) {
+          onSelect(option);
+          return;
+        }
+        onEnableExtension(option);
+      }}
+    >
+      <ExtensionIcon />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="mention-menu__filename truncate font-medium">{option.displayName}</span>
+          {option.enabled ? null : (
+            <Badge variant="secondary">{option.enabling ? "Enabling" : "Disabled"}</Badge>
+          )}
+        </span>
+        <span className="truncate text-xs text-muted-foreground">{option.description}</span>
+      </span>
+      {option.enabled ? null : (
+        <Button
+          aria-label={`Enable ${option.displayName}`}
           disabled={option.enabling}
-          type="button"
-          onClick={() => {
-            if (option.enabled) {
-              onSelect(option);
-              return;
-            }
+          size="xs"
+          variant="outline"
+          onClick={(event) => {
+            event.stopPropagation();
             onEnableExtension(option);
           }}
         >
-          <span className="mention-menu__icon" aria-hidden="true">
-            <ExtensionIcon />
-          </span>
-          <span className="mention-menu__content">
-            <span className="mention-menu__line">
-              <span className="mention-menu__filename">{option.displayName}</span>
-              {option.enabled ? null : (
-                <span className="mention-menu__badge">
-                  {option.enabling ? "Enabling" : "Disabled"}
-                </span>
-              )}
-            </span>
-            <span className="mention-menu__description">{option.description}</span>
-          </span>
-        </button>
-        {option.enabled ? null : (
-          <button
-            aria-label={`Enable ${option.displayName}`}
-            className="mention-menu__enable"
-            disabled={option.enabling}
-            type="button"
-            onClick={() => onEnableExtension(option)}
-          >
-            {option.enabling ? "Enabling" : "Enable"}
-          </button>
-        )}
-      </div>
-    );
-  }
+          {option.enabling ? "Enabling" : "Enable"}
+        </Button>
+      )}
+    </CommandItem>
+  );
+}
 
+function FileMentionItem({
+  option,
+  onSelect,
+}: {
+  readonly option: FileMentionOption;
+  readonly onSelect: (option: MentionOption) => void;
+}) {
   const lastSlash = option.filePath.lastIndexOf("/");
   const dirPart = lastSlash >= 0 ? option.filePath.slice(0, lastSlash + 1) : "";
   const namePart = lastSlash >= 0 ? option.filePath.slice(lastSlash + 1) : option.filePath;
   return (
-    <button
-      className={`mention-menu__item ${active ? "mention-menu__item--active" : ""}`}
-      type="button"
-      onClick={() => onSelect(option)}
-    >
-      <span className="mention-menu__icon" aria-hidden="true">
-        <FileIcon />
+    <CommandItem className="mention-menu__item" value={option.id} onSelect={() => onSelect(option)}>
+      <FileIcon />
+      <span className="flex min-w-0">
+        {dirPart ? <span className="truncate text-muted-foreground">{dirPart}</span> : null}
+        <span className="mention-menu__filename shrink-0 font-medium">{namePart}</span>
       </span>
-      <span className="mention-menu__file">
-        {dirPart ? <span className="mention-menu__dirname">{dirPart}</span> : null}
-        <span className="mention-menu__filename">{namePart}</span>
-      </span>
-    </button>
+    </CommandItem>
   );
 }
 
