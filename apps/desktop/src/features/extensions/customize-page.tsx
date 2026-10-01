@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   RuntimeExtensionRecord,
   RuntimeSkillRecord,
@@ -10,6 +10,11 @@ import type {
   ExtensionCommandCompatibilityRecord,
   WorkspaceRecord,
 } from "../../../contracts/desktop-state";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/shadcn/empty";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 import { RefreshIcon, SearchIcon } from "../../ui/icons";
 import { extensionScopeLabel } from "./extension-display";
 import { ExtensionsTab } from "./extensions-view";
@@ -102,14 +107,6 @@ export function CustomizePage({
     [extensions, normalizedQuery],
   );
 
-  const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    const next: CustomizeTab = tab === "skills" ? "extensions" : "skills";
-    onSelectTab(next);
-    document.getElementById(tabId(next))?.focus();
-  };
-
   return (
     <section className="canvas">
       <div className="conversation settings-view">
@@ -123,172 +120,131 @@ export function CustomizePage({
           </div>
           <div className="view-header__actions">
             {workspacePicker}
-            <button
+            <Button
               aria-label="Refresh"
-              className="icon-button resource-refresh"
+              size="icon"
               title="Refresh"
-              type="button"
+              variant="ghost"
               onClick={onRefresh}
             >
               <RefreshIcon />
-            </button>
+            </Button>
             {tab === "skills" && workspace ? (
-              <button
-                className="button button--primary"
-                type="button"
-                onClick={() => onTryCommand(NEW_SKILL_PROMPT)}
-              >
-                New skill
-              </button>
+              <Button onClick={() => onTryCommand(NEW_SKILL_PROMPT)}>New skill</Button>
             ) : null}
             {tab === "extensions" && workspace && onStartAuthoring ? (
               <>
-                <button
-                  className="button"
+                <Button
                   data-testid="new-host-contribution"
-                  type="button"
+                  variant="outline"
                   onClick={() => onStartAuthoring("host-contribution")}
                 >
                   New badge
-                </button>
-                <button
-                  className="button"
+                </Button>
+                <Button
                   data-testid="new-rich-surface"
-                  type="button"
+                  variant="outline"
                   onClick={() => onStartAuthoring("rich-surface")}
                 >
                   New widget
-                </button>
-                <button
-                  className="button button--primary"
+                </Button>
+                <Button
                   data-testid="new-desktop-view"
-                  type="button"
                   onClick={() => onStartAuthoring("desktop-view")}
                 >
                   New desktop view
-                </button>
+                </Button>
               </>
             ) : null}
           </div>
         </header>
 
-        <div className="resource-toolbar">
-          <div
-            aria-label="Skills and extensions"
-            className="resource-tabs"
-            role="tablist"
-            onKeyDown={handleTabKeyDown}
-          >
-            <ResourceTab
-              count={skills.length}
-              label="Skills"
-              selected={tab === "skills"}
-              tab="skills"
-              onSelect={() => onSelectTab("skills")}
-            />
-            <ResourceTab
-              count={extensions.length}
-              label="Extensions"
-              selected={tab === "extensions"}
-              tab="extensions"
-              onSelect={() => onSelectTab("extensions")}
-            />
-          </div>
-          <label className="resource-search">
-            <SearchIcon />
-            <input
-              aria-label={`Search ${tab}`}
-              placeholder={`Search ${tab}`}
-              spellCheck={false}
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.currentTarget.value);
-                setSelectedId(undefined);
-              }}
-            />
-          </label>
-        </div>
-
-        <div
-          aria-labelledby={tabId(tab)}
-          className="settings-grid"
-          id={TAB_PANEL_ID}
-          ref={panelRef}
-          role="tabpanel"
+        <Tabs
+          value={tab}
+          onValueChange={(next: unknown) => {
+            if (next === "skills" || next === "extensions") onSelectTab(next);
+          }}
         >
-          {!workspace ? (
-            <div className="settings-group resource-empty">
-              <div className="resource-empty__title">Open a folder first</div>
-              <p className="resource-empty__body">
-                Skills and extensions are discovered per workspace, plus your user folders.
-              </p>
-            </div>
-          ) : tab === "skills" ? (
-            <SkillsTab
-              searching={normalizedQuery.length > 0}
-              selected={skills.find((skill) => skill.filePath === selectedId)}
-              skills={filteredSkills}
-              workspace={workspace}
-              onOpenSkillFolder={onOpenSkillFolder}
-              onSelect={selectItem}
-              onToggleSkill={onToggleSkill}
-              onTrySkill={(skill) => onTryCommand(`${skill.slashCommand} `)}
-            />
-          ) : (
-            <ExtensionsTab
-              api={api}
-              commandCompatibility={commandCompatibility}
-              extensions={filteredExtensions}
-              searching={normalizedQuery.length > 0}
-              selected={extensions.find((extension) => extension.path === selectedId)}
-              workspace={workspace}
-              onAdaptForDesktop={onAdaptForDesktop}
-              onOpenExtensionFolder={onOpenExtensionFolder}
-              onSelect={selectItem}
-              onToggleExtension={onToggleExtension}
-              shortcutConflicts={shortcutConflicts}
-            />
-          )}
-        </div>
+          <div className="resource-toolbar">
+            <TabsList activateOnFocus aria-label="Skills and extensions" variant="line">
+              <ResourceTab count={skills.length} label="Skills" tab="skills" />
+              <ResourceTab count={extensions.length} label="Extensions" tab="extensions" />
+            </TabsList>
+            <InputGroup className="max-w-xs">
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label={`Search ${tab}`}
+                placeholder={`Search ${tab}`}
+                spellCheck={false}
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.currentTarget.value);
+                  setSelectedId(undefined);
+                }}
+              />
+            </InputGroup>
+          </div>
+
+          <TabsContent className="settings-grid" ref={panelRef} value={tab}>
+            {!workspace ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>Open a folder first</EmptyTitle>
+                  <EmptyDescription>
+                    Skills and extensions are discovered per workspace, plus your user folders.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : tab === "skills" ? (
+              <SkillsTab
+                searching={normalizedQuery.length > 0}
+                selected={skills.find((skill) => skill.filePath === selectedId)}
+                skills={filteredSkills}
+                workspace={workspace}
+                onOpenSkillFolder={onOpenSkillFolder}
+                onSelect={selectItem}
+                onToggleSkill={onToggleSkill}
+                onTrySkill={(skill) => onTryCommand(`${skill.slashCommand} `)}
+              />
+            ) : (
+              <ExtensionsTab
+                api={api}
+                commandCompatibility={commandCompatibility}
+                extensions={filteredExtensions}
+                searching={normalizedQuery.length > 0}
+                selected={extensions.find((extension) => extension.path === selectedId)}
+                workspace={workspace}
+                onAdaptForDesktop={onAdaptForDesktop}
+                onOpenExtensionFolder={onOpenExtensionFolder}
+                onSelect={selectItem}
+                onToggleExtension={onToggleExtension}
+                shortcutConflicts={shortcutConflicts}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </section>
   );
-}
-
-const TAB_PANEL_ID = "customize-tab-panel";
-
-function tabId(tab: CustomizeTab): string {
-  return `customize-tab-${tab}`;
 }
 
 function ResourceTab({
   tab,
   label,
   count,
-  selected,
-  onSelect,
 }: {
   readonly tab: CustomizeTab;
   readonly label: string;
   readonly count: number;
-  readonly selected: boolean;
-  readonly onSelect: () => void;
 }) {
   return (
-    <button
-      aria-controls={TAB_PANEL_ID}
-      aria-selected={selected}
-      className="resource-tabs__tab"
-      id={tabId(tab)}
-      role="tab"
-      tabIndex={selected ? 0 : -1}
-      type="button"
-      onClick={onSelect}
-    >
+    <TabsTrigger value={tab}>
       {label}
-      <span className="resource-tabs__count">{count}</span>
-    </button>
+      <Badge variant="secondary">{count}</Badge>
+    </TabsTrigger>
   );
 }
 

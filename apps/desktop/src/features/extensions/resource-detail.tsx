@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { SettingsSwitch } from "../settings/settings-controls";
+import { Button } from "@/ui/shadcn/button";
+import { Switch } from "@/ui/shadcn/switch";
 
 /** Drill-in page for one skill or extension, in the style of Codex's Hooks detail. */
 export function ResourceDetail({
@@ -35,7 +36,10 @@ export function ResourceDetail({
     // Capture phase, so Escape returns to the list before the settings surface closes.
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
-      if (document.querySelector("[aria-modal='true'], .extension-dialog-backdrop")) return;
+      // Any open dialog (legacy or shadcn) owns Escape.
+      if (document.querySelector("[aria-modal='true'], [role='dialog'], [role='alertdialog']")) {
+        return;
+      }
       event.preventDefault();
       backRef.current();
     };
@@ -45,10 +49,16 @@ export function ResourceDetail({
 
   return (
     <div className="skill-detail resource-detail">
-      <button className="resource-detail__back" ref={backButtonRef} type="button" onClick={onBack}>
+      <Button
+        className="justify-self-start"
+        ref={backButtonRef}
+        size="sm"
+        variant="ghost"
+        onClick={onBack}
+      >
         <span aria-hidden="true">←</span>
         <span>{backLabel}</span>
-      </button>
+      </Button>
       <div className="resource-detail__header">
         <span className="resource-row__icon resource-row__icon--large" aria-hidden="true">
           {icon}
@@ -59,11 +69,11 @@ export function ResourceDetail({
         </div>
         <div className="resource-detail__actions">
           {actions}
-          <SettingsSwitch
+          <Switch
+            aria-label="Enabled"
             checked={enabled}
             disabled={!onToggle}
-            label="Enabled"
-            onChange={(next) => onToggle?.(next)}
+            onCheckedChange={(next) => onToggle?.(next)}
           />
         </div>
       </div>

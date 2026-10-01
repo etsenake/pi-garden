@@ -1,5 +1,6 @@
 import type { RuntimeSkillRecord } from "@pi-garden/session-driver/runtime-types";
 import type { WorkspaceRecord } from "../../../contracts/desktop-state";
+import { Button } from "@/ui/shadcn/button";
 import { titleCase } from "../../lib/string-utils";
 import { SkillIcon } from "../../ui/icons";
 import { SettingsGroup, SettingsRow } from "../settings/settings-utils";
@@ -58,20 +59,10 @@ export function SkillsTab({
         <ResourceDetail
           actions={
             <>
-              <button
-                className="button button--secondary"
-                type="button"
-                onClick={() => onOpenSkillFolder(selected.filePath)}
-              >
+              <Button variant="outline" onClick={() => onOpenSkillFolder(selected.filePath)}>
                 Open folder
-              </button>
-              <button
-                className="button button--primary"
-                type="button"
-                onClick={() => onTrySkill(selected)}
-              >
-                Try
-              </button>
+              </Button>
+              <Button onClick={() => onTrySkill(selected)}>Try</Button>
             </>
           }
           backLabel="All skills"

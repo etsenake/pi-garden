@@ -1,5 +1,17 @@
-import { useState, type ReactNode } from "react";
-import { SettingsSwitch } from "../settings/settings-controls";
+import { Fragment, useState, type ReactNode } from "react";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Card } from "@/ui/shadcn/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/shadcn/empty";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemSeparator,
+  ItemTitle,
+} from "@/ui/shadcn/item";
+import { Switch } from "@/ui/shadcn/switch";
 
 export interface ResourceListItem {
   readonly id: string;
@@ -17,7 +29,7 @@ export interface ResourceListGroup {
 
 const COLLAPSED_ROW_COUNT = 6;
 
-/** Cursor-style groups of Codex-style rows: icon tile, name, one-line description, switch. */
+/** Cursor-style groups of Codex-style rows: icon, name, one-line description, switch. */
 export function ResourceList({
   groups,
   icon,
@@ -33,7 +45,7 @@ export function ResourceList({
   readonly onOpen: (id: string) => void;
 }) {
   return (
-    <div className="resource-list" data-testid={testId}>
+    <div className="flex flex-col gap-6" data-testid={testId}>
       {groups.map((group) => (
         <ResourceGroup
           expanded={expanded}
@@ -64,39 +76,44 @@ function ResourceGroup({
 
   return (
     <section className="settings-section">
-      <h3 className="settings-section__title">
-        {group.label} <span className="resource-list__count">{group.items.length}</span>
+      <h3 className="settings-section__title flex items-center gap-2">
+        {group.label} <Badge variant="secondary">{group.items.length}</Badge>
       </h3>
-      <div className="settings-group">
-        {visible.map((item) => (
-          <div className="resource-row" key={item.id}>
-            <button
-              className="resource-row__main"
-              data-resource-id={item.id}
-              type="button"
-              onClick={() => onOpen(item.id)}
-            >
-              <span className="resource-row__icon" aria-hidden="true">
-                {icon}
-              </span>
-              <span className="resource-row__text">
-                <span className="resource-row__title">{item.title}</span>
-                <span className="resource-row__description">{item.description}</span>
-              </span>
-            </button>
-            <SettingsSwitch
-              checked={item.enabled}
-              disabled={!item.onToggle}
-              label={`Enable ${item.title}`}
-              onChange={(enabled) => item.onToggle?.(enabled)}
-            />
-          </div>
+      <Card className="gap-0 py-0" size="sm">
+        {visible.map((item, index) => (
+          <Fragment key={item.id}>
+            {index > 0 ? <ItemSeparator className="my-0" /> : null}
+            <div className="flex items-center gap-2 pr-3">
+              <Item
+                className="min-w-0 flex-1 flex-nowrap text-left"
+                data-resource-id={item.id}
+                render={<button type="button" onClick={() => onOpen(item.id)} />}
+              >
+                <ItemMedia variant="icon">{icon}</ItemMedia>
+                <ItemContent className="min-w-0">
+                  <ItemTitle>{item.title}</ItemTitle>
+                  <ItemDescription className="line-clamp-1">{item.description}</ItemDescription>
+                </ItemContent>
+              </Item>
+              <Switch
+                aria-label={`Enable ${item.title}`}
+                checked={item.enabled}
+                disabled={!item.onToggle}
+                onCheckedChange={(enabled) => item.onToggle?.(enabled)}
+              />
+            </div>
+          </Fragment>
         ))}
-      </div>
+      </Card>
       {hiddenCount > 0 ? (
-        <button className="resource-list__more" type="button" onClick={() => setShowAll(true)}>
+        <Button
+          className="justify-self-start"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowAll(true)}
+        >
           Show {hiddenCount} more
-        </button>
+        </Button>
       ) : null}
     </section>
   );
@@ -110,9 +127,11 @@ export function ResourceEmptyState({
   readonly body: string;
 }) {
   return (
-    <div className="settings-group resource-empty">
-      <div className="resource-empty__title">{title}</div>
-      <p className="resource-empty__body">{body}</p>
-    </div>
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{body}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }

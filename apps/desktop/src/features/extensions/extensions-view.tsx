@@ -1,9 +1,14 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import type { ExtensionActionConflict } from "../../../contracts/extension-actions";
 import type { RuntimeExtensionRecord } from "@pi-garden/session-driver/runtime-types";
 import type {
   ExtensionCommandCompatibilityRecord,
   WorkspaceRecord,
 } from "../../../contracts/desktop-state";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/shadcn/item";
 import { ExtensionIcon } from "../../ui/icons";
 import { SettingsGroup, SettingsRow } from "../settings/settings-utils";
 import {
@@ -15,6 +20,7 @@ import type { PiDesktopApi } from "../../../contracts/ipc";
 import { ExtensionDesktopCompatibility } from "./extension-compatibility-section";
 import { displayPath, ResourceDetail } from "./resource-detail";
 import { ResourceEmptyState, ResourceList, type ResourceListGroup } from "./resource-list";
+import { toneBadge, type HostTone } from "./tone-badge";
 
 const GROUP_ORDER = ["Workspace", "User", "This session", PI_GARDEN_TOOLS_LABEL];
 
@@ -112,13 +118,9 @@ function ExtensionDetail({
     <ResourceDetail
       actions={
         hasFolder ? (
-          <button
-            className="button button--secondary"
-            type="button"
-            onClick={() => onOpenExtensionFolder(selected.path)}
-          >
+          <Button variant="outline" onClick={() => onOpenExtensionFolder(selected.path)}>
             Open folder
-          </button>
+          </Button>
         ) : null
       }
       backLabel="All extensions"
@@ -236,13 +238,11 @@ function ExtensionContributionSection({
   if (items.length === 0) return null;
   return (
     <SettingsGroup title={title}>
-      <div className="resource-detail__tokens">
+      <ResourceTokens>
         {items.map((item) => (
-          <code className="resource-detail__token" key={item}>
-            {item}
-          </code>
+          <ResourceToken key={item}>{item}</ResourceToken>
         ))}
-      </div>
+      </ResourceTokens>
     </SettingsGroup>
   );
 }
@@ -256,13 +256,25 @@ function ExtensionDiagnostics({
   return (
     <SettingsGroup title="Diagnostics">
       {diagnostics.map((diagnostic, index) => (
-        <div
-          className={`activity-item activity-item--${diagnostic.type === "error" ? "error" : "info"}`}
+        <Item
+          data-diagnostic-type={diagnostic.type}
           key={`${diagnostic.message}:${index}`}
+          size="sm"
         >
-          <div className="activity-item__text">{diagnostic.message}</div>
-          {diagnostic.path ? <div className="activity-item__meta">{diagnostic.path}</div> : null}
-        </div>
+          <ItemMedia>
+            <Badge {...toneBadge(diagnostic.type === "error" ? "error" : "warning")}>
+              {diagnostic.type === "error" ? "Error" : "Warning"}
+            </Badge>
+          </ItemMedia>
+          <ItemContent className="min-w-0">
+            <ItemTitle className="line-clamp-none wrap-anywhere">{diagnostic.message}</ItemTitle>
+            {diagnostic.path ? (
+              <ItemDescription className="line-clamp-none font-mono wrap-anywhere">
+                {diagnostic.path}
+              </ItemDescription>
+            ) : null}
+          </ItemContent>
+        </Item>
       ))}
     </SettingsGroup>
   );
@@ -289,26 +301,40 @@ function ExtensionCompatibilitySection({
       title="Commands"
       description="Whether each command works in the app is learned the first time it runs here."
     >
-      <div className="resource-detail__tokens">
+      <ResourceTokens>
         {supported.map((record) => (
-          <code className="resource-detail__token" key={`supported:${record.commandName}`}>
+          <ResourceToken key={`supported:${record.commandName}`}>
             {record.commandName} · GUI-compatible
-          </code>
+          </ResourceToken>
         ))}
         {terminalOnly.map((record) => (
-          <code
-            className="resource-detail__token resource-detail__token--warning"
-            key={`terminal:${record.commandName}`}
-          >
+          <ResourceToken key={`terminal:${record.commandName}`} tone="error">
             {record.commandName} · Terminal-only
-          </code>
+          </ResourceToken>
         ))}
         {unknown.map((commandName) => (
-          <code className="resource-detail__token" key={`unknown:${commandName}`}>
-            {commandName} · Unknown
-          </code>
+          <ResourceToken key={`unknown:${commandName}`}>{commandName} · Unknown</ResourceToken>
         ))}
-      </div>
+      </ResourceTokens>
     </SettingsGroup>
+  );
+}
+
+function ResourceTokens({ children }: { readonly children: ReactNode }) {
+  return <div className="flex flex-wrap gap-2 px-4 py-3">{children}</div>;
+}
+
+function ResourceToken({
+  tone,
+  children,
+}: {
+  readonly tone?: HostTone;
+  readonly children: ReactNode;
+}) {
+  const badge = tone ? toneBadge(tone) : { variant: "outline" as const };
+  return (
+    <Badge {...badge} className={cn("max-w-full font-mono", badge.className)} render={<code />}>
+      <span className="truncate">{children}</span>
+    </Badge>
   );
 }
