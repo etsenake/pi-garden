@@ -281,6 +281,8 @@ function NewThreadComposerFooter({
             <ToggleGroup
               aria-label="Environment"
               variant="outline"
+              size="sm"
+              spacing={0}
               value={[environment]}
               onValueChange={(values) => {
                 // Choosing the active environment again keeps it selected.
