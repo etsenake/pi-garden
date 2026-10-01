@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import { SettingsSwitch } from "./settings-controls";
-import { SettingsGroup, SettingsRow } from "./settings-utils";
+import { runSettingsAction, SettingsGroup, SettingsRow } from "./settings-utils";
 
 const PI_BUILTINS = [
   {
@@ -49,16 +49,18 @@ export function SettingsToolsSection({
     setDraft((tools?.defaultTools ?? []).join("\n"));
   }, [tools?.defaultTools]);
 
-  const saveDefaultTools = async () => {
+  const saveDefaultTools = async (): Promise<string | undefined> => {
     setPending(true);
     setError("");
     const entries = draft
       .split(/[\n,]+/)
       .map((entry) => entry.trim())
       .filter(Boolean);
-    const nextError = await onSetDefaultTools(entries);
-    setPending(false);
-    if (nextError) setError(nextError);
+    try {
+      return await onSetDefaultTools(entries);
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -69,11 +71,9 @@ export function SettingsToolsSection({
             <SettingsSwitch
               checked={!disabled.has(builtin.name)}
               label={`Enable ${builtin.title}`}
-              onChange={(enabled) => {
-                void onSetPiBuiltinEnabled(builtin.name, enabled).then((message) => {
-                  if (message) setError(message);
-                });
-              }}
+              onChange={(enabled) =>
+                runSettingsAction(onSetPiBuiltinEnabled(builtin.name, enabled), setError)
+              }
             />
           </SettingsRow>
         ))}
@@ -100,9 +100,7 @@ export function SettingsToolsSection({
             className="button"
             type="button"
             disabled={pending}
-            onClick={() => {
-              void saveDefaultTools();
-            }}
+            onClick={() => runSettingsAction(saveDefaultTools(), setError)}
           >
             {pending ? "Saving…" : "Save"}
           </button>

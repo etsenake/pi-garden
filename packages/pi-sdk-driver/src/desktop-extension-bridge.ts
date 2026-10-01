@@ -398,11 +398,14 @@ function createDiscoveryEventBus(): {
       emitter.emit(channel, data);
     },
     on(channel, handler) {
-      const safeHandler = async (data: unknown) => {
+      const report = (error: unknown) => {
+        console.error(`Event handler error (${channel}):`, error);
+      };
+      const safeHandler = (data: unknown) => {
         try {
-          await handler(data);
+          Promise.resolve(handler(data)).catch(report);
         } catch (error) {
-          console.error(`Event handler error (${channel}):`, error);
+          report(error);
         }
       };
       emitter.on(channel, safeHandler);

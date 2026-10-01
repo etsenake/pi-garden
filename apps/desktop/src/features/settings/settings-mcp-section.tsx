@@ -6,7 +6,7 @@ import type {
 } from "@pi-garden/session-driver/runtime-types";
 import type { AddMcpServerInput, UpdateMcpServerInput } from "../../../contracts/ipc";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
-import { SettingsGroup, SettingsRow } from "./settings-utils";
+import { runSettingsAction, SettingsGroup, SettingsRow } from "./settings-utils";
 
 const EXPOSURE_OPTIONS: readonly { readonly value: DesktopMcpExposure; readonly label: string }[] =
   [
@@ -48,7 +48,7 @@ export function SettingsMcpSection({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
-  const submit = async () => {
+  const submit = async (): Promise<string | undefined> => {
     setPending(true);
     setError("");
     const trimmedName = name.trim();
@@ -68,16 +68,17 @@ export function SettingsMcpSection({
               ...(argsText.trim() ? { args: argsText.trim().split(/\s+/).filter(Boolean) } : {}),
             },
           };
-    const nextError = await onAddMcpServer(input);
-    setPending(false);
-    if (nextError) {
-      setError(nextError);
-      return;
+    try {
+      const nextError = await onAddMcpServer(input);
+      if (nextError) return nextError;
+    } finally {
+      setPending(false);
     }
     setName("");
     setCommand("");
     setArgsText("");
     setUrl("");
+    return undefined;
   };
 
   return (
@@ -91,11 +92,7 @@ export function SettingsMcpSection({
             <SettingsSwitch
               checked={projectTrusted}
               label="Trust project"
-              onChange={(trusted) => {
-                void onSetProjectTrust(trusted).then((message) => {
-                  if (message) setError(message);
-                });
-              }}
+              onChange={(trusted) => runSettingsAction(onSetProjectTrust(trusted), setError)}
             />
           </SettingsRow>
         </SettingsGroup>
@@ -113,18 +110,13 @@ export function SettingsMcpSection({
               key={`${server.scope}:${server.name}`}
               server={server}
               onRemove={() =>
-                void onRemoveMcpServer(server.scope, server.name).then((message) => {
-                  if (message) setError(message);
-                })
+                runSettingsAction(onRemoveMcpServer(server.scope, server.name), setError)
               }
               onUpdate={(patch) =>
-                void onUpdateMcpServer({
-                  scope: server.scope,
-                  name: server.name,
-                  ...patch,
-                }).then((message) => {
-                  if (message) setError(message);
-                })
+                runSettingsAction(
+                  onUpdateMcpServer({ scope: server.scope, name: server.name, ...patch }),
+                  setError,
+                )
               }
             />
           ))
@@ -203,9 +195,7 @@ export function SettingsMcpSection({
             className="button"
             type="button"
             disabled={pending || !name.trim() || (mode === "stdio" ? !command.trim() : !url.trim())}
-            onClick={() => {
-              void submit();
-            }}
+            onClick={() => runSettingsAction(submit(), setError)}
           >
             {pending ? "Adding…" : "Add server"}
           </button>

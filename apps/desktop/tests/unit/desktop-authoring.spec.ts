@@ -113,7 +113,7 @@ test("theme-pi-garden writer scaffolds a parseable Garden document", async () =>
     ]);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("created");
-    const raw = JSON.parse(await readFile(path.join(root, "coast.json"), "utf8"));
+    const raw: unknown = JSON.parse(await readFile(path.join(root, "coast.json"), "utf8"));
     const parsed = parseExternalThemeDocument(raw);
     expect(parsed.origin).toBe("garden");
     expect(parsed.id).toBe("coast");

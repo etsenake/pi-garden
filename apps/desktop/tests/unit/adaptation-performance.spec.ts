@@ -105,7 +105,6 @@ test("adaptation writer and ordinary-Pi reload stay within evidence thresholds",
   expect(reloadMs, `reload ${reloadMs.toFixed(0)}ms`).toBeLessThan(20_000);
   expect(disposeMs, `dispose ${disposeMs.toFixed(0)}ms`).toBeLessThan(25_000);
 
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify({
       extensions: entries.length,

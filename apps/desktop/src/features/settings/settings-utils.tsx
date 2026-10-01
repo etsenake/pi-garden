@@ -4,6 +4,19 @@ import type {
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
 
+/** Run a settings action that resolves to an error message; rejections surface the same way. */
+export function runSettingsAction(
+  task: Promise<string | undefined>,
+  onError: (message: string) => void,
+): void {
+  task.then(
+    (message) => {
+      if (message) onError(message);
+    },
+    (error: unknown) => onError(error instanceof Error ? error.message : String(error)),
+  );
+}
+
 export const THINKING_LEVELS: NonNullable<RuntimeSettingsSnapshot["defaultThinkingLevel"]>[] = [
   "low",
   "medium",
