@@ -1,7 +1,7 @@
 {
   "name": "@pi-garden/desktop",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Josh Etsenake",
   "license": "MIT",
   "description": "Codex-style desktop shell for pi",
