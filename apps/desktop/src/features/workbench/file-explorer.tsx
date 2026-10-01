@@ -5,7 +5,13 @@ import {
   FileIcon,
   FolderIcon,
   RefreshIcon,
+  SearchIcon,
 } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import { PanelEmpty } from "./panel-empty";
+import { WithTooltip } from "./workbench-tooltip";
 import { ancestorDirectoryPaths } from "./file-workbench-state";
 import { buildFileTree, filterWorkspaceFiles, type FileTreeNode } from "./file-tree";
 
@@ -65,27 +71,33 @@ export function FileExplorer({
   return (
     <section className="file-explorer" data-testid="file-explorer" aria-label="File explorer">
       <div className="file-explorer__toolbar">
-        <input
-          aria-label="Filter files"
-          className="file-explorer__filter"
-          data-testid="file-workbench-filter"
-          onChange={(event) => setFilter(event.target.value)}
-          placeholder="Filter files…"
-          type="search"
-          value={filter}
-        />
-        <button
-          aria-label="Refresh"
-          className="icon-button"
-          disabled={loading}
-          onClick={onRefresh}
-          type="button"
-        >
-          <RefreshIcon />
-        </button>
+        <InputGroup>
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput
+            aria-label="Filter files"
+            data-testid="file-workbench-filter"
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder="Filter files…"
+            type="search"
+            value={filter}
+          />
+        </InputGroup>
+        <WithTooltip label="Refresh files">
+          <Button
+            aria-label="Refresh"
+            disabled={loading}
+            onClick={onRefresh}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <RefreshIcon />
+          </Button>
+        </WithTooltip>
       </div>
       {emptyCopy ? (
-        <div className="diff-panel__empty">{emptyCopy}</div>
+        <PanelEmpty loading={files === null && !error} title={emptyCopy} />
       ) : (
         <div className="file-workbench__tree" data-testid="file-workbench-tree">
           {tree.map((node) => (
@@ -133,36 +145,35 @@ function FileTreeRow({
   if (node.kind === "directory") {
     const isExpanded = expandAll || expanded.has(node.path);
     return (
-      <div>
-        <button
-          aria-expanded={isExpanded}
-          className="file-workbench__tree-row file-workbench__tree-row--dir"
-          style={{ "--depth": depthFromPath(node.path) } as CSSProperties}
-          type="button"
-          onClick={() => onToggleDirectory(node.path)}
+      <Collapsible onOpenChange={() => onToggleDirectory(node.path)} open={isExpanded}>
+        <CollapsibleTrigger
+          render={
+            <Button
+              className="file-workbench__tree-row file-workbench__tree-row--dir w-full justify-start ps-[calc(10px+var(--depth)*14px)]"
+              size="sm"
+              style={depthStyle(node.path)}
+              variant="ghost"
+            />
+          }
         >
-          <span className="file-workbench__tree-icon">
-            {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-          </span>
-          <span className="file-workbench__tree-icon">
-            <FolderIcon />
-          </span>
-          <span>{node.name}</span>
-        </button>
-        {isExpanded
-          ? node.children.map((child) => (
-              <FileTreeRow
-                key={child.path || child.name}
-                expandAll={expandAll}
-                expanded={expanded}
-                node={child}
-                selectedPath={selectedPath}
-                onSelect={onSelect}
-                onToggleDirectory={onToggleDirectory}
-              />
-            ))
-          : null}
-      </div>
+          {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+          <FolderIcon />
+          <span className="truncate">{node.name}</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {node.children.map((child) => (
+            <FileTreeRow
+              key={child.path || child.name}
+              expandAll={expandAll}
+              expanded={expanded}
+              node={child}
+              selectedPath={selectedPath}
+              onSelect={onSelect}
+              onToggleDirectory={onToggleDirectory}
+            />
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
     );
   }
 
@@ -194,20 +205,24 @@ function FileTreeFileRow({
     }
   }, [selected]);
   return (
-    <button
-      className={`file-workbench__tree-row file-workbench__tree-row--file ${selected ? "file-workbench__tree-row--selected" : ""}`}
+    <Button
+      className={`file-workbench__tree-row file-workbench__tree-row--file w-full justify-start ps-[calc(10px+var(--depth)*14px)]${selected ? " file-workbench__tree-row--selected" : ""}`}
       data-file-path={path}
-      ref={rowRef}
-      style={{ "--depth": depthFromPath(path) } as CSSProperties}
-      type="button"
       onClick={() => onSelect(path)}
+      ref={rowRef}
+      size="sm"
+      style={depthStyle(path)}
+      variant={selected ? "secondary" : "ghost"}
     >
-      <span className="file-workbench__tree-icon">
-        <FileIcon />
-      </span>
-      <span>{name}</span>
-    </button>
+      <FileIcon />
+      <span className="truncate">{name}</span>
+    </Button>
   );
+}
+
+/** Rows step in by their depth in the tree. */
+function depthStyle(path: string): CSSProperties {
+  return { "--depth": depthFromPath(path) } as CSSProperties;
 }
 
 function depthFromPath(path: string): number {

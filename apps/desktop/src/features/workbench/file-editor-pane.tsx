@@ -6,6 +6,12 @@ import remarkGfm from "remark-gfm";
 import { CloseIcon, CopyIcon, WorktreeIcon } from "../../ui/icons";
 import { HighlightedLine } from "../../ui/highlighted-line";
 import { MAX_HIGHLIGHTED_LINES, extensionToLanguage } from "../../ui/syntax-highlight";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
+import { Toggle } from "@/ui/shadcn/toggle";
+import { PanelEmpty } from "./panel-empty";
+import { WithTooltip } from "./workbench-tooltip";
 import {
   breadcrumbSegments,
   fileNameFromPath,
@@ -110,83 +116,89 @@ export function FileEditorPane({
     <section className="file-editor" data-testid="file-editor" aria-label="Open file">
       <div className="file-editor__tab-strip">
         {worktreeLabel ? (
-          <span className="file-editor__worktree-chip" data-testid="file-editor-worktree-chip">
+          <Badge
+            className="max-w-35"
+            data-testid="file-editor-worktree-chip"
+            title={worktreeLabel}
+            variant="outline"
+          >
             <WorktreeIcon />
-            <span>{worktreeLabel}</span>
-          </span>
+            <span className="truncate">{worktreeLabel}</span>
+          </Badge>
         ) : null}
-        <div className="file-editor__tabs">
-          {tabs.tabs.map((path) => {
-            const selected = path === activePath;
-            return (
+        <Tabs
+          className="min-w-0 flex-1"
+          onValueChange={(path) => {
+            if (typeof path === "string") onActivate(path);
+          }}
+          value={activePath}
+        >
+          <TabsList
+            aria-label="Open files"
+            className="w-full min-w-0 justify-start overflow-x-auto [scrollbar-width:none]"
+            variant="line"
+          >
+            {tabs.tabs.map((path) => (
               <div
-                className={`file-editor__tab ${selected ? "file-editor__tab--active" : ""}`}
+                className="flex max-w-45 min-w-24 flex-initial items-center"
                 data-testid="file-workbench-tab"
                 key={path}
               >
-                <button
-                  aria-current={selected ? "page" : undefined}
-                  className="file-editor__tab-button"
-                  type="button"
-                  onClick={() => onActivate(path)}
-                >
-                  {fileNameFromPath(path)}
-                </button>
-                <button
+                <TabsTrigger className="min-w-0" title={path} value={path}>
+                  <span className="truncate">{fileNameFromPath(path)}</span>
+                </TabsTrigger>
+                <Button
                   aria-label={`Close ${fileNameFromPath(path)}`}
-                  className="file-editor__tab-close"
-                  type="button"
                   onClick={() => onClose(path)}
+                  size="icon-xs"
+                  variant="ghost"
                 >
                   <CloseIcon />
-                </button>
+                </Button>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </TabsList>
+        </Tabs>
         {activePath ? (
           <div className="file-editor__actions">
             {markdown ? (
-              <button
-                aria-pressed={showSource}
-                className={
-                  showSource
-                    ? "file-workbench__mode file-workbench__mode--active"
-                    : "file-workbench__mode"
-                }
-                type="button"
-                onClick={() => setSourceMode((current) => !current)}
+              <Toggle
+                onPressedChange={() => setSourceMode((current) => !current)}
+                pressed={showSource}
+                size="sm"
               >
                 View source
-              </button>
+              </Toggle>
             ) : null}
-            <button
-              aria-label="Copy file"
-              className="icon-button"
-              disabled={!preview || preview.binary || Boolean(viewerError)}
-              type="button"
-              onClick={() => {
-                if (preview && !preview.binary) {
-                  void navigator.clipboard.writeText(preview.content).catch((error: unknown) => {
-                    console.error("[renderer] copy file failed", error);
-                  });
-                }
-              }}
-            >
-              <CopyIcon />
-            </button>
-            <button
-              className="file-workbench__mode"
+            <WithTooltip label="Copy file">
+              <Button
+                aria-label="Copy file"
+                disabled={!preview || preview.binary || Boolean(viewerError)}
+                onClick={() => {
+                  if (preview && !preview.binary) {
+                    void navigator.clipboard.writeText(preview.content).catch((error: unknown) => {
+                      console.error("[renderer] copy file failed", error);
+                    });
+                  }
+                }}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <CopyIcon />
+              </Button>
+            </WithTooltip>
+            <Button
               disabled={!activePath}
-              type="button"
               onClick={() => {
                 void api.revealWorkspaceFile(workspace.id, activePath).catch((error: unknown) => {
                   setViewerError(error instanceof Error ? error.message : String(error));
                 });
               }}
+              size="sm"
+              variant="ghost"
             >
               Open
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>
@@ -239,19 +251,19 @@ function renderEditorBody({
   readonly viewerLoading: boolean;
 }): ReactNode {
   if (!activePath) {
-    return <div className="diff-panel__empty">Select a file from the explorer.</div>;
+    return <PanelEmpty title="Select a file from the explorer." />;
   }
   if (viewerLoading) {
-    return <div className="diff-panel__empty">Loading file...</div>;
+    return <PanelEmpty loading title="Loading file…" />;
   }
   if (viewerError) {
-    return <div className="diff-panel__empty">{viewerError}</div>;
+    return <PanelEmpty title={viewerError} />;
   }
   if (!preview) {
-    return <div className="diff-panel__empty">No preview available.</div>;
+    return <PanelEmpty title="No preview available." />;
   }
   if (preview.binary) {
-    return <div className="diff-panel__empty">Binary or directory preview is not available.</div>;
+    return <PanelEmpty title="Binary or directory preview is not available." />;
   }
   return (
     <>
