@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "electron-vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,7 +41,7 @@ export default defineConfig(({ command }) => {
     renderer: {
       root: projectRoot,
       base: "./",
-      plugins: [react(), tsconfigPaths({ projects: [pathsProject] })],
+      plugins: [react(), tailwindcss(), tsconfigPaths({ projects: [pathsProject] })],
       server: {
         port: devPort,
         strictPort: true,

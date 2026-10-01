@@ -4,6 +4,8 @@ import { earlyModifierChords, getSidePanelTabCommand } from "../contracts/ipc";
 import App from "./app/App";
 import { RendererErrorBoundary } from "./app/desktop-recovery";
 import { applyLastTheme } from "./ui/active-theme";
+import { Toaster } from "./ui/shadcn/sonner";
+import { TooltipProvider } from "./ui/shadcn/tooltip";
 import "./dev-reload-hook";
 import "./styles.css";
 
@@ -42,7 +44,10 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         });
       }}
     >
-      <App />
+      <TooltipProvider>
+        <App />
+        <Toaster />
+      </TooltipProvider>
     </RendererErrorBoundary>
   </React.StrictMode>,
 );

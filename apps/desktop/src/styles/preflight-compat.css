@@ -1,0 +1,77 @@
+/* Tailwind preflight (shadcn's base layer) removes browser defaults that the
+   pre-shadcn stylesheets were written against. This restores them for that
+   older markup only: everything is zero-specificity, so any legacy class rule
+   still wins, and nothing inside a shadcn component (`[data-slot]`) is
+   touched. Delete a rule once no legacy markup needs it; the whole file goes
+   when the legacy stylesheets do. */
+
+#root {
+  line-height: normal;
+}
+
+:where(h1, h2, h3, h4, h5, h6):where(:not([data-slot], [data-slot] *)) {
+  font-size: revert;
+  font-weight: revert;
+}
+
+:where(h1, h2, h3, h4, h5, h6, p, blockquote, figure, dl, dd, pre, hr):where(
+  :not([data-slot], [data-slot] *)
+) {
+  margin: revert;
+}
+
+:where(ul, ol, menu):where(:not([data-slot], [data-slot] *)) {
+  margin: revert;
+  padding: revert;
+  list-style: revert;
+}
+
+:where(a):where(:not([data-slot], [data-slot] *)) {
+  color: revert;
+  text-decoration: revert;
+}
+
+:where(table):where(:not([data-slot], [data-slot] *)) {
+  border-collapse: revert;
+  border-color: revert;
+  text-indent: revert;
+}
+
+:where(hr):where(:not([data-slot], [data-slot] *)) {
+  height: revert;
+  color: revert;
+  border: revert;
+}
+
+:where(input, select, textarea, fieldset):where(:not([data-slot], [data-slot] *)) {
+  border: revert;
+  border-radius: revert;
+  background-color: revert;
+}
+
+:where(input, select):where(:not([data-slot], [data-slot] *)) {
+  font: revert;
+  color: revert;
+  letter-spacing: revert;
+}
+
+:where(textarea):where(:not([data-slot], [data-slot] *)) {
+  resize: revert;
+}
+
+:where(input, textarea):where(:not([data-slot], [data-slot] *))::placeholder {
+  color: revert;
+  opacity: revert;
+}
+
+:where(img, svg, video, canvas, audio, iframe, embed, object):where(
+  :not([data-slot], [data-slot] *)
+) {
+  display: revert;
+  vertical-align: revert;
+}
+
+:where(img, video):where(:not([data-slot], [data-slot] *)) {
+  max-width: revert;
+  height: revert;
+}

@@ -1,16 +1,105 @@
-@import "./styles/tokens.css";
-@import "./styles/base.css";
-@import "./styles/sidebar.css";
-@import "./styles/topbar.css";
-@import "./styles/model-selector-panel.css";
-@import "./styles/context-meter.css";
-@import "./styles/new-thread.css";
-@import "./styles/main.css";
-@import "./styles/workbench.css";
-@import "./styles/review.css";
-@import "./styles/extension-views.css";
-@import "./styles/timeline.css";
-@import "./styles/scheduled-tasks.css";
-@import "./styles/thread-switch.css";
-@import "./styles/command-palette.css";
-@import "./styles/annotations.css";
+/* Cascade order: Tailwind's theme/base, then the pre-shadcn stylesheets, then
+   shadcn/Tailwind components and utilities. The legacy layer sits below the
+   utilities so shadcn components render as shadcn wrote them; delete legacy
+   rules as their elements move onto shadcn components. */
+@layer theme, base, legacy, components, utilities;
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@import "./styles/preflight-compat.css" layer(legacy);
+@import "./styles/tokens.css" layer(legacy);
+@import "./styles/base.css" layer(legacy);
+@import "./styles/sidebar.css" layer(legacy);
+@import "./styles/topbar.css" layer(legacy);
+@import "./styles/model-selector-panel.css" layer(legacy);
+@import "./styles/context-meter.css" layer(legacy);
+@import "./styles/new-thread.css" layer(legacy);
+@import "./styles/main.css" layer(legacy);
+@import "./styles/workbench.css" layer(legacy);
+@import "./styles/review.css" layer(legacy);
+@import "./styles/extension-views.css" layer(legacy);
+@import "./styles/timeline.css" layer(legacy);
+@import "./styles/scheduled-tasks.css" layer(legacy);
+@import "./styles/thread-switch.css" layer(legacy);
+@import "./styles/command-palette.css" layer(legacy);
+@import "./styles/annotations.css" layer(legacy);
+
+/* The active theme (src/ui/active-theme.ts) writes our own tokens on :root and
+   toggles `.dark`. shadcn's semantic colours are bound to those tokens here,
+   so every built-in and extension theme drives the components. Our `--accent`
+   (brand colour) and `--muted` (secondary text) mean something else in
+   shadcn, so those two are bound only through `--color-*`. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-heading: var(--font-ui);
+  --color-background: var(--main);
+  --color-foreground: var(--text-strong);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text-strong);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text-strong);
+  --color-primary: var(--button-primary-bg);
+  --color-primary-foreground: var(--button-primary-ink);
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--text-strong);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--surface-overlay-hover);
+  --color-accent-foreground: var(--text-strong);
+  --color-destructive: var(--error);
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--accent);
+  --color-chart-1: var(--accent);
+  --color-chart-2: var(--success);
+  --color-chart-3: var(--warning);
+  --color-chart-4: var(--error);
+  --color-chart-5: var(--muted);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--text);
+  --color-sidebar-primary: var(--button-primary-bg);
+  --color-sidebar-primary-foreground: var(--button-primary-ink);
+  --color-sidebar-accent: var(--surface-overlay-hover);
+  --color-sidebar-accent-foreground: var(--text-strong);
+  --color-sidebar-border: var(--line);
+  --color-sidebar-ring: var(--accent);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Raw shadcn variables that components reference directly in arbitrary
+   values (for example `var(--secondary)`). */
+:root {
+  --radius: 0.625rem;
+  --background: var(--main);
+  --foreground: var(--text-strong);
+  --card: var(--surface);
+  --card-foreground: var(--text-strong);
+  --popover: var(--surface);
+  --popover-foreground: var(--text-strong);
+  --primary: var(--button-primary-bg);
+  --primary-foreground: var(--button-primary-ink);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--text-strong);
+  --muted-foreground: var(--muted);
+  --accent-foreground: var(--text-strong);
+  --destructive: var(--error);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--accent);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
