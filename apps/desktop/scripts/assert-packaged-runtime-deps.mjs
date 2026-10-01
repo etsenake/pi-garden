@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { constants, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { access } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -166,6 +166,10 @@ if (!existsSync(asarPath)) {
 
 if (notificationHelperPath && !existsSync(notificationHelperPath)) {
   throw new Error(`Packaged app is missing notification helper: ${notificationHelperPath}`);
+}
+
+if (notificationHelperPath) {
+  assertNotificationHelperSigningIdentifier(notificationHelperPath);
 }
 
 const extractedDir = mkdtempSync(path.join(tmpdir(), "pi-garden-packaged-runtime-"));
@@ -387,4 +391,23 @@ function findFileNamed(directoryPath, fileName) {
     }
   }
   return undefined;
+}
+
+// macOS only reports notification permission to the helper when its signing
+// identifier matches the app's bundle id.
+function assertNotificationHelperSigningIdentifier(helperPath) {
+  const infoPlistPath = path.resolve(helperPath, "..", "..", "Info.plist");
+  const bundleId = execFileSync(
+    "/usr/libexec/PlistBuddy",
+    ["-c", "Print :CFBundleIdentifier", infoPlistPath],
+    { encoding: "utf8" },
+  ).trim();
+  // codesign -dv writes its report to stderr.
+  const { stderr } = spawnSync("codesign", ["-dv", helperPath], { encoding: "utf8" });
+  const identifier = /^Identifier=(.+)$/m.exec(stderr ?? "")?.[1]?.trim();
+  if (identifier !== bundleId) {
+    throw new Error(
+      `Notification helper is signed as ${identifier ?? "<unsigned>"}, expected ${bundleId}`,
+    );
+  }
 }
