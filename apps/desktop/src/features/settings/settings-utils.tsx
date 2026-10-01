@@ -1,8 +1,22 @@
-import type { ReactNode } from "react";
+import { Children, Fragment, isValidElement, type ComponentProps, type ReactNode } from "react";
 import type {
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
+import { SearchIcon } from "lucide-react";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Card } from "@/ui/shadcn/card";
+import { FieldError } from "@/ui/shadcn/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemSeparator,
+  ItemTitle,
+} from "@/ui/shadcn/item";
 
 /** Run a settings action that resolves to an error message; rejections surface the same way. */
 export function runSettingsAction(
@@ -66,24 +80,67 @@ export function filterModels(
 
 /* ── Layout components ────────────────────────────────── */
 
+/**
+ * A titled settings section over a card of rows. The `settings-section*` and `settings-row*`
+ * class names are stable hooks for Electron tests, not styling.
+ */
 export function SettingsGroup({
   title,
+  count,
   description,
+  actions,
   plain = false,
+  listTestId,
+  footer,
   children,
 }: {
   readonly title?: string;
+  /** Shown beside the title, such as how many rows the card holds. */
+  readonly count?: ReactNode;
   readonly description?: string;
-  /** Lay children out without the rounded card, for tiles and other custom content. */
+  /** Header controls aligned opposite the title, such as a search field. */
+  readonly actions?: ReactNode;
+  /** Lay children out without the card, for tiles and other custom content. */
   readonly plain?: boolean;
+  readonly listTestId?: string;
+  /** Content after the card, such as a "Show more" button. */
+  readonly footer?: ReactNode;
   readonly children: ReactNode;
 }) {
+  const heading = title ? (
+    <h3 className="settings-section__title flex items-center gap-2">
+      {title}
+      {count !== undefined ? <Badge variant="secondary">{count}</Badge> : null}
+    </h3>
+  ) : null;
   return (
     <div className="settings-section">
-      {title ? <h3 className="settings-section__title">{title}</h3> : null}
+      {actions ? (
+        <div className="flex items-center justify-between gap-3">
+          {heading}
+          {actions}
+        </div>
+      ) : (
+        heading
+      )}
       {description ? <p className="settings-section__description">{description}</p> : null}
-      {plain ? children : <div className="settings-group">{children}</div>}
+      {plain ? children : <SettingsCard data-testid={listTestId}>{children}</SettingsCard>}
+      {footer}
     </div>
+  );
+}
+
+/** Rows in one card, divided like Codex's grouped settings. */
+export function SettingsCard({ children, ...props }: ComponentProps<typeof Card>) {
+  return (
+    <Card size="sm" className="gap-0 py-0" {...props}>
+      {Children.toArray(children).map((row, index) => (
+        <Fragment key={isValidElement(row) && row.key !== null ? row.key : index}>
+          {index > 0 ? <ItemSeparator className="my-0" /> : null}
+          {row}
+        </Fragment>
+      ))}
+    </Card>
   );
 }
 
@@ -92,18 +149,68 @@ export function SettingsRow({
   description,
   children,
 }: {
-  readonly title: string;
-  readonly description?: string;
+  readonly title: ReactNode;
+  readonly description?: ReactNode;
   readonly children?: ReactNode;
 }) {
   return (
-    <div className="settings-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">{title}</div>
-        {description ? <div className="settings-row__description">{description}</div> : null}
-      </div>
-      {children ? <div className="settings-row__control">{children}</div> : null}
-    </div>
+    <Item className="settings-row">
+      <ItemContent className="min-w-0">
+        <ItemTitle className="settings-row__title">{title}</ItemTitle>
+        {description ? (
+          <ItemDescription className="line-clamp-none wrap-anywhere">{description}</ItemDescription>
+        ) : null}
+      </ItemContent>
+      {children ? <ItemActions className="settings-row__control">{children}</ItemActions> : null}
+    </Item>
+  );
+}
+
+/** A card row holding only a sentence, such as an empty or warning state. */
+export function SettingsNote({
+  children,
+  tone,
+}: {
+  readonly children: ReactNode;
+  readonly tone?: "warning";
+}) {
+  return (
+    <Item className="settings-row">
+      <ItemContent className="min-w-0">
+        {tone === "warning" ? (
+          <FieldError className="settings-warning">{children}</FieldError>
+        ) : (
+          <ItemDescription className="line-clamp-none wrap-anywhere">{children}</ItemDescription>
+        )}
+      </ItemContent>
+    </Item>
+  );
+}
+
+/** A search box for filtering a settings list; the label doubles as the placeholder. */
+export function SearchField({
+  label,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+}) {
+  return (
+    <InputGroup className="w-60">
+      <InputGroupAddon>
+        <SearchIcon />
+      </InputGroupAddon>
+      <InputGroupInput
+        aria-label={label}
+        placeholder={label}
+        spellCheck={false}
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      />
+    </InputGroup>
   );
 }
 
@@ -125,24 +232,13 @@ export function ProviderRow({
     onConfigureApiKey,
   );
   return (
-    <div className="settings-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">{provider.name}</div>
-        <div className="settings-row__description">{describeProviderStatus(provider)}</div>
-      </div>
+    <SettingsRow title={provider.name} description={describeProviderStatus(provider)}>
       {action ? (
-        <div className="settings-row__control">
-          <button
-            className="button button--secondary"
-            disabled={action.disabled}
-            type="button"
-            onClick={action.onClick}
-          >
-            {action.label}
-          </button>
-        </div>
+        <Button disabled={action.disabled} size="sm" variant="secondary" onClick={action.onClick}>
+          {action.label}
+        </Button>
       ) : null}
-    </div>
+    </SettingsRow>
   );
 }
 

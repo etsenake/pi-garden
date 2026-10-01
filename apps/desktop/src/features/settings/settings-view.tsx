@@ -16,6 +16,7 @@ import type {
   UpdateMcpServerInput,
 } from "../../../contracts/ipc";
 import type { ThemeCatalogEntry } from "../../../contracts/theme-catalog";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/shadcn/empty";
 import { SettingsAppearanceSection } from "./settings-appearance-section";
 import { SettingsGeneralSection } from "./settings-general-section";
 import { SettingsMcpSection } from "./settings-mcp-section";
@@ -141,17 +142,15 @@ export function SettingsView({
       <section className="canvas">
         <div className="conversation settings-view">
           {header}
-          <div className="settings-group">
-            <div className="settings-row">
-              <div className="settings-row__label">
-                <div className="settings-row__title">Select a workspace</div>
-                <div className="settings-row__description">
-                  Providers, models, MCP, and tools are set per workspace. Choose one, or open a
-                  folder first.
-                </div>
-              </div>
-            </div>
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>Select a workspace</EmptyTitle>
+              <EmptyDescription>
+                Providers, models, MCP, and tools are set per workspace. Choose one, or open a
+                folder first.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </div>
       </section>
     );
