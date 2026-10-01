@@ -68,6 +68,7 @@ import { SidebarToggleButton } from "../features/threads/sidebar-toggle-button";
 import { Topbar } from "./topbar";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import { TerminalPanel } from "../features/workbench/terminal-panel";
+import { PanelEmpty } from "../features/workbench/panel-empty";
 import { ConversationTimeline } from "../features/conversation/conversation-timeline";
 import { ScheduledTasksView } from "../features/scheduled-tasks/scheduled-tasks-view";
 import {
@@ -1389,9 +1390,7 @@ export default function App() {
                       workspace={filesWorkspace}
                     />
                   ) : (
-                    <p className="workbench__unavailable" role="status">
-                      This file checkout is unavailable.
-                    </p>
+                    <PanelEmpty role="status" title="This file checkout is unavailable." />
                   ),
                 terminal: () => (
                   <TerminalPanel
