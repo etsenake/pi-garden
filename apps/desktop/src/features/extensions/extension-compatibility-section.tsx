@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronRightIcon } from "lucide-react";
 import type {
   ExtensionCompatibilityEvidence,
   ExtensionCompatibilityFinding,
@@ -6,8 +7,21 @@ import type {
   ExtensionCompatibilityStatus,
 } from "../../../contracts/extension-compatibility";
 import type { PiDesktopApi } from "../../../contracts/ipc";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemGroup,
+  ItemHeader,
+} from "@/ui/shadcn/item";
 import { SettingsGroup } from "../settings/settings-utils";
 import { displayPath } from "./resource-detail";
+import { toneBadge, type HostTone } from "./tone-badge";
 
 type CompatibilityApi = Pick<
   PiDesktopApi,
@@ -125,6 +139,17 @@ const STATUS_LABEL: Readonly<Record<ExtensionCompatibilityStatus, string>> = {
   supported: "Supported",
 };
 
+const STATUS_TONE: Readonly<Record<ExtensionCompatibilityStatus, HostTone>> = {
+  adaptable: "accent",
+  adapted: "success",
+  unsupported: "error",
+  unknown: "muted",
+  "desktop-native": "success",
+  supported: "default",
+};
+
+const RUNTIME_BADGE = toneBadge("accent");
+
 const STATUS_DESCRIPTION: Readonly<Record<ExtensionCompatibilityStatus, string>> = {
   adaptable: "Terminal-specific. Adapt for Desktop maps it to the target shown.",
   adapted:
@@ -152,8 +177,10 @@ export function ExtensionCompatibilitySectionView({
 }) {
   const adaptable = inventory?.findings.filter((finding) => finding.status === "adaptable") ?? [];
   const adaptation = inventory?.adaptation;
+  const skippedFiles = inventory?.source.skipped.filter((entry) => entry.file) ?? [];
   return (
     <SettingsGroup
+      plain
       title="Desktop compatibility"
       description="What this extension asks its host for, and what pi-garden does with it. Source means the code references an API; runtime means it was observed in this app's current session generation."
     >
@@ -163,25 +190,19 @@ export function ExtensionCompatibilitySectionView({
             {summaryText(inventory, loading, error)}
           </span>
           <div className="extension-compat__actions">
-            <button
-              className="button button--secondary"
-              disabled={loading}
-              type="button"
-              onClick={onRefresh}
-            >
+            <Button disabled={loading} size="sm" variant="outline" onClick={onRefresh}>
               Re-inspect
-            </button>
+            </Button>
             {adaptation ? (
-              <button
-                className="button button--primary"
+              <Button
                 data-testid="adapt-for-desktop"
                 disabled={!adaptation.available || loading || !onAdapt}
+                size="sm"
                 title={adaptation.message}
-                type="button"
                 onClick={onAdapt}
               >
                 Adapt for Desktop
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -204,7 +225,7 @@ export function ExtensionCompatibilitySectionView({
           <p className="extension-compat__note extension-compat__note--error">{error}</p>
         ) : null}
         {inventory ? (
-          <ul className="extension-compat__list" data-testid="extension-compatibility-findings">
+          <ItemGroup className="gap-2" data-testid="extension-compatibility-findings">
             {inventory.findings.map((finding) => (
               <FindingRow
                 finding={finding}
@@ -213,29 +234,32 @@ export function ExtensionCompatibilitySectionView({
               />
             ))}
             {inventory.findings.length === 0 ? (
-              <li className="extension-compat__empty">
+              <p className="extension-compat__empty">
                 {inventory.source.status === "skipped"
                   ? "No source was inspected and no runtime evidence has been observed."
                   : "No host UI or desktop registrations were found."}
-              </li>
+              </p>
             ) : null}
-          </ul>
+          </ItemGroup>
         ) : null}
-        {inventory && inventory.source.skipped.filter((entry) => entry.file).length > 0 ? (
-          <details className="extension-compat__skipped">
-            <summary>
-              {inventory.source.skipped.filter((entry) => entry.file).length} file(s) not inspected
-            </summary>
-            <ul>
-              {inventory.source.skipped
-                .filter((entry) => entry.file)
-                .map((entry) => (
+        {skippedFiles.length > 0 ? (
+          <Collapsible className="extension-compat__skipped">
+            <CollapsibleTrigger
+              render={<Button className="group justify-self-start" size="sm" variant="ghost" />}
+            >
+              <ChevronRightIcon className="transition-transform group-data-panel-open:rotate-90" />
+              {skippedFiles.length} file(s) not inspected
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul>
+                {skippedFiles.map((entry) => (
                   <li key={`${entry.file}:${entry.reason}`}>
                     <code>{displayPath(entry.file, workspacePath)}</code> · {entry.reason}
                   </li>
                 ))}
-            </ul>
-          </details>
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
         ) : null}
       </div>
     </SettingsGroup>
@@ -287,74 +311,84 @@ function FindingRow({
       item.kind === "runtime",
   );
   return (
-    <li
-      className={`extension-compat__finding extension-compat__finding--${finding.status}`}
+    <Item
       data-adapted-by={
         finding.adaptedBy ? `${finding.adaptedBy.api}:${finding.adaptedBy.id}` : undefined
       }
       data-capability={finding.capability}
       data-status={finding.status}
       data-testid="extension-compatibility-finding"
+      role="listitem"
+      size="sm"
+      variant="outline"
     >
-      <div className="extension-compat__finding-head">
-        <span className={`extension-compat__status extension-compat__status--${finding.status}`}>
-          {STATUS_LABEL[finding.status]}
-        </span>
-        <span className="extension-compat__label">{finding.label}</span>
-        <code className="extension-compat__capability">{finding.capability}</code>
-      </div>
-      <div className="extension-compat__finding-body">
-        <span>{STATUS_DESCRIPTION[finding.status]}</span>
-        {finding.adaptedBy ? (
-          <span>
-            {" "}
-            Paired with <code>{finding.adaptedBy.api}</code>
-            {finding.adaptedBy.surface ? (
-              <>
-                {" "}
-                <code>{finding.adaptedBy.surface}</code>
-              </>
-            ) : null}{" "}
-            <code>{finding.adaptedBy.id}</code>
-          </span>
-        ) : null}
-        {finding.adaptationTarget ? (
-          <span>
-            {" "}
-            Target: <code>{finding.adaptationTarget}</code>
-          </span>
-        ) : null}
-        {finding.desktopAnalogue ? (
-          <span>
-            {" "}
-            Via <code>{finding.desktopAnalogue}</code>
-          </span>
-        ) : null}
-        {finding.unsupportedReason ? <span> {finding.unsupportedReason}</span> : null}
-      </div>
-      <div className="extension-compat__evidence">
-        {sourceEvidence.map((item) => (
-          <span
-            className="extension-compat__evidence-item extension-compat__evidence-item--source"
-            data-evidence="source"
-            key={`${item.file}:${item.line}:${item.column}`}
-            title={item.snippet}
-          >
-            source · {displayPath(item.file, workspacePath)}:{item.line}
-            {item.partial ? " (uncertain)" : ""}
-          </span>
-        ))}
-        {runtimeEvidence.map((item, index) => (
-          <span
-            className="extension-compat__evidence-item extension-compat__evidence-item--runtime"
-            data-evidence="runtime"
-            key={`${item.generation}:${item.attribution}:${index}`}
-            title={`generation ${item.generation} · ${item.observedAt}`}
-          >
-            runtime · {item.detail ?? item.attribution} · {item.attribution}
-          </span>
-        ))}
-      </div>
-    </li>
+      <ItemHeader className="flex-wrap justify-start">
+        <Badge {...toneBadge(STATUS_TONE[finding.status])}>{STATUS_LABEL[finding.status]}</Badge>
+        <span className="font-medium">{finding.label}</span>
+        <code className="text-xs text-muted-foreground">{finding.capability}</code>
+      </ItemHeader>
+      <ItemContent className="min-w-0">
+        <ItemDescription className="line-clamp-none wrap-anywhere">
+          {STATUS_DESCRIPTION[finding.status]}
+          {finding.adaptedBy ? (
+            <>
+              {" "}
+              Paired with <code>{finding.adaptedBy.api}</code>
+              {finding.adaptedBy.surface ? (
+                <>
+                  {" "}
+                  <code>{finding.adaptedBy.surface}</code>
+                </>
+              ) : null}{" "}
+              <code>{finding.adaptedBy.id}</code>
+            </>
+          ) : null}
+          {finding.adaptationTarget ? (
+            <>
+              {" "}
+              Target: <code>{finding.adaptationTarget}</code>
+            </>
+          ) : null}
+          {finding.desktopAnalogue ? (
+            <>
+              {" "}
+              Via <code>{finding.desktopAnalogue}</code>
+            </>
+          ) : null}
+          {finding.unsupportedReason ? <> {finding.unsupportedReason}</> : null}
+        </ItemDescription>
+      </ItemContent>
+      {sourceEvidence.length + runtimeEvidence.length > 0 ? (
+        <ItemFooter className="flex-wrap justify-start">
+          {sourceEvidence.map((item) => (
+            <Badge
+              className="max-w-full"
+              data-evidence="source"
+              key={`${item.file}:${item.line}:${item.column}`}
+              title={item.snippet}
+              variant="secondary"
+            >
+              <span className="truncate">
+                source · {displayPath(item.file, workspacePath)}:{item.line}
+                {item.partial ? " (uncertain)" : ""}
+              </span>
+            </Badge>
+          ))}
+          {runtimeEvidence.map((item, index) => (
+            <Badge
+              {...RUNTIME_BADGE}
+              className={cn("max-w-full", RUNTIME_BADGE.className)}
+              data-evidence="runtime"
+              key={`${item.generation}:${item.attribution}:${index}`}
+              title={`generation ${item.generation} · ${item.observedAt}`}
+            >
+              <span className="truncate">
+                runtime · {item.detail ?? item.attribution} · {item.attribution}
+              </span>
+            </Badge>
+          ))}
+        </ItemFooter>
+      ) : null}
+    </Item>
   );
 }
