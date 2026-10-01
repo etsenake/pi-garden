@@ -79,7 +79,10 @@ import { useMentionMenu } from "../features/conversation/hooks/use-mention-menu"
 import { useThreadSearch } from "../features/conversation/hooks/use-thread-search";
 import { useWorkspaceMenu } from "../features/threads/hooks/use-workspace-menu";
 import { useThreadActions } from "../features/threads/hooks/use-thread-actions";
-import { ThreadActionsMenu } from "../features/threads/thread-actions";
+import { ThreadActionDropdownMenuItems } from "../features/threads/thread-actions";
+import { MoreIcon } from "../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/shadcn/dropdown-menu";
 import { useNewThreadController } from "../features/threads/hooks/use-new-thread-controller";
 import { ExtensionDialog } from "../features/extensions/extension-session-ui";
 import { TreeModal } from "../features/conversation/tree-modal";
@@ -951,7 +954,9 @@ export default function App() {
     );
   }
 
-  const shellClassName = `shell${snapshot.sidebarCollapsed ? " shell--sidebar-collapsed" : ""}`;
+  // `isolate` keeps the shell's own z-indexed chrome (sidebar toggle, top bar)
+  // below shadcn popups, which portal to <body> at z-50.
+  const shellClassName = `shell isolate${snapshot.sidebarCollapsed ? " shell--sidebar-collapsed" : ""}`;
 
   return (
     <div className={shellClassName}>
@@ -1034,28 +1039,25 @@ export default function App() {
                   ? runningLabel
                   : formatRelativeTime(selectedSession.updatedAt)}
               </div>
-              <div
-                className="chat-header__menu-wrap"
-                ref={threadMenu.openMenu?.surface === "header" ? threadMenu.menuWrapRef : undefined}
-              >
-                <button
-                  aria-haspopup="menu"
-                  aria-expanded={threadMenu.openMenu?.surface === "header"}
-                  aria-label="Thread actions"
-                  className="icon-button"
-                  data-testid="thread-header-menu"
-                  type="button"
-                  onClick={threadMenu.toggleHeaderMenu}
-                >
-                  …
-                </button>
-                {threadMenu.openMenu?.surface === "header" && selectedThreadActions ? (
-                  <ThreadActionsMenu
-                    actions={selectedThreadActions}
-                    className="chat-header__menu"
-                  />
-                ) : null}
-              </div>
+              {selectedThreadActions ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        aria-label="Thread actions"
+                        data-testid="thread-header-menu"
+                        size="icon"
+                        variant="ghost"
+                      />
+                    }
+                  >
+                    <MoreIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-auto min-w-52">
+                    <ThreadActionDropdownMenuItems actions={selectedThreadActions} />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </>
           ) : null}
         </Topbar>

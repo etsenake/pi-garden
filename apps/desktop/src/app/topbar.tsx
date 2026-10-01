@@ -5,6 +5,9 @@ import { HeaderBadges } from "../features/extensions/header-badges";
 import { StatusChromeContributions } from "../features/extensions/host-contributions";
 import { getSidePanelToggleShortcutLabel, type PiDesktopApi } from "../../contracts/ipc";
 import { SidePanelIcon } from "../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Kbd } from "@/ui/shadcn/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 interface TopbarProps {
   readonly activeView: AppView;
@@ -88,24 +91,29 @@ export function Topbar({
         />
         {children}
         {!panelVisible ? (
-          <div className="shortcut-tooltip-wrap topbar__tooltip-wrap">
-            <button
-              type="button"
-              aria-label="Toggle side panel"
-              aria-pressed={panelVisible}
-              aria-controls="task-workbench"
-              data-testid="toggle-side-panel"
-              className={`icon-button topbar__icon${panelVisible ? " icon-button--active" : ""}`}
-              disabled={!panelAvailable}
-              onClick={onTogglePanel}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-controls="task-workbench"
+                  aria-label="Toggle side panel"
+                  aria-pressed={panelVisible}
+                  className="topbar__icon"
+                  data-testid="toggle-side-panel"
+                  disabled={!panelAvailable}
+                  size="icon"
+                  variant="ghost"
+                  onClick={onTogglePanel}
+                />
+              }
             >
               <SidePanelIcon />
-            </button>
-            <span className="shortcut-tooltip topbar__tooltip" role="tooltip">
-              <span>{panelVisible ? "Hide side panel" : "Show side panel"}</span>
-              <kbd>{getSidePanelToggleShortcutLabel(api.platform)}</kbd>
-            </span>
-          </div>
+            </TooltipTrigger>
+            <TooltipContent align="end" side="bottom">
+              Show side panel
+              <Kbd>{getSidePanelToggleShortcutLabel(api.platform)}</Kbd>
+            </TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
     </header>

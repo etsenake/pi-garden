@@ -135,13 +135,6 @@ button.header-badge {
   place-items: center;
 }
 
-.topbar__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  color: var(--muted-soft);
-}
-
 .shortcut-tooltip {
   position: absolute;
   top: calc(100% + 8px);
@@ -185,17 +178,6 @@ button.header-badge {
 .shortcut-tooltip-wrap:focus-within .shortcut-tooltip {
   opacity: 1;
   transform: translateX(-50%);
-}
-
-.topbar__tooltip {
-  left: auto;
-  right: 0;
-  transform: translateY(-2px);
-}
-
-.topbar__tooltip-wrap:hover .topbar__tooltip,
-.topbar__tooltip-wrap:focus-within .topbar__tooltip {
-  transform: none;
 }
 
 .sidebar-toggle {
