@@ -72,10 +72,10 @@ test("opens /tree from the composer, navigates branches, and blocks it on the ne
       initialScrollState.scrollHeight - 40,
     );
 
-    await treeModal.locator(".tree-row__content", { hasText: "Branch alpha" }).click();
+    await treeModal.locator("[data-testid^='tree-row-']", { hasText: "Branch alpha" }).click();
     await treeModal.getByRole("button", { name: "Continue" }).click();
     await expect(window.getByTestId("tree-summary-step")).toBeVisible();
-    await treeModal.getByRole("button", { name: "No summary" }).click();
+    await treeModal.getByRole("radio", { name: "No summary" }).click();
     await treeModal.getByRole("button", { name: "Switch branch" }).click();
 
     await expect(treeModal).toHaveCount(0);
@@ -86,9 +86,9 @@ test("opens /tree from the composer, navigates branches, and blocks it on the ne
     await composer.fill("/tree");
     await composer.press("Enter");
     await expect(treeModal).toBeVisible();
-    await treeModal.locator(".tree-row__content", { hasText: "Beta answer" }).click();
+    await treeModal.locator("[data-testid^='tree-row-']", { hasText: "Beta answer" }).click();
     await treeModal.getByRole("button", { name: "Continue" }).click();
-    await treeModal.getByRole("button", { name: "No summary" }).click();
+    await treeModal.getByRole("radio", { name: "No summary" }).click();
     await treeModal.getByRole("button", { name: "Switch branch" }).click();
 
     await expect(treeModal).toHaveCount(0);
@@ -111,7 +111,7 @@ test("opens /tree from the composer, navigates branches, and blocks it on the ne
   }
 });
 
-test("restores focus to a remaining extension dialog after the tree modal closes", async () => {
+test("an extension dialog stacked over the tree modal hands focus back when it closes", async () => {
   test.setTimeout(90_000);
   const userDataDir = await makeUserDataDir();
   const agentDir = join(userDataDir, "agent");
@@ -156,13 +156,14 @@ test("restores focus to a remaining extension dialog after the tree modal closes
 
     const extensionDialog = window.getByTestId("extension-dialog");
     const extensionCancel = extensionDialog.getByTestId("extension-dialog-cancel");
-    await expect(extensionDialog).toBeVisible();
-    await expect(window.getByTestId("tree-modal-search")).toBeFocused();
-
-    await treeModal.getByRole("button", { name: "Close tree modal" }).click();
-    await expect(treeModal).toHaveCount(0);
+    // The newest dialog sits on top and owns focus until it is answered.
     await expect(extensionDialog).toBeVisible();
     await expect(extensionCancel).toBeFocused();
+
+    await extensionCancel.click();
+    await expect(extensionDialog).toHaveCount(0);
+    await expect(treeModal).toBeVisible();
+    await expect(window.getByTestId("tree-modal-search")).toBeFocused();
   } finally {
     await harness.close();
   }
@@ -234,9 +235,11 @@ test("opens /tree on a long branched session whose deepest path passes 500 entri
     await expect(treeModal).toContainText("Step 57 on branch 58");
     await expect(treeModal.locator("[data-testid^='tree-row-']")).toHaveCount(fixture.entryCount);
 
-    await treeModal.locator(".tree-row__content", { hasText: "Step 517 on branch 518" }).click();
+    await treeModal
+      .locator("[data-testid^='tree-row-']", { hasText: "Step 517 on branch 518" })
+      .click();
     await treeModal.getByRole("button", { name: "Continue" }).click();
-    await treeModal.getByRole("button", { name: "No summary" }).click();
+    await treeModal.getByRole("radio", { name: "No summary" }).click();
     await treeModal.getByRole("button", { name: "Switch branch" }).click();
     await expect(treeModal).toHaveCount(0);
     await expect(window.getByTestId("transcript")).toContainText("Step 517 on branch 518");

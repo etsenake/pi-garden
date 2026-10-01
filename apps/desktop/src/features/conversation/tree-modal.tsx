@@ -12,8 +12,21 @@ import type {
   SessionTreeNodeSnapshot,
   SessionTreeSnapshot,
 } from "@pi-garden/session-driver/types";
-import { trapDialogFocus } from "../../ui/dialog-focus";
-import { ChevronDownIcon, ChevronRightIcon } from "../../ui/icons";
+import { ChevronDownIcon, ChevronRightIcon, CloseIcon } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/ui/shadcn/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/shadcn/dialog";
+import { Field, FieldContent, FieldDescription, FieldLabel, FieldTitle } from "@/ui/shadcn/field";
+import { RadioGroup, RadioGroupItem } from "@/ui/shadcn/radio-group";
+import { Spinner } from "@/ui/shadcn/spinner";
+import { Textarea } from "@/ui/shadcn/textarea";
 
 interface TreeModalProps {
   readonly tree?: SessionTreeSnapshot;
@@ -77,6 +90,7 @@ export function TreeModal({
   const listRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const customInstructionsRef = useRef<HTMLTextAreaElement | null>(null);
+  const summaryConfirmRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!tree) {
@@ -103,20 +117,22 @@ export function TreeModal({
       customInstructionsRef.current?.focus();
       return;
     }
-    dialogRef.current
-      ?.querySelector<HTMLButtonElement>("[data-tree-summary-confirm='true']")
-      ?.focus();
+    summaryConfirmRef.current?.focus();
   }, [loading, step, summaryMode, tree]);
 
   useLayoutEffect(() => {
     const handleFocusIn = (event: FocusEvent) => {
       const dialog = dialogRef.current;
       const target = event.target;
-      if (!dialog || !(target instanceof Node) || dialog.contains(target)) {
+      if (!dialog || !(target instanceof Element) || dialog.contains(target)) {
+        return;
+      }
+      // A dialog that opens over this one owns focus until it closes.
+      if (target.closest("[role='dialog'], [role='alertdialog']")) {
         return;
       }
 
-      // Tab handling keeps keyboard navigation inside; this also contains delayed programmatic focus.
+      // The dialog traps keyboard focus; this also contains delayed programmatic focus.
       if (step === "select" && !loading && tree && searchRef.current) {
         searchRef.current.focus();
         return;
@@ -125,7 +141,7 @@ export function TreeModal({
         customInstructionsRef.current.focus();
         return;
       }
-      dialog.querySelector<HTMLButtonElement>("[data-tree-summary-confirm='true']")?.focus();
+      summaryConfirmRef.current?.focus();
       if (!dialog.contains(document.activeElement)) {
         dialog.focus();
       }
@@ -171,10 +187,6 @@ export function TreeModal({
       if (!listElement) {
         return;
       }
-      const lastRow = listElement.lastElementChild;
-      if (lastRow instanceof HTMLElement) {
-        lastRow.scrollIntoView({ block: "end" });
-      }
       listElement.scrollTop = Math.max(0, listElement.scrollHeight - listElement.clientHeight);
     };
     scrollToBottom();
@@ -195,45 +207,11 @@ export function TreeModal({
     };
   }, [autoScrollRequest, displayRows, step]);
 
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Tab") {
-      trapDialogFocus(event, dialogRef.current);
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      if (submitting) {
-        return;
-      }
-      if (step === "summary") {
-        setStep("select");
-        return;
-      }
-      onClose();
-      return;
-    }
-
-    if (step !== "select" || displayRows.length === 0) {
-      return;
-    }
-
-    const currentIndex = Math.max(
-      0,
-      displayRows.findIndex((row) => row.node.id === selectedId),
-    );
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
+  // The command list moves the selection with the arrow keys; branches fold on left/right,
+  // and Enter continues instead of selecting.
+  const handleListKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       cancelAutoScroll();
-      setSelectedId(
-        displayRows[Math.min(displayRows.length - 1, currentIndex + 1)]?.node.id ?? selectedId,
-      );
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      cancelAutoScroll();
-      setSelectedId(displayRows[Math.max(0, currentIndex - 1)]?.node.id ?? selectedId);
       return;
     }
     if (
@@ -266,6 +244,18 @@ export function TreeModal({
     }
   };
 
+  const handleOpenChange = (open: boolean, details: { readonly reason: string }) => {
+    if (open || submitting) {
+      return;
+    }
+    if (step === "summary") {
+      // Escape steps back; only the select step closes on an outside click.
+      if (details.reason !== "outside-press") setStep("select");
+      return;
+    }
+    onClose();
+  };
+
   const handleToggleExpanded = (nodeId: string) => {
     cancelAutoScroll();
     setExpandedIds((current) => ({ ...current, [nodeId]: !current[nodeId] }));
@@ -294,36 +284,34 @@ export function TreeModal({
   };
 
   return (
-    <div
-      className="tree-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target !== event.currentTarget || step !== "select" || submitting) {
-          return;
-        }
-        onClose();
-      }}
-    >
-      <div
-        aria-modal="true"
-        className="tree-modal"
+    <Dialog open onOpenChange={handleOpenChange}>
+      {/* The app returns focus to the composer or the topmost remaining dialog. */}
+      <DialogContent
+        className="max-h-[calc(100vh-3rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-4xl"
         data-testid="tree-modal"
+        finalFocus={false}
+        initialFocus={() => searchRef.current ?? true}
         ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-        onKeyDown={handleKeyDown}
+        showCloseButton={false}
       >
-        <div className="tree-modal__header">
-          <div>
-            <div className="tree-modal__eyebrow">Session tree</div>
-            <h2 className="tree-modal__title">
-              {step === "summary" ? "Switch branch" : "Browse branches"}
-            </h2>
+        <DialogHeader className="flex-row items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <DialogTitle>{step === "summary" ? "Switch branch" : "Browse branches"}</DialogTitle>
+            <DialogDescription>
+              {step === "summary"
+                ? "You're leaving the current branch. Choose whether pi should summarize the abandoned path before switching."
+                : searching
+                  ? "Search expands matching branches."
+                  : currentLeafId
+                    ? "Tree opens at the most recent entries."
+                    : "Select a node to branch from it."}
+            </DialogDescription>
           </div>
-          <button
+          <Button
             aria-label="Close tree modal"
-            className="tree-modal__close"
             disabled={submitting}
-            type="button"
+            size="icon-sm"
+            variant="ghost"
             onClick={() => {
               if (step === "summary") {
                 setStep("select");
@@ -332,212 +320,236 @@ export function TreeModal({
               onClose();
             }}
           >
-            ×
-          </button>
-        </div>
+            <CloseIcon />
+          </Button>
+        </DialogHeader>
 
-        {error ? (
-          <div className="tree-modal__error error-banner" data-testid="tree-modal-error">
-            {error}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="tree-modal__loading" data-testid="tree-modal-loading">
-            Loading session tree…
-          </div>
-        ) : null}
-
-        {!loading && tree && step === "select" ? (
-          <>
-            <div className="tree-modal__search-row">
-              <input
-                autoFocus
-                aria-label="Search session tree"
-                className="tree-modal__search"
-                data-testid="tree-modal-search"
-                placeholder="Search visible tree entries"
-                ref={searchRef}
-                value={search}
-                onChange={(event) => {
-                  cancelAutoScroll();
-                  setSearch(event.target.value);
-                }}
-              />
-              <div className="tree-modal__meta">
-                {searching
-                  ? "Search expands matching branches."
-                  : currentLeafId
-                    ? "Tree opens at the most recent entries."
-                    : "Select a node to branch from it."}
-              </div>
+        <div className="flex min-h-0 flex-col gap-4">
+          {error ? (
+            <div className="error-banner" data-testid="tree-modal-error">
+              {error}
             </div>
+          ) : null}
 
-            <div className="tree-modal__list" data-testid="tree-modal-list" ref={setListElement}>
-              {displayRows.length === 0 ? (
-                <div className="tree-modal__empty">No matching nodes.</div>
-              ) : (
-                displayRows.map((row) => {
-                  const isSelected = row.node.id === selectedId;
-                  const isCurrentLeaf = row.node.id === currentLeafId;
-                  return (
-                    <div
-                      className={`tree-row ${isSelected ? "tree-row--selected" : ""} ${isCurrentLeaf ? "tree-row--active" : ""}`}
+          {loading ? (
+            <div
+              className="flex items-center justify-center gap-2 py-7 text-muted-foreground"
+              data-testid="tree-modal-loading"
+            >
+              <Spinner />
+              Loading session tree…
+            </div>
+          ) : null}
+
+          {!loading && tree && step === "select" ? (
+            <>
+              <Command
+                className="min-h-0"
+                disablePointerSelection
+                label="Session tree entries"
+                shouldFilter={false}
+                value={selectedId}
+                onKeyDown={handleListKeyDown}
+                onValueChange={setSelectedId}
+              >
+                <CommandInput
+                  aria-label="Search session tree"
+                  autoFocus
+                  data-testid="tree-modal-search"
+                  placeholder="Search visible tree entries"
+                  ref={searchRef}
+                  value={search}
+                  onValueChange={(value) => {
+                    cancelAutoScroll();
+                    setSearch(value);
+                  }}
+                />
+                <CommandList
+                  className="mt-1 max-h-[min(420px,54vh)] min-h-80"
+                  data-testid="tree-modal-list"
+                  ref={setListElement}
+                >
+                  <CommandEmpty>No matching nodes.</CommandEmpty>
+                  {displayRows.map((row) => (
+                    <TreeRowItem
+                      currentLeafId={currentLeafId}
                       key={row.node.id}
-                    >
-                      <button
-                        aria-label={row.expanded ? "Collapse branch" : "Expand branch"}
-                        className={`tree-row__toggle ${row.hasChildren ? "" : "tree-row__toggle--hidden"}`}
-                        disabled={searching || !row.hasChildren}
-                        tabIndex={-1}
-                        type="button"
-                        onClick={() => handleToggleExpanded(row.node.id)}
-                      >
-                        {row.hasChildren ? (
-                          row.expanded ? (
-                            <ChevronDownIcon />
-                          ) : (
-                            <ChevronRightIcon />
-                          )
-                        ) : null}
-                      </button>
-                      <button
-                        className="tree-row__content"
-                        data-tree-selected={isSelected ? "true" : undefined}
-                        data-testid={`tree-row-${row.node.id}`}
-                        title={buildTreeRowLine(row, currentLeafId)}
-                        type="button"
-                        onClick={() => {
-                          cancelAutoScroll();
-                          setSelectedId(row.node.id);
-                        }}
-                        onDoubleClick={() => {
-                          cancelAutoScroll();
-                          setSelectedId(row.node.id);
-                          if (row.node.id !== currentLeafId) {
-                            setStep("summary");
-                          }
-                        }}
-                      >
-                        <span className="tree-row__line">
-                          {buildTreeRowLine(row, currentLeafId)}
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                      row={row}
+                      searching={searching}
+                      onDoubleClick={() => {
+                        cancelAutoScroll();
+                        setSelectedId(row.node.id);
+                        if (row.node.id !== currentLeafId) {
+                          setStep("summary");
+                        }
+                      }}
+                      onSelect={() => {
+                        cancelAutoScroll();
+                        setSelectedId(row.node.id);
+                      }}
+                      onToggleExpanded={handleToggleExpanded}
+                    />
+                  ))}
+                </CommandList>
+              </Command>
 
-            <div className="tree-modal__footer">
-              <div className="tree-modal__hint">
-                Selecting a user prompt reopens it in the composer. Selecting any other node jumps
-                directly there.
-              </div>
-              <div className="tree-modal__actions">
-                <button className="button button--secondary" type="button" onClick={onClose}>
-                  Cancel
-                </button>
-                <button
-                  className="button button--primary"
-                  disabled={!selectedId || currentLeafSelected}
-                  type="button"
-                  onClick={() => setStep("summary")}
-                >
-                  {currentLeafSelected ? "Already here" : "Continue"}
-                </button>
-              </div>
-            </div>
-          </>
-        ) : null}
+              <DialogFooter className="items-center sm:justify-between">
+                <p className="text-muted-foreground">
+                  Selecting a user prompt reopens it in the composer. Selecting any other node jumps
+                  directly there.
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <Button variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={!selectedId || currentLeafSelected}
+                    onClick={() => setStep("summary")}
+                  >
+                    {currentLeafSelected ? "Already here" : "Continue"}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </>
+          ) : null}
 
-        {!loading && tree && step === "summary" ? (
-          <div className="tree-modal__summary-step" data-testid="tree-summary-step">
-            <div className="tree-modal__summary-copy">
-              You&apos;re leaving the current branch. Choose whether pi should summarize the
-              abandoned path before switching.
-            </div>
-            <div className="tree-summary-options">
-              <button
-                className={`tree-summary-option ${summaryMode === "none" ? "tree-summary-option--selected" : ""}`}
-                type="button"
-                onClick={() => setSummaryMode("none")}
+          {!loading && tree && step === "summary" ? (
+            <div className="flex flex-col gap-4" data-testid="tree-summary-step">
+              <RadioGroup
+                aria-label="Branch summary"
+                value={summaryMode}
+                onValueChange={(value) => setSummaryMode(value as TreeSummaryMode)}
               >
-                <span className="tree-summary-option__title">No summary</span>
-                <span className="tree-summary-option__description">
-                  Jump immediately with no branch summary.
-                </span>
-              </button>
-              <button
-                className={`tree-summary-option ${summaryMode === "summary" ? "tree-summary-option--selected" : ""}`}
-                type="button"
-                onClick={() => setSummaryMode("summary")}
-              >
-                <span className="tree-summary-option__title">Summarize</span>
-                <span className="tree-summary-option__description">
-                  Generate a branch summary before switching.
-                </span>
-              </button>
-              <button
-                className={`tree-summary-option ${summaryMode === "custom" ? "tree-summary-option--selected" : ""}`}
-                type="button"
-                onClick={() => setSummaryMode("custom")}
-              >
-                <span className="tree-summary-option__title">Summarize with custom prompt</span>
-                <span className="tree-summary-option__description">
-                  Provide extra instructions for the summary.
-                </span>
-              </button>
-            </div>
+                {SUMMARY_OPTIONS.map((option) => (
+                  <FieldLabel htmlFor={`tree-summary-${option.mode}`} key={option.mode}>
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldTitle id={`tree-summary-${option.mode}-title`}>
+                          {option.title}
+                        </FieldTitle>
+                        <FieldDescription id={`tree-summary-${option.mode}-description`}>
+                          {option.description}
+                        </FieldDescription>
+                      </FieldContent>
+                      <RadioGroupItem
+                        aria-describedby={`tree-summary-${option.mode}-description`}
+                        aria-labelledby={`tree-summary-${option.mode}-title`}
+                        id={`tree-summary-${option.mode}`}
+                        value={option.mode}
+                      />
+                    </Field>
+                  </FieldLabel>
+                ))}
+              </RadioGroup>
 
-            {summaryMode === "custom" ? (
-              <textarea
-                autoFocus
-                aria-label="Custom summary instructions"
-                className="tree-modal__custom-instructions"
-                placeholder="Focus the summary on decisions, changed files, and unresolved risks."
-                ref={customInstructionsRef}
-                value={customInstructions}
-                onChange={(event) => setCustomInstructions(event.target.value)}
-              />
-            ) : null}
+              {summaryMode === "custom" ? (
+                <Textarea
+                  aria-label="Custom summary instructions"
+                  autoFocus
+                  className="min-h-28"
+                  placeholder="Focus the summary on decisions, changed files, and unresolved risks."
+                  ref={customInstructionsRef}
+                  value={customInstructions}
+                  onChange={(event) => setCustomInstructions(event.target.value)}
+                />
+              ) : null}
 
-            <div className="tree-modal__footer">
-              <div className="tree-modal__hint">
-                {submitting
-                  ? "Switching branches…"
-                  : summaryMode === "none"
-                    ? "The current branch will be left as-is."
-                    : "The summary will be attached to the branch you switch to."}
-              </div>
-              <div className="tree-modal__actions">
-                <button
-                  className="button button--secondary"
-                  disabled={submitting}
-                  type="button"
-                  onClick={() => setStep("select")}
-                >
-                  Back
-                </button>
-                <button
-                  className="button button--primary"
-                  data-tree-summary-confirm="true"
-                  disabled={
-                    submitting ||
-                    !selectedId ||
-                    (summaryMode === "custom" && customInstructions.trim().length === 0)
-                  }
-                  type="button"
-                  onClick={handleSubmit}
-                >
-                  {submitting ? "Switching…" : "Switch branch"}
-                </button>
-              </div>
+              <DialogFooter className="items-center sm:justify-between">
+                <p className="text-muted-foreground">
+                  {submitting
+                    ? "Switching branches…"
+                    : summaryMode === "none"
+                      ? "The current branch will be left as-is."
+                      : "The summary will be attached to the branch you switch to."}
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <Button disabled={submitting} variant="outline" onClick={() => setStep("select")}>
+                    Back
+                  </Button>
+                  <Button
+                    disabled={
+                      submitting ||
+                      !selectedId ||
+                      (summaryMode === "custom" && customInstructions.trim().length === 0)
+                    }
+                    ref={summaryConfirmRef}
+                    onClick={handleSubmit}
+                  >
+                    {submitting ? <Spinner data-icon="inline-start" /> : null}
+                    {submitting ? "Switching…" : "Switch branch"}
+                  </Button>
+                </div>
+              </DialogFooter>
             </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const SUMMARY_OPTIONS: readonly {
+  readonly mode: TreeSummaryMode;
+  readonly title: string;
+  readonly description: string;
+}[] = [
+  { mode: "none", title: "No summary", description: "Jump immediately with no branch summary." },
+  {
+    mode: "summary",
+    title: "Summarize",
+    description: "Generate a branch summary before switching.",
+  },
+  {
+    mode: "custom",
+    title: "Summarize with custom prompt",
+    description: "Provide extra instructions for the summary.",
+  },
+];
+
+function TreeRowItem({
+  row,
+  currentLeafId,
+  searching,
+  onSelect,
+  onDoubleClick,
+  onToggleExpanded,
+}: {
+  readonly row: TreeRow;
+  readonly currentLeafId: string | null;
+  readonly searching: boolean;
+  readonly onSelect: () => void;
+  readonly onDoubleClick: () => void;
+  readonly onToggleExpanded: (nodeId: string) => void;
+}) {
+  const line = buildTreeRowLine(row, currentLeafId);
+  return (
+    <CommandItem
+      className="items-start py-0.5 pl-0.5"
+      data-testid={`tree-row-${row.node.id}`}
+      title={line}
+      value={row.node.id}
+      onDoubleClick={onDoubleClick}
+      onSelect={onSelect}
+    >
+      <Button
+        aria-label={row.expanded ? "Collapse branch" : "Expand branch"}
+        className={row.hasChildren ? undefined : "invisible"}
+        disabled={searching || !row.hasChildren}
+        size="icon-xs"
+        tabIndex={-1}
+        variant="ghost"
+        onClick={(event) => {
+          // Folding a branch leaves the selection where it is.
+          event.stopPropagation();
+          onToggleExpanded(row.node.id);
+        }}
+      >
+        {row.expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+      </Button>
+      <span className="min-w-0 flex-1 py-0.5 font-mono break-words whitespace-pre-wrap">
+        {line}
+      </span>
+    </CommandItem>
   );
 }
 
