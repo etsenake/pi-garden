@@ -16,7 +16,7 @@ export function SidebarToggleButton({
 }: SidebarToggleButtonProps) {
   return (
     <div className="sidebar-toggle flex">
-      <Tooltip>
+      <Tooltip disableHoverablePopup>
         <TooltipTrigger
           render={
             <Button

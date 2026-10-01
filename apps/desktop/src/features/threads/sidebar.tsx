@@ -485,7 +485,7 @@ export function Sidebar(props: SidebarProps) {
                   );
                 }}
               />
-              <Tooltip>
+              <Tooltip disableHoverablePopup>
                 <TooltipTrigger
                   render={
                     <Button
@@ -773,7 +773,7 @@ function WorkspaceFolderContent(
         </button>
         <span className="workspace-row__actions">
           {onNewThread ? (
-            <Tooltip>
+            <Tooltip disableHoverablePopup>
               <TooltipTrigger
                 render={
                   <Button
@@ -1086,7 +1086,7 @@ function ThreadGroupingControl({
   const [open, setOpen] = useState(false);
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <Tooltip>
+      <Tooltip disableHoverablePopup>
         <TooltipTrigger
           render={
             <DropdownMenuTrigger
@@ -1459,7 +1459,7 @@ const ThreadSessionRow = forwardRef<HTMLDivElement, ThreadSessionRowProps>(
                 <PinIcon filled={pinned} />
               </Button>
             ) : null}
-            <Tooltip>
+            <Tooltip disableHoverablePopup>
               <TooltipTrigger
                 render={
                   <Button
