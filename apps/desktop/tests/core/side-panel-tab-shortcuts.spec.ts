@@ -32,8 +32,14 @@ test("Control or Alt with 1-9 selects side panel tabs while Cmd or Ctrl keeps sw
     const tabs = window.getByRole("tablist", { name: "Workspace tools" });
     const tab = (name: string) => tabs.getByRole("tab", { name, exact: true });
     await expect(tabs.getByRole("tab")).toHaveCount(3);
-    await expect(tab("Review")).toHaveAttribute("title", `Review (${tabLabel(1)})`);
-    await expect(tab("Files")).toHaveAttribute("title", `Files (${tabLabel(2)})`);
+    // Each tab's tooltip names its shortcut.
+    const tooltip = (name: string) =>
+      window.locator('[data-slot="tooltip-content"]', { hasText: name });
+    await tab("Review").hover();
+    await expect(tooltip("Review")).toHaveText(`Review${tabLabel(1)}`);
+    await tab("Files").hover();
+    await expect(tooltip("Files")).toHaveText(`Files${tabLabel(2)}`);
+    await window.mouse.move(0, 0);
 
     // Renderer keydown path, from the composer.
     const composer = window.getByTestId("composer");

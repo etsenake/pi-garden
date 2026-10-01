@@ -7,6 +7,20 @@ import {
 import { toolRefId, type TaskWorkbenchTemplate, type ToolRef } from "../../../contracts/workbench";
 import type { DesktopExtensionViewInfo } from "../../../contracts/extension-views";
 import { CloseIcon, ExtensionIcon, PlusIcon, SidePanelIcon } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/ui/shadcn/item";
+import { Kbd } from "@/ui/shadcn/kbd";
+import { Spinner } from "@/ui/shadcn/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
+import { PanelEmpty } from "./panel-empty";
+import { WithTooltip } from "./workbench-tooltip";
 import { BUILTIN_TOOL_ENTRIES, BUILTIN_TOOLS } from "./builtin-tools";
 import { WorkbenchResizeHandle } from "./workbench-resize-handle";
 import { activeWorkbenchTool } from "./workbench-state";
@@ -100,29 +114,11 @@ export function Workbench({
   };
 
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, toolId: string) => {
+    // Arrow, Home and End keys move between tabs through the tab list itself.
     if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();
       closeAndFocus(toolId);
-      return;
     }
-    const index = view.tools.findIndex((tool) => toolRefId(tool) === toolId);
-    const nextIndex =
-      event.key === "ArrowRight"
-        ? (index + 1) % view.tools.length
-        : event.key === "ArrowLeft"
-          ? (index - 1 + view.tools.length) % view.tools.length
-          : event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? view.tools.length - 1
-              : undefined;
-    if (nextIndex === undefined) return;
-    event.preventDefault();
-    const nextTool = view.tools[nextIndex];
-    if (!nextTool) return;
-    const nextId = toolRefId(nextTool);
-    onActivateTool(nextId);
-    tabRefs.current.get(nextId)?.focus();
   };
 
   if (view.visibility === "hidden") return null;
@@ -136,99 +132,109 @@ export function Workbench({
     >
       <WorkbenchResizeHandle onResize={onResize} />
       <div className="workbench__tabbar">
-        <div aria-label="Workspace tools" className="workbench__tabs" role="tablist">
-          {view.tools.map((tool, index) => {
-            const toolId = toolRefId(tool);
-            const label =
-              tool.kind === "extension"
-                ? (extensionViews.find(
-                    (entry) => entry.extensionId === tool.extensionId && entry.id === tool.viewId,
-                  )?.title ?? workbenchToolLabel(tool))
-                : workbenchToolLabel(tool);
-            const selected = view.selection.kind === "tool" && view.selection.toolId === toolId;
-            const slot = index < SIDE_PANEL_TAB_SHORTCUT_SLOT_COUNT ? index + 1 : undefined;
-            const shortcut = slot ? getSidePanelTabShortcutLabel(platform, slot) : undefined;
-            return (
-              <div className="workbench__tab-wrapper" key={toolId} role="presentation">
-                <button
-                  aria-controls={panelId}
-                  aria-keyshortcuts={
-                    slot ? `${platform === "darwin" ? "Control" : "Alt"}+${slot}` : undefined
-                  }
-                  aria-label={label}
-                  aria-selected={selected}
-                  className={`workbench__tab${selected ? " workbench__tab--active" : ""}`}
-                  data-tab-shortcut={tabHintsVisible && slot ? String(slot) : undefined}
-                  data-testid={`workbench-tab-${toolId}`}
-                  disabled={loading}
-                  id={tabId(toolId)}
-                  onClick={() => onActivateTool(toolId)}
-                  onKeyDown={(event) => onTabKeyDown(event, toolId)}
-                  ref={(button) => {
-                    if (button) tabRefs.current.set(toolId, button);
-                    else tabRefs.current.delete(toolId);
-                  }}
-                  role="tab"
-                  tabIndex={selected || (view.selection.kind === "chooser" && index === 0) ? 0 : -1}
-                  title={shortcut ? `${label} (${shortcut})` : label}
-                  type="button"
-                >
-                  {tabHintsVisible && shortcut ? (
-                    <span className="workbench__tab-shortcut" aria-hidden="true">
-                      {shortcut}
-                    </span>
-                  ) : (
-                    <ToolIcon tool={tool} />
-                  )}
-                  <span>{label}</span>
-                </button>
-                <button
-                  aria-label={`Close ${label} tab`}
-                  className="workbench__tab-close icon-button"
-                  disabled={loading}
-                  onClick={() => closeAndFocus(toolId)}
-                  tabIndex={-1}
-                  title={`Close ${label} tab`}
-                  type="button"
-                >
-                  <CloseIcon />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <button
-          aria-label="Add tab"
-          className="workbench__add icon-button"
-          data-testid="workbench-add-tab"
-          disabled={loading}
-          onClick={onShowChooser}
-          ref={addRef}
-          title="Add tab"
-          type="button"
+        <Tabs
+          className="min-w-0 flex-1"
+          onValueChange={(toolId) => {
+            if (typeof toolId === "string") onActivateTool(toolId);
+          }}
+          value={view.selection.kind === "tool" ? view.selection.toolId : null}
         >
-          <PlusIcon />
-        </button>
-        <button
-          aria-label="Toggle side panel"
-          aria-pressed="true"
-          aria-controls="task-workbench"
-          data-testid="toggle-side-panel"
-          className="workbench__add icon-button"
-          onClick={onTogglePanel}
-          title="Hide side panel"
-          type="button"
-        >
-          <SidePanelIcon />
-        </button>
+          <TabsList
+            activateOnFocus
+            aria-label="Workspace tools"
+            className="w-full min-w-0 justify-start overflow-x-auto [scrollbar-width:none]"
+            variant="line"
+          >
+            {view.tools.map((tool, index) => {
+              const toolId = toolRefId(tool);
+              const label =
+                tool.kind === "extension"
+                  ? (extensionViews.find(
+                      (entry) => entry.extensionId === tool.extensionId && entry.id === tool.viewId,
+                    )?.title ?? workbenchToolLabel(tool))
+                  : workbenchToolLabel(tool);
+              const slot = index < SIDE_PANEL_TAB_SHORTCUT_SLOT_COUNT ? index + 1 : undefined;
+              const shortcut = slot ? getSidePanelTabShortcutLabel(platform, slot) : undefined;
+              return (
+                <div className="flex max-w-45 min-w-0 flex-none items-center" key={toolId}>
+                  <WithTooltip label={label} shortcut={shortcut}>
+                    <TabsTrigger
+                      aria-controls={panelId}
+                      aria-keyshortcuts={
+                        slot ? `${platform === "darwin" ? "Control" : "Alt"}+${slot}` : undefined
+                      }
+                      aria-label={label}
+                      className="min-w-0"
+                      data-tab-shortcut={tabHintsVisible && slot ? String(slot) : undefined}
+                      data-testid={`workbench-tab-${toolId}`}
+                      disabled={loading}
+                      id={tabId(toolId)}
+                      onKeyDown={(event) => onTabKeyDown(event, toolId)}
+                      ref={(button: HTMLButtonElement | null) => {
+                        if (button) tabRefs.current.set(toolId, button);
+                        else tabRefs.current.delete(toolId);
+                      }}
+                      value={toolId}
+                    >
+                      {tabHintsVisible && shortcut ? (
+                        <Kbd aria-hidden="true" className="workbench__tab-shortcut">
+                          {shortcut}
+                        </Kbd>
+                      ) : (
+                        <ToolIcon tool={tool} />
+                      )}
+                      <span className="truncate">{label}</span>
+                    </TabsTrigger>
+                  </WithTooltip>
+                  <Button
+                    aria-label={`Close ${label} tab`}
+                    disabled={loading}
+                    onClick={() => closeAndFocus(toolId)}
+                    size="icon-xs"
+                    tabIndex={-1}
+                    variant="ghost"
+                  >
+                    <CloseIcon />
+                  </Button>
+                </div>
+              );
+            })}
+          </TabsList>
+        </Tabs>
+        <WithTooltip label="Add tab">
+          <Button
+            aria-label="Add tab"
+            data-testid="workbench-add-tab"
+            disabled={loading}
+            onClick={onShowChooser}
+            ref={addRef}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <PlusIcon />
+          </Button>
+        </WithTooltip>
+        <WithTooltip label="Hide side panel">
+          <Button
+            aria-label="Toggle side panel"
+            aria-pressed="true"
+            aria-controls="task-workbench"
+            data-testid="toggle-side-panel"
+            onClick={onTogglePanel}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <SidePanelIcon />
+          </Button>
+        </WithTooltip>
       </div>
       {error ? (
         <div className="workbench__error" role="status">
           <p>{error}</p>
           {loading && onRetryRestore ? (
-            <button className="button" onClick={onRetryRestore} type="button">
+            <Button onClick={onRetryRestore} size="sm" variant="outline">
               Retry restoring tabs
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -239,58 +245,68 @@ export function Workbench({
         role={activeTool ? "tabpanel" : undefined}
       >
         {loading ? (
-          <p className="workbench__loading" role="status">
-            {error
-              ? "Saved tabs are unavailable until restoration succeeds."
-              : "Restoring tool tabs…"}
-          </p>
+          <PanelEmpty
+            loading
+            role="status"
+            title={
+              error
+                ? "Saved tabs are unavailable until restoration succeeds."
+                : "Restoring tool tabs…"
+            }
+          />
         ) : view.selection.kind === "chooser" ? (
           <div className="workbench__chooser" data-testid="workbench-chooser">
             <h2>Open a tool</h2>
             <p>Keep the tools you need alongside your conversation.</p>
             {BUILTIN_TOOL_ENTRIES.map(({ kind, label, description, Icon, shortcutKey }) => (
-              <button
+              <Item
                 aria-keyshortcuts={
                   shortcutKey
                     ? `${platform === "darwin" ? "Meta" : "Control"}+${shortcutKey}`
                     : undefined
                 }
                 aria-label={label}
-                className="workbench__choice"
+                className="text-left hover:bg-muted"
                 key={kind}
                 onClick={() => onOpenTool({ kind })}
-                type="button"
+                render={<button type="button" />}
+                variant="outline"
               >
-                <span className="workbench__choice-icon">
+                <ItemMedia variant="icon">
                   <Icon />
-                </span>
-                <span className="workbench__choice-copy">
-                  <strong>{label}</strong>
-                  <span>{description}</span>
-                </span>
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>{label}</ItemTitle>
+                  <ItemDescription>{description}</ItemDescription>
+                </ItemContent>
                 {shortcutKey ? (
-                  <kbd className="workbench__choice-shortcut">
-                    {formatShortcut(platform, shortcutKey)}
-                  </kbd>
+                  <ItemActions>
+                    <Kbd>{formatShortcut(platform, shortcutKey)}</Kbd>
+                  </ItemActions>
                 ) : null}
-              </button>
+              </Item>
             ))}
             <h3 className="workbench__extension-heading">Extension views</h3>
-            {extensionViewsLoading ? <p role="status">Loading extension views…</p> : null}
+            {extensionViewsLoading ? (
+              <p className="flex items-center gap-2" role="status">
+                <Spinner aria-hidden="true" role="presentation" />
+                Loading extension views…
+              </p>
+            ) : null}
             {extensionViewsError ? (
               <div role="status">
                 <p>{extensionViewsError}</p>
                 {onReloadExtensionViews ? (
-                  <button className="button" type="button" onClick={onReloadExtensionViews}>
+                  <Button onClick={onReloadExtensionViews} size="sm" variant="outline">
                     Refresh views
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             ) : null}
             {extensionViews.map((extension) => (
-              <button
+              <Item
                 aria-label={extension.title}
-                className="workbench__choice"
+                className="text-left hover:bg-muted"
                 key={toolRefId({
                   kind: "extension",
                   extensionId: extension.extensionId,
@@ -303,49 +319,55 @@ export function Workbench({
                     viewId: extension.id,
                   })
                 }
-                type="button"
+                render={<button type="button" />}
+                variant="outline"
               >
-                <span className="workbench__choice-icon">
+                <ItemMedia variant="icon">
                   <ExtensionIcon />
-                </span>
-                <span className="workbench__choice-copy">
-                  <strong>{extension.title}</strong>
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>{extension.title}</ItemTitle>
                   {extension.state === "error" ? (
-                    <span>{extension.error ?? "View unavailable"}</span>
+                    <ItemDescription>{extension.error ?? "View unavailable"}</ItemDescription>
                   ) : null}
-                </span>
-              </button>
+                </ItemContent>
+              </Item>
             ))}
             {!extensionViewsLoading && !extensionViewsError && extensionViews.length === 0 ? (
               <p>Installed extensions can provide additional views here.</p>
             ) : null}
           </div>
         ) : activeTool?.kind === "extension" && activeExtension?.state !== "ready" ? (
-          <div className="workbench__unavailable" role="status">
-            <ExtensionIcon />
-            <h2>
-              {extensionViewsLoading
+          <PanelEmpty
+            description={
+              activeExtension?.error ||
+              extensionViewsError ||
+              "Your saved tab is retained. Extension commands can still be used when installed."
+            }
+            loading={extensionViewsLoading}
+            media={<ExtensionIcon />}
+            role="status"
+            title={
+              extensionViewsLoading
                 ? "Finding this extension view…"
-                : "This extension view is unavailable"}
-            </h2>
-            <p>
-              {activeExtension?.error ||
-                extensionViewsError ||
-                "Your saved tab is retained. Extension commands can still be used when installed."}
-            </p>
-            {!extensionViewsLoading && onReloadExtensionViews ? (
-              <button className="button" type="button" onClick={onReloadExtensionViews}>
-                Refresh views
-              </button>
-            ) : null}
-            <button
-              className="button"
-              onClick={() => closeAndFocus(toolRefId(activeTool))}
-              type="button"
-            >
-              Close tab
-            </button>
-          </div>
+                : "This extension view is unavailable"
+            }
+          >
+            <div className="flex gap-2">
+              {!extensionViewsLoading && onReloadExtensionViews ? (
+                <Button onClick={onReloadExtensionViews} size="sm" variant="outline">
+                  Refresh views
+                </Button>
+              ) : null}
+              <Button
+                onClick={() => closeAndFocus(toolRefId(activeTool))}
+                size="sm"
+                variant="outline"
+              >
+                Close tab
+              </Button>
+            </div>
+          </PanelEmpty>
         ) : (
           children
         )}
