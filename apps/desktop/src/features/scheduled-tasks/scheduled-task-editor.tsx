@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { useMemo, useRef, useState } from "react";
 import type {
   CreateScheduledTaskInput,
   ScheduledTaskRecord,
@@ -19,13 +13,34 @@ import {
   WEEKDAY_NAMES,
   type Weekday,
 } from "../../../contracts/scheduled-tasks";
-import { trapDialogFocus } from "../../ui/dialog-focus";
+import { Button } from "@/ui/shadcn/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/ui/shadcn/field";
+import { Input } from "@/ui/shadcn/input";
+import { RadioGroup, RadioGroupItem } from "@/ui/shadcn/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/shadcn/select";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/ui/shadcn/sheet";
+import { Textarea } from "@/ui/shadcn/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/ui/shadcn/toggle-group";
 
 export type ScheduledEditorState =
   | { readonly mode: "create"; readonly prefill?: Partial<CreateScheduledTaskInput> }
   | { readonly mode: "edit"; readonly taskId: string };
 
 type FrequencyKind = ScheduledTaskSchedule["kind"];
+
+const FREQUENCIES: readonly { readonly id: FrequencyKind; readonly label: string }[] = [
+  { id: "daily", label: "Daily" },
+  { id: "weekly", label: "Weekly" },
+  { id: "interval", label: "Interval" },
+  { id: "once", label: "Once" },
+];
 
 interface ScheduledTaskEditorProps {
   readonly editor: ScheduledEditorState;
@@ -84,7 +99,7 @@ export function ScheduledTaskEditor({
   onSubmit,
   onOpenChat,
 }: ScheduledTaskEditorProps) {
-  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const titleRef = useRef<HTMLInputElement | null>(null);
   const source = editor.mode === "edit" ? task : undefined;
   const prefill = editor.mode === "create" ? editor.prefill : undefined;
   const [title, setTitle] = useState(source?.title ?? prefill?.title ?? "");
@@ -150,21 +165,6 @@ export function ScheduledTaskEditor({
         ? { workspaceId: source.runs.at(-1)!.workspaceId, sessionId: source.runs.at(-1)!.sessionId }
         : undefined;
 
-  useEffect(() => {
-    dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
-  }, []);
-
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Tab") {
-      trapDialogFocus(event, dialogRef.current);
-      return;
-    }
-    if (event.key === "Escape" && !busy) {
-      event.preventDefault();
-      onClose();
-    }
-  };
-
   const buildSchedule = (): ScheduledTaskSchedule | undefined => {
     if (frequency === "once") {
       if (!onceAt) {
@@ -210,218 +210,240 @@ export function ScheduledTaskEditor({
     return { kind: "new-thread", workspaceId };
   };
 
+  const submit = () => {
+    const schedule = buildSchedule();
+    const target = buildTarget();
+    if (!schedule || !target) {
+      return;
+    }
+    onSubmit({
+      title: title.trim(),
+      instruction: instruction.trim(),
+      schedule,
+      target,
+    });
+  };
+
   return (
-    <div className="scheduled-editor-backdrop" onClick={onClose}>
-      <div
-        className="scheduled-editor"
-        data-testid="scheduled-task-editor"
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="scheduled-editor-title"
-        tabIndex={-1}
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={handleKeyDown}
-      >
-        <header className="scheduled-editor__header">
-          <h2 id="scheduled-editor-title">
+    <Sheet
+      open
+      onOpenChange={(open, details) => {
+        if (open || (busy && details.reason === "escape-key")) {
+          return;
+        }
+        onClose();
+      }}
+    >
+      <SheetContent data-testid="scheduled-task-editor" initialFocus={titleRef}>
+        <SheetHeader>
+          <SheetTitle>
             {editor.mode === "edit" ? "Edit scheduled task" : "Set up scheduled task"}
-          </h2>
-          <button className="icon-button" type="button" aria-label="Close" onClick={onClose}>
-            ×
-          </button>
-        </header>
+          </SheetTitle>
+        </SheetHeader>
 
-        <label className="scheduled-editor__field">
-          <span>Title</span>
-          <input
-            data-testid="scheduled-task-title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Weekly status"
-          />
-        </label>
-        <label className="scheduled-editor__field">
-          <span>Instructions</span>
-          <textarea
-            data-testid="scheduled-task-instruction"
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            placeholder="What should pi do when this runs?"
-            rows={5}
-          />
-        </label>
-
-        <label className="scheduled-editor__field">
-          <span>Workspace</span>
-          <select
-            data-testid="scheduled-task-workspace"
-            value={workspaceId}
-            onChange={(event) => {
-              setWorkspaceId(event.target.value);
-              setSessionId("");
-            }}
-          >
-            {workspaces.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <fieldset className="scheduled-editor__field">
-          <legend>Runs in</legend>
-          <label className="scheduled-editor__choice">
-            <input
-              type="radio"
-              name="scheduled-target"
-              checked={targetKind === "new-thread"}
-              onChange={() => setTargetKind("new-thread")}
+        <FieldGroup className="min-h-0 flex-1 overflow-y-auto px-4">
+          <Field>
+            <FieldLabel htmlFor="scheduled-task-title">Title</FieldLabel>
+            <Input
+              data-testid="scheduled-task-title"
+              id="scheduled-task-title"
+              ref={titleRef}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Weekly status"
             />
-            New thread for this task
-          </label>
-          <label className="scheduled-editor__choice">
-            <input
-              type="radio"
-              name="scheduled-target"
-              checked={targetKind === "existing-thread"}
-              onChange={() => setTargetKind("existing-thread")}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="scheduled-task-instruction">Instructions</FieldLabel>
+            <Textarea
+              data-testid="scheduled-task-instruction"
+              id="scheduled-task-instruction"
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              placeholder="What should pi do when this runs?"
+              rows={5}
             />
-            Existing thread
-          </label>
-          {targetKind === "existing-thread" ? (
-            <select
-              data-testid="scheduled-task-session"
-              value={sessionId}
-              onChange={(event) => setSessionId(event.target.value)}
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="scheduled-task-workspace">Workspace</FieldLabel>
+            <Select
+              items={workspaces.map((entry) => ({ value: entry.id, label: entry.name }))}
+              value={workspaceId}
+              onValueChange={(value) => {
+                if (value) {
+                  setWorkspaceId(value);
+                  setSessionId("");
+                }
+              }}
             >
-              <option value="">Select a thread</option>
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.title}
-                </option>
+              <SelectTrigger
+                className="w-full"
+                data-testid="scheduled-task-workspace"
+                id="scheduled-task-workspace"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((entry) => (
+                  <SelectItem key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <FieldSet>
+            <FieldLegend variant="label">Runs in</FieldLegend>
+            <RadioGroup
+              value={targetKind}
+              onValueChange={(value) => setTargetKind(value as typeof targetKind)}
+            >
+              <Field orientation="horizontal">
+                <RadioGroupItem id="scheduled-target-new" value="new-thread" />
+                <FieldLabel className="font-normal" htmlFor="scheduled-target-new">
+                  New thread for this task
+                </FieldLabel>
+              </Field>
+              <Field orientation="horizontal">
+                <RadioGroupItem id="scheduled-target-existing" value="existing-thread" />
+                <FieldLabel className="font-normal" htmlFor="scheduled-target-existing">
+                  Existing thread
+                </FieldLabel>
+              </Field>
+            </RadioGroup>
+            {targetKind === "existing-thread" ? (
+              <Select
+                items={sessions.map((session) => ({ value: session.id, label: session.title }))}
+                value={sessionId || null}
+                onValueChange={(value) => setSessionId(value ?? "")}
+              >
+                <SelectTrigger
+                  aria-label="Thread"
+                  className="w-full"
+                  data-testid="scheduled-task-session"
+                >
+                  <SelectValue placeholder="Select a thread" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sessions.map((session) => (
+                    <SelectItem key={session.id} value={session.id}>
+                      {session.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </FieldSet>
+
+          <FieldSet>
+            <FieldLegend variant="label">Frequency</FieldLegend>
+            <ToggleGroup
+              data-testid="scheduled-task-frequency"
+              variant="outline"
+              value={[frequency]}
+              onValueChange={(value) => {
+                const next = value[0] as FrequencyKind | undefined;
+                if (next) {
+                  setFrequency(next);
+                }
+              }}
+            >
+              {FREQUENCIES.map((entry) => (
+                <ToggleGroupItem key={entry.id} value={entry.id}>
+                  {entry.label}
+                </ToggleGroupItem>
               ))}
-            </select>
+            </ToggleGroup>
+          </FieldSet>
+
+          {frequency === "once" ? (
+            <Field>
+              <FieldLabel htmlFor="scheduled-task-once-at">Run at</FieldLabel>
+              <Input
+                data-testid="scheduled-task-once-at"
+                id="scheduled-task-once-at"
+                type="datetime-local"
+                value={onceAt}
+                onChange={(event) => setOnceAt(event.target.value)}
+              />
+            </Field>
           ) : null}
-        </fieldset>
-
-        <label className="scheduled-editor__field">
-          <span>Frequency</span>
-          <select
-            data-testid="scheduled-task-frequency"
-            value={frequency}
-            onChange={(event) => setFrequency(event.target.value as FrequencyKind)}
-          >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="interval">Interval</option>
-            <option value="once">Once</option>
-          </select>
-        </label>
-
-        {frequency === "once" ? (
-          <label className="scheduled-editor__field">
-            <span>Run at</span>
-            <input
-              data-testid="scheduled-task-once-at"
-              type="datetime-local"
-              value={onceAt}
-              onChange={(event) => setOnceAt(event.target.value)}
-            />
-          </label>
-        ) : null}
-        {frequency === "daily" || frequency === "weekly" ? (
-          <label className="scheduled-editor__field">
-            <span>Time</span>
-            <input
-              data-testid="scheduled-task-time"
-              type="time"
-              value={clock}
-              onChange={(event) => setClock(event.target.value)}
-            />
-          </label>
-        ) : null}
-        {frequency === "weekly" ? (
-          <fieldset className="scheduled-editor__field">
-            <legend>Days</legend>
-            <div className="scheduled-editor__days">
-              {WEEKDAY_NAMES.map((name, index) => {
-                const day = index as Weekday;
-                const selected = days.includes(day);
-                return (
-                  <button
-                    className={`scheduled-editor__day${selected ? " scheduled-editor__day--active" : ""}`}
-                    key={name}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() =>
-                      setDays((current) =>
-                        current.includes(day)
-                          ? current.filter((entry) => entry !== day)
-                          : [...current, day].sort((left, right) => left - right),
-                      )
-                    }
-                  >
+          {frequency === "daily" || frequency === "weekly" ? (
+            <Field>
+              <FieldLabel htmlFor="scheduled-task-time">Time</FieldLabel>
+              <Input
+                data-testid="scheduled-task-time"
+                id="scheduled-task-time"
+                type="time"
+                value={clock}
+                onChange={(event) => setClock(event.target.value)}
+              />
+            </Field>
+          ) : null}
+          {frequency === "weekly" ? (
+            <FieldSet>
+              <FieldLegend variant="label">Days</FieldLegend>
+              <ToggleGroup
+                className="flex-wrap"
+                multiple
+                size="sm"
+                variant="outline"
+                value={days.map(String)}
+                onValueChange={(value) =>
+                  setDays(
+                    value
+                      .map((entry) => Number(entry) as Weekday)
+                      .sort((left, right) => left - right),
+                  )
+                }
+              >
+                {WEEKDAY_NAMES.map((name, index) => (
+                  <ToggleGroupItem aria-label={name} key={name} value={String(index)}>
                     {name.slice(0, 3)}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        ) : null}
-        {frequency === "interval" ? (
-          <label className="scheduled-editor__field">
-            <span>Every (minutes)</span>
-            <input
-              data-testid="scheduled-task-interval"
-              type="number"
-              min={1}
-              max={7 * 24 * 60}
-              value={intervalMinutes}
-              onChange={(event) => setIntervalMinutes(Number(event.target.value))}
-            />
-          </label>
-        ) : null}
-
-        {error ? <p className="scheduled-editor__error">{error}</p> : null}
-
-        <div className="scheduled-editor__actions">
-          {openChatTarget && onOpenChat ? (
-            <button
-              className="button button--secondary"
-              type="button"
-              onClick={() => onOpenChat(openChatTarget)}
-            >
-              Open chat
-            </button>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </FieldSet>
           ) : null}
-          <button className="button button--secondary" type="button" onClick={onClose}>
+          {frequency === "interval" ? (
+            <Field>
+              <FieldLabel htmlFor="scheduled-task-interval">Every (minutes)</FieldLabel>
+              <Input
+                data-testid="scheduled-task-interval"
+                id="scheduled-task-interval"
+                type="number"
+                min={1}
+                max={7 * 24 * 60}
+                value={intervalMinutes}
+                onChange={(event) => setIntervalMinutes(Number(event.target.value))}
+              />
+            </Field>
+          ) : null}
+
+          {error ? <FieldError>{error}</FieldError> : null}
+        </FieldGroup>
+
+        <SheetFooter className="flex-row flex-wrap justify-end">
+          {openChatTarget && onOpenChat ? (
+            <Button variant="outline" type="button" onClick={() => onOpenChat(openChatTarget)}>
+              Open chat
+            </Button>
+          ) : null}
+          <Button variant="outline" type="button" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            className="button button--primary"
+          </Button>
+          <Button
             data-testid="scheduled-task-save"
             type="button"
             disabled={!canSubmit || busy}
-            onClick={() => {
-              const schedule = buildSchedule();
-              const target = buildTarget();
-              if (!schedule || !target) {
-                return;
-              }
-              onSubmit({
-                title: title.trim(),
-                instruction: instruction.trim(),
-                schedule,
-                target,
-              });
-            }}
+            onClick={submit}
           >
             {editor.mode === "edit" ? "Save" : "Create"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
