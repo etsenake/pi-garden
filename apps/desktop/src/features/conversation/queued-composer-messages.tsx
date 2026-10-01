@@ -1,5 +1,7 @@
 import type { ComposerAttachment, QueuedComposerMessage } from "../../../contracts/desktop-state";
 import { FileIcon } from "../../ui/icons";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
 import { ImageAttachmentThumb } from "./image-attachment-thumb";
 import { parseAnnotatedPrompt } from "./annotations/annotation-prompt";
 
@@ -37,9 +39,9 @@ export function QueuedComposerMessages({
       {editingQueuedMessageId ? (
         <div className="queued-composer-messages__editing" data-testid="queued-composer-editing">
           <span>Editing queued message</span>
-          <button type="button" onClick={onCancelEdit}>
+          <Button size="xs" variant="ghost" onClick={onCancelEdit}>
             Cancel
-          </button>
+          </Button>
         </div>
       ) : null}
       {messages.map((message) => (
@@ -54,23 +56,24 @@ export function QueuedComposerMessages({
             ) : null}
             <div className="queued-composer-message__actions">
               {message.mode !== "steer" ? (
-                <button type="button" onClick={() => onSteerMessage(message.id)}>
+                <Button size="xs" variant="ghost" onClick={() => onSteerMessage(message.id)}>
                   Steer
-                </button>
+                </Button>
               ) : null}
               {/* Its annotations cannot be reattached to the transcript, so it is not editable. */}
               {parseAnnotatedPrompt(message.text) ? null : (
-                <button type="button" onClick={() => onEditMessage(message.id)}>
+                <Button size="xs" variant="ghost" onClick={() => onEditMessage(message.id)}>
                   Edit
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 aria-label={`Delete queued message ${message.text || message.id}`}
-                type="button"
+                size="xs"
+                variant="ghost"
                 onClick={() => onRemoveMessage(message.id)}
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
           {message.attachments.length > 0 ? (
@@ -90,22 +93,24 @@ export function QueuedComposerMessages({
 }
 
 function QueuedAttachmentPreview({ attachment }: { readonly attachment: ComposerAttachment }) {
-  return (
-    <div className={`queued-composer-attachment queued-composer-attachment--${attachment.kind}`}>
-      {attachment.kind === "image" ? (
+  if (attachment.kind === "image") {
+    return (
+      <div className="queued-composer-attachment queued-composer-attachment--image">
         <ImageAttachmentThumb
           className="queued-composer-attachment__preview"
           name={attachment.name}
           src={`data:${attachment.mimeType};base64,${attachment.data}`}
         />
-      ) : (
-        <>
-          <span className="queued-composer-attachment__icon" aria-hidden="true">
-            <FileIcon />
-          </span>
-          <span className="queued-composer-attachment__name">{attachment.name}</span>
-        </>
-      )}
-    </div>
+      </div>
+    );
+  }
+  return (
+    <Badge
+      className={`queued-composer-attachment queued-composer-attachment--${attachment.kind} max-w-56`}
+      variant="outline"
+    >
+      <FileIcon />
+      <span className="queued-composer-attachment__name truncate">{attachment.name}</span>
+    </Badge>
   );
 }

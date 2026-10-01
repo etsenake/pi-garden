@@ -20,6 +20,9 @@ import { composerEditorRegionSlots, type ComposerEditorRegion } from "./composer
 import type { ActiveTheme } from "../../ui/active-theme";
 import type { MentionOption } from "./hooks/use-mention-menu";
 import { ArrowUpIcon, PlusIcon, StopSquareIcon } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Kbd } from "@/ui/shadcn/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 import type {
   ComposerSlashCommand,
   ComposerSlashCommandSection,
@@ -243,27 +246,48 @@ export function ComposerPanel({
                   <ContextMeter usage={usage} />
                 </div>
                 <div className="composer__actions">
-                  <button
-                    aria-label="Attach files"
-                    className="icon-button composer__attach"
-                    type="button"
-                    onClick={onPickAttachments}
-                  >
-                    <PlusIcon />
-                  </button>
-                  <button
-                    aria-label={primaryActionIsStop ? "Stop run" : "Send message"}
-                    className="button button--primary button--cta-icon"
-                    data-testid="send"
-                    type="button"
-                    disabled={
-                      !primaryActionIsStop &&
-                      (!hasComposerInput || modelOnboarding.requiresModelSelection)
-                    }
-                    onClick={onSubmit}
-                  >
-                    {primaryActionIsStop ? <StopSquareIcon /> : <ArrowUpIcon />}
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          aria-label="Attach files"
+                          size="icon"
+                          variant="ghost"
+                          onClick={onPickAttachments}
+                        />
+                      }
+                    >
+                      <PlusIcon />
+                    </TooltipTrigger>
+                    <TooltipContent>Attach files</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          aria-label={primaryActionIsStop ? "Stop run" : "Send message"}
+                          data-testid="send"
+                          size="icon"
+                          disabled={
+                            !primaryActionIsStop &&
+                            (!hasComposerInput || modelOnboarding.requiresModelSelection)
+                          }
+                          onClick={onSubmit}
+                        />
+                      }
+                    >
+                      {primaryActionIsStop ? <StopSquareIcon /> : <ArrowUpIcon />}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {primaryActionIsStop ? (
+                        "Stop run"
+                      ) : (
+                        <>
+                          Send message <Kbd>↵</Kbd>
+                        </>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -281,15 +305,14 @@ export function ComposerPanel({
             Preparing task… Your current draft is saved before opening it.
           </p>
           {selectedSession.status === "running" ? (
-            <button
+            <Button
               aria-label="Stop run"
-              className="button button--primary button--cta-icon"
               data-testid="stop-while-preparing-task"
+              size="icon"
               onClick={onStop}
-              type="button"
             >
               <StopSquareIcon />
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}

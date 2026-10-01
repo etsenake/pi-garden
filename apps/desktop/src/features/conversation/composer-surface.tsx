@@ -35,6 +35,9 @@ import {
   SparkIcon,
   StatusIcon,
 } from "../../ui/icons";
+import { XIcon } from "lucide-react";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
 import type { ComposerEditorHandle } from "./composer-editor";
 import { bindTextareaEditor } from "./composer-editor";
 import { ImageAttachmentThumb } from "./image-attachment-thumb";
@@ -204,14 +207,15 @@ export function ComposerSurface({
               <span className="composer__slash-intent-meta">{activeSlashCommandMeta}</span>
             ) : null}
           </span>
-          <button
+          <Button
             aria-label={`Clear ${activeSlashCommand.title}`}
-            className="composer__slash-intent-clear"
-            type="button"
+            className="ml-auto"
+            size="icon-xs"
+            variant="ghost"
             onClick={onClearSlashCommand}
           >
-            ×
-          </button>
+            <XIcon />
+          </Button>
         </div>
       ) : null}
       <QueuedComposerMessages
@@ -225,35 +229,46 @@ export function ComposerSurface({
       {annotationChip}
       {attachments.length > 0 ? (
         <div className="composer__attachments">
-          {attachments.map((attachment) => (
-            <div
-              className={`composer-attachment composer-attachment--${attachment.kind}`}
-              key={attachment.id}
-            >
-              {attachment.kind === "image" ? (
+          {attachments.map((attachment) =>
+            attachment.kind === "image" ? (
+              <div
+                className="composer-attachment composer-attachment--image group relative"
+                key={attachment.id}
+              >
                 <ImageAttachmentThumb
                   className="composer-attachment__preview"
                   name={attachment.name}
                   src={`data:${attachment.mimeType};base64,${attachment.data}`}
                 />
-              ) : (
-                <>
-                  <span className="composer-attachment__icon" aria-hidden="true">
-                    <FileIcon />
-                  </span>
-                  <span className="composer-attachment__name">{attachment.name}</span>
-                </>
-              )}
-              <button
-                aria-label={`Remove ${attachment.name}`}
-                className="composer-attachment__remove"
-                type="button"
-                onClick={() => onRemoveAttachment(attachment.id)}
+                <Button
+                  aria-label={`Remove ${attachment.name}`}
+                  className="absolute -top-2 -right-2 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                  size="icon-xs"
+                  variant="outline"
+                  onClick={() => onRemoveAttachment(attachment.id)}
+                >
+                  <XIcon />
+                </Button>
+              </div>
+            ) : (
+              <Badge
+                className={`composer-attachment composer-attachment--${attachment.kind} h-7 max-w-72 pr-0.5`}
+                key={attachment.id}
+                variant="outline"
               >
-                ×
-              </button>
-            </div>
-          ))}
+                <FileIcon />
+                <span className="composer-attachment__name truncate">{attachment.name}</span>
+                <Button
+                  aria-label={`Remove ${attachment.name}`}
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={() => onRemoveAttachment(attachment.id)}
+                >
+                  <XIcon />
+                </Button>
+              </Badge>
+            ),
+          )}
         </div>
       ) : null}
       {lastError ? (
