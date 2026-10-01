@@ -38,6 +38,7 @@ interface CustomizePageProps {
     "getExtensionCompatibility" | "onExtensionCompatibilityChanged"
   >;
   readonly onAdaptForDesktop?: (path: string) => void;
+  readonly onStartAuthoring?: (kind: "host-contribution" | "rich-surface" | "desktop-view") => void;
 }
 
 const NEW_SKILL_PROMPT =
@@ -61,6 +62,7 @@ export function CustomizePage({
   shortcutConflicts = [],
   api,
   onAdaptForDesktop,
+  onStartAuthoring,
 }: CustomizePageProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -138,6 +140,34 @@ export function CustomizePage({
               >
                 New skill
               </button>
+            ) : null}
+            {tab === "extensions" && workspace && onStartAuthoring ? (
+              <>
+                <button
+                  className="button"
+                  data-testid="new-host-contribution"
+                  type="button"
+                  onClick={() => onStartAuthoring("host-contribution")}
+                >
+                  New badge
+                </button>
+                <button
+                  className="button"
+                  data-testid="new-rich-surface"
+                  type="button"
+                  onClick={() => onStartAuthoring("rich-surface")}
+                >
+                  New widget
+                </button>
+                <button
+                  className="button button--primary"
+                  data-testid="new-desktop-view"
+                  type="button"
+                  onClick={() => onStartAuthoring("desktop-view")}
+                >
+                  New desktop view
+                </button>
+              </>
             ) : null}
           </div>
         </header>

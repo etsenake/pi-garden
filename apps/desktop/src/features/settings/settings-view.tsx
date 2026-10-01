@@ -74,6 +74,7 @@ interface SettingsViewProps {
   readonly onSetThemeMode: (mode: "system" | "light" | "dark") => void;
   readonly onSetThemePresetId: (presetId: string) => void;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
+  readonly onAuthorGardenTheme?: () => void;
 }
 
 export function SettingsView({
@@ -116,6 +117,7 @@ export function SettingsView({
   onSetThemeMode,
   onSetThemePresetId,
   onSetEnableTransparency,
+  onAuthorGardenTheme,
 }: SettingsViewProps) {
   const definition = settingsSectionDefinition(section);
   const header = (
@@ -166,6 +168,7 @@ export function SettingsView({
               onSetThemePresetId={onSetThemePresetId}
               enableTransparency={enableTransparency}
               onSetEnableTransparency={onSetEnableTransparency}
+              onAuthorGardenTheme={onAuthorGardenTheme}
             />
           ) : null}
 

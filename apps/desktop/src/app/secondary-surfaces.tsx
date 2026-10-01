@@ -393,6 +393,23 @@ export function SecondarySurfaces({
     });
   };
 
+  const handleStartAuthoring = (
+    kind: "host-contribution" | "rich-surface" | "desktop-view" | "theme",
+  ) => {
+    const workspaceId =
+      kind === "theme" ? (settingsWorkspace?.id ?? extensionsWorkspace?.id) : extensionsWorkspace?.id;
+    if (!workspaceId) return;
+    void updateSnapshot(setSnapshot, () =>
+      api.startDesktopAuthoring({
+        workspaceId,
+        kind,
+        ...(kind === "rich-surface" ? { surface: "composer-before" } : {}),
+      }),
+    ).catch((error: unknown) => {
+      console.error("[renderer] startDesktopAuthoring failed", error);
+    });
+  };
+
   const handleOpenExtensionFolder = (filePath: string) => {
     if (!extensionsWorkspace) {
       return;
@@ -539,6 +556,7 @@ export function SecondarySurfaces({
               : workspacePicker(skillsWorkspace, onSelectSkillsWorkspace)
           }
           onAdaptForDesktop={handleAdaptForDesktop}
+          onStartAuthoring={handleStartAuthoring}
           onOpenExtensionFolder={handleOpenExtensionFolder}
           onOpenSkillFolder={handleOpenSkillFolder}
           onRefresh={() => {
@@ -635,6 +653,7 @@ export function SecondarySurfaces({
               },
             );
           }}
+          onAuthorGardenTheme={() => handleStartAuthoring("theme")}
         />
       )}
     </SecondarySurface>

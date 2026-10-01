@@ -14,6 +14,7 @@ interface SettingsAppearanceSectionProps {
   readonly onSetThemePresetId: (presetId: string) => void;
   readonly enableTransparency: boolean;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
+  readonly onAuthorGardenTheme?: () => void;
 }
 
 const THEME_MODES: readonly { readonly mode: ThemeMode; readonly label: string }[] = [
@@ -30,6 +31,7 @@ export function SettingsAppearanceSection({
   onSetThemePresetId,
   enableTransparency,
   onSetEnableTransparency,
+  onAuthorGardenTheme,
 }: SettingsAppearanceSectionProps) {
   const { variant } = useActiveTheme();
   const active = presentTheme(themeCatalog, themePresetId, variant);
@@ -82,6 +84,21 @@ export function SettingsAppearanceSection({
             />
           </span>
         </SettingsRow>
+        {onAuthorGardenTheme ? (
+          <SettingsRow
+            title="Garden theme file"
+            description="Author a pi-garden.theme/v1 document (seed + syntaxTheme). Pi CLI colors themes are not enough for desktop."
+          >
+            <button
+              className="button"
+              data-testid="author-garden-theme"
+              type="button"
+              onClick={onAuthorGardenTheme}
+            >
+              Author Garden theme
+            </button>
+          </SettingsRow>
+        ) : null}
         <SettingsRow
           title="Window transparency"
           description="Let desktop colors show through supported surfaces."

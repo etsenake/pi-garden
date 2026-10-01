@@ -120,7 +120,7 @@ test("the terminal-heavy fixture loads under ordinary Pi unchanged", async () =>
   expect([...loaded.tools.keys()]).toEqual(["fixture-terminal-heavy_tool"]);
 });
 
-test("the bundled adapt-for-desktop skill is discovered by Pi's skill loader", async () => {
+test("the bundled authoring skills are discovered by Pi's skill loader", async () => {
   const { agentDir, workspacePath } = await dirs();
   const loader = new pi.DefaultResourceLoader({
     cwd: workspacePath,
@@ -131,9 +131,16 @@ test("the bundled adapt-for-desktop skill is discovered by Pi's skill loader", a
   await loader.reload();
   const { skills, diagnostics } = loader.getSkills();
   expect(diagnostics.filter((entry) => entry.type === "error")).toEqual([]);
-  const skill = skills.find((entry) => entry.name === "adapt-for-desktop");
-  expect(skill).toBeDefined();
-  expect(skill!.filePath).toBe(path.join(SKILLS_DIR, "adapt-for-desktop", "SKILL.md"));
-  expect(skill!.description).toMatch(/pi-garden desktop/);
-  expect(skill!.disableModelInvocation).toBe(false);
+  for (const name of [
+    "adapt-for-desktop",
+    "create-host-contribution",
+    "create-rich-surface",
+    "create-desktop-view",
+    "theme-pi-garden",
+  ]) {
+    const skill = skills.find((entry) => entry.name === name);
+    expect(skill, name).toBeDefined();
+    expect(skill!.filePath).toBe(path.join(SKILLS_DIR, name, "SKILL.md"));
+    expect(skill!.disableModelInvocation).toBe(false);
+  }
 });

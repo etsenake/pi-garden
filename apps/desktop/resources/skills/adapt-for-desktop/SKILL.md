@@ -10,6 +10,10 @@ for the terminal also appears in pi-garden, the desktop app for Pi. The
 adaptation is additive: the extension must keep working unchanged in ordinary
 terminal Pi 0.99.1, which has no desktop host.
 
+For a **new** extension (no terminal UI to port), use **create-host-contribution**,
+**create-rich-surface**, or **create-desktop-view** instead. For Garden theme
+files (`pi-garden.theme/v1`), use **theme-pi-garden**.
+
 The request that invoked this skill names the target. Work only on that
 target. If no target path is given, ask for the exact entry file before
 touching anything.

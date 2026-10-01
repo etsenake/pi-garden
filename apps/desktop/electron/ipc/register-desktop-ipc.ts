@@ -25,6 +25,7 @@ import { WorkbenchRequests, type WorkbenchOwner } from "./workbench-requests";
 import type { DesktopExtensionViewOwner } from "../extensions/extension-view-owner";
 import type { ExtensionActionRegistry } from "../extensions/extension-action-registry";
 import type { ExtensionCompatibilityService } from "../extensions/extension-adaptation";
+import type { DesktopAuthoringService } from "../extensions/desktop-authoring";
 import type { ExtensionCompatibilityOwner } from "../extensions/extension-compatibility-owner";
 import type { SurfaceRegistry } from "../extensions/surface-registry";
 import { registerExtensionViewRequests } from "./extension-view-requests";
@@ -182,6 +183,7 @@ export interface DesktopIpcOwners {
   readonly extensionCompatibility: {
     readonly owner: Pick<ExtensionCompatibilityOwner, "subscribe">;
     readonly service: Pick<ExtensionCompatibilityService, "inventory" | "adapt">;
+    readonly authoring?: Pick<DesktopAuthoringService, "start">;
   };
   readonly workspace: WorkspaceOwner;
   readonly conversation: ConversationOwner;
@@ -256,6 +258,7 @@ export function registerDesktopIpc({
     windows,
     owners.extensionCompatibility.owner,
     owners.extensionCompatibility.service,
+    owners.extensionCompatibility.authoring,
   );
   const workbench = new WorkbenchRequests(owners.workbench);
   const workbenchSenders = new WeakSet<Electron.WebContents>();

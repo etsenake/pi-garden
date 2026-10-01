@@ -15,6 +15,7 @@ import type {
   ExtensionCompatibilityInventory,
   ExtensionCompatibilityRequest,
 } from "../contracts/extension-compatibility";
+import type { StartDesktopAuthoringInput } from "../contracts/desktop-authoring";
 import type {
   ExtensionViewOpenFile,
   DesktopExtensionViewInfo,
@@ -148,6 +149,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ) as Promise<ExtensionCompatibilityInventory>,
   adaptExtensionForDesktop: (input: AdaptExtensionForDesktopInput) =>
     ipcRenderer.invoke(desktopIpc.adaptExtensionForDesktop, input) as Promise<DesktopAppState>,
+  startDesktopAuthoring: (input: StartDesktopAuthoringInput) =>
+    ipcRenderer.invoke(desktopIpc.startDesktopAuthoring, input) as Promise<DesktopAppState>,
   onExtensionCompatibilityChanged: (listener: (event: ExtensionCompatibilityChange) => void) =>
     subscribeIpc(desktopIpc.extensionCompatibilityChanged, listener),
   listDesktopEditors: (target: SessionRef) =>

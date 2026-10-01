@@ -43,6 +43,7 @@ import type {
   ExtensionCompatibilityInventory,
   ExtensionCompatibilityRequest,
 } from "./extension-compatibility";
+import type { StartDesktopAuthoringInput } from "./desktop-authoring";
 import type { SessionRef } from "@pi-garden/session-driver/types";
 import type { SaveTaskWorkbenchTemplateInput, TaskWorkbenchTemplate } from "./workbench";
 import type {
@@ -145,6 +146,7 @@ export const desktopIpc = {
   listExtensionViews: "pi-garden:list-extension-views",
   getExtensionCompatibility: "pi-garden:get-extension-compatibility",
   adaptExtensionForDesktop: "pi-garden:adapt-extension-for-desktop",
+  startDesktopAuthoring: "pi-garden:start-desktop-authoring",
   extensionCompatibilityChanged: "pi-garden:extension-compatibility-changed",
   listDesktopEditors: "pi-garden:list-desktop-editors",
   openDesktopEditor: "pi-garden:open-desktop-editor",
@@ -932,6 +934,7 @@ export interface PiDesktopApi {
     input: ExtensionCompatibilityRequest,
   ): Promise<ExtensionCompatibilityInventory>;
   adaptExtensionForDesktop(input: AdaptExtensionForDesktopInput): Promise<DesktopAppState>;
+  startDesktopAuthoring(input: StartDesktopAuthoringInput): Promise<DesktopAppState>;
   onExtensionCompatibilityChanged(
     listener: (event: ExtensionCompatibilityChange) => void,
   ): () => void;

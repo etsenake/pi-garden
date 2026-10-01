@@ -34,6 +34,7 @@ import {
 } from "./extensions/extension-view-owner";
 import { ExtensionActionRegistry } from "./extensions/extension-action-registry";
 import { ExtensionCompatibilityService } from "./extensions/extension-adaptation";
+import { DesktopAuthoringService } from "./extensions/desktop-authoring";
 import { ExtensionCompatibilityOwner } from "./extensions/extension-compatibility-owner";
 import { SurfaceRegistry } from "./extensions/surface-registry";
 import { projectIsTrusted } from "./platform/project-trust";
@@ -1084,6 +1085,22 @@ app
       },
       { helperPackageDir: extensionUiPackageDir, adaptWriterPath: path.join(bundledSkillsDir, "adapt-for-desktop", "apply.mjs") },
     );
+    const desktopAuthoringService = new DesktopAuthoringService(
+      {
+        workspaceFor: (workspaceId) => {
+          const workspace = store.snapshot().workspaces.find((entry) => entry.id === workspaceId);
+          return workspace ? { workspaceId, path: workspace.path } : undefined;
+        },
+        startThread: (input) => store.startThread(input),
+      },
+      {
+        helperPackageDir: extensionUiPackageDir,
+        skillsDir: bundledSkillsDir,
+        // Overridden per workspace when starting extension authoring.
+        extensionsDir: path.join(agentDir, "extensions"),
+        themesDir: path.join(agentDir, "themes"),
+      },
+    );
     store.subscribeToSessionEvents((event) => {
       if (event.type === "extensionUiCapabilityObserved") {
         return extensionCompatibility.observeTerminalUi({
@@ -1203,6 +1220,7 @@ app
         extensionCompatibility: {
           owner: extensionCompatibility,
           service: extensionCompatibilityService,
+          authoring: desktopAuthoringService,
         },
         review: new ReviewOwner({
           checkpoints,
