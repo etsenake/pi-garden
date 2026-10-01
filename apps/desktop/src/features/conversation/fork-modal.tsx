@@ -1,6 +1,18 @@
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useRef, useState } from "react";
 import type { NewThreadEnvironment } from "../../../contracts/desktop-state";
-import { trapDialogFocus } from "../../ui/dialog-focus";
+import { CloseIcon } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/shadcn/dialog";
+import { Spinner } from "@/ui/shadcn/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/ui/shadcn/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 interface ForkModalProps {
   readonly submitting: boolean;
@@ -22,134 +34,112 @@ export function ForkModal({
   onSubmit,
 }: ForkModalProps) {
   const [environment, setEnvironment] = useState<NewThreadEnvironment>("local");
-  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const confirmRef = useRef<HTMLButtonElement | null>(null);
 
-  useEffect(() => {
-    dialogRef.current?.querySelector<HTMLButtonElement>("[data-fork-confirm='true']")?.focus();
-  }, []);
-
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Tab") {
-      trapDialogFocus(event, dialogRef.current);
-      return;
-    }
-
-    if (event.key === "Escape" && !submitting) {
-      event.preventDefault();
-      onClose();
-    }
-  };
+  const worktreeItem = (
+    <ToggleGroupItem
+      data-testid="fork-environment-worktree"
+      disabled={!canUseWorktree}
+      value="worktree"
+    >
+      New worktree
+    </ToggleGroupItem>
+  );
 
   return (
-    <div
-      className="tree-modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target !== event.currentTarget || submitting) {
-          return;
-        }
-        onClose();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !submitting) onClose();
       }}
     >
-      <div
-        aria-modal="true"
-        className="tree-modal tree-modal--compact"
+      {/* The app returns focus to the composer or the topmost remaining dialog. */}
+      <DialogContent
+        className="sm:max-w-lg"
         data-testid="fork-modal"
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-        onKeyDown={handleKeyDown}
+        finalFocus={false}
+        initialFocus={confirmRef}
+        showCloseButton={false}
       >
-        <div className="tree-modal__header">
-          <div>
-            <div className="tree-modal__eyebrow">Fork conversation</div>
-            <h2 className="tree-modal__title">Start a new thread</h2>
+        <DialogHeader className="flex-row items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <DialogTitle>Fork conversation</DialogTitle>
+            <DialogDescription>
+              Forks the conversation up to and including this response into a new sidebar thread
+              with an empty composer, so you can continue it in a different direction. The original
+              thread stays untouched.
+            </DialogDescription>
           </div>
-          <button
+          <Button
             aria-label="Close fork modal"
-            className="tree-modal__close"
             disabled={submitting}
-            type="button"
+            size="icon-sm"
+            variant="ghost"
             onClick={onClose}
           >
-            ×
-          </button>
-        </div>
+            <CloseIcon />
+          </Button>
+        </DialogHeader>
 
         {error ? (
-          <div className="tree-modal__error error-banner" data-testid="fork-modal-error">
+          <div className="error-banner" data-testid="fork-modal-error">
             {error}
           </div>
         ) : null}
 
-        <div className="tree-modal__summary-step">
-          <div className="tree-modal__summary-copy">
-            Forks the conversation up to and including this response into a new sidebar thread with
-            an empty composer, so you can continue it in a different direction. The original thread
-            stays untouched.
+        {messagePreview ? (
+          <div className="fork-modal__preview" data-testid="fork-modal-preview">
+            {messagePreview}
           </div>
+        ) : null}
 
-          {messagePreview ? (
-            <div className="fork-modal__preview" data-testid="fork-modal-preview">
-              {messagePreview}
-            </div>
-          ) : null}
+        <ToggleGroup
+          aria-label="Fork environment"
+          value={[environment]}
+          variant="outline"
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next === "local" || next === "worktree") setEnvironment(next);
+          }}
+        >
+          <ToggleGroupItem data-testid="fork-environment-local" value="local">
+            Same worktree
+          </ToggleGroupItem>
+          {canUseWorktree ? (
+            worktreeItem
+          ) : (
+            <Tooltip>
+              {/* A disabled button takes no pointer events; the wrapper carries the hint. */}
+              <TooltipTrigger render={<span className="inline-flex" />}>
+                {worktreeItem}
+              </TooltipTrigger>
+              <TooltipContent>This workspace can&apos;t create worktrees.</TooltipContent>
+            </Tooltip>
+          )}
+        </ToggleGroup>
 
-          <div
-            className="new-thread__environment-group"
-            role="radiogroup"
-            aria-label="Fork environment"
-          >
-            <button
-              aria-pressed={environment === "local"}
-              className={`new-thread__environment ${environment === "local" ? "new-thread__environment--active" : ""}`}
-              data-testid="fork-environment-local"
-              type="button"
-              onClick={() => setEnvironment("local")}
+        <DialogFooter className="items-center sm:justify-between">
+          <p className="text-muted-foreground">
+            {environment === "worktree"
+              ? "A fresh worktree is created and the forked thread opens there."
+              : "The forked thread opens in the same folder as the original."}
+          </p>
+          <div className="flex shrink-0 gap-2">
+            <Button disabled={submitting} variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              data-testid="fork-modal-confirm"
+              disabled={submitting}
+              ref={confirmRef}
+              onClick={() => onSubmit(environment)}
             >
-              <span>Same worktree</span>
-            </button>
-            <button
-              aria-pressed={environment === "worktree"}
-              className={`new-thread__environment ${environment === "worktree" ? "new-thread__environment--active" : ""}`}
-              data-testid="fork-environment-worktree"
-              disabled={!canUseWorktree}
-              title={canUseWorktree ? undefined : "This workspace can't create worktrees."}
-              type="button"
-              onClick={() => setEnvironment("worktree")}
-            >
-              <span>New worktree</span>
-            </button>
+              {submitting ? <Spinner data-icon="inline-start" /> : null}
+              {submitting ? "Forking…" : "Fork thread"}
+            </Button>
           </div>
-
-          <div className="tree-modal__footer">
-            <div className="tree-modal__hint">
-              {environment === "worktree"
-                ? "A fresh worktree is created and the forked thread opens there."
-                : "The forked thread opens in the same folder as the original."}
-            </div>
-            <div className="tree-modal__actions">
-              <button
-                className="button button--secondary"
-                disabled={submitting}
-                type="button"
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button
-                className="button button--primary"
-                data-fork-confirm="true"
-                data-testid="fork-modal-confirm"
-                disabled={submitting}
-                type="button"
-                onClick={() => onSubmit(environment)}
-              >
-                {submitting ? "Forking…" : "Fork thread"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
