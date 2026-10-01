@@ -83,7 +83,7 @@ test("adds transcript selections to chat with comments and sends them before the
     await expect(sent).toContainText("Earlier note");
     await expect(page.locator(".timeline-item--user")).toContainText("Earlier follow-up");
     await expect(page.locator(".timeline-item--user")).not.toContainText("<annotation>");
-    await expect(sent.locator("details")).not.toHaveAttribute("open");
+    await expect(sent.getByRole("button")).toHaveAttribute("aria-expanded", "false");
 
     // Record what reaches pi without a provider.
     await harness.electronApp.evaluate(
@@ -147,6 +147,8 @@ test("adds transcript selections to chat with comments and sends them before the
     await page.getByTestId("annotation-editor").getByRole("textbox").fill("Why not wait?");
     await page.getByTestId("annotation-marker").nth(1).click();
     await expect(page.getByTestId("annotation-editor").getByRole("textbox")).toHaveValue("");
+    // The list renders only while open.
+    await chip.getByRole("button", { name: "2 annotations" }).hover();
     await expect(popover).toContainText("Why not wait?");
     await page.getByTestId("annotation-remove").click();
     await expect(page.getByTestId("annotation-marker")).toHaveText(["1"]);

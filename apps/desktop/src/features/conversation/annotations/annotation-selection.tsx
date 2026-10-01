@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CloseIcon } from "../../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Kbd, KbdGroup } from "@/ui/shadcn/kbd";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
+import { Textarea } from "@/ui/shadcn/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 import { ANNOTATION_ROOT_ATTRIBUTE, type OpenAnnotation } from "./annotation-markers";
 import { rangeToOffsets } from "./text-offsets";
 import type { TranscriptAnnotations } from "./use-transcript-annotations";
@@ -92,6 +97,8 @@ function isTextEntry(element: Element | null): boolean {
 }
 
 const POPOVER_GAP = 8;
+/** Marks the floating annotation UI, which clicks and shortcuts treat as part of the selection. */
+const POPOVER_SELECTOR = "[data-annotation-popover]";
 
 function popoverTop(anchor: DOMRect, height: number): number {
   const above = anchor.top - height - POPOVER_GAP;
@@ -144,7 +151,7 @@ export function useAnnotationSelection({
       snapEditorToMarker();
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Element && event.target.closest(".annotation-popover")) return;
+      if (event.target instanceof Element && event.target.closest(POPOVER_SELECTOR)) return;
       pointerDownRef.current = true;
       setSelection(null);
     };
@@ -185,7 +192,7 @@ export function useAnnotationSelection({
       if (!isAddToChatShortcut(event, platform) || event.repeat || event.defaultPrevented) return;
       // Typing elsewhere (composer, terminal, search) keeps its own Ctrl+L.
       const active = document.activeElement;
-      if (isTextEntry(active) && !active?.closest(".annotation-popover")) return;
+      if (isTextEntry(active) && !active?.closest(POPOVER_SELECTOR)) return;
       if (active?.closest("[data-pi-terminal]")) return;
       event.preventDefault();
       addSelection();
@@ -246,24 +253,25 @@ function AddToChatButton({
 }) {
   return (
     <div
-      className="annotation-popover annotation-add"
+      className="annotation-add"
+      data-annotation-popover=""
       style={{ top: popoverTop(anchor, 32), left: Math.max(POPOVER_GAP, anchor.left) }}
     >
-      <button
-        className="annotation-add__button"
+      <Button
         data-testid="add-to-chat"
-        type="button"
+        size="sm"
+        variant="outline"
         // Keep the transcript selection alive through the click.
         onMouseDown={(event) => event.preventDefault()}
         onClick={onAdd}
       >
-        <span>Add to Chat</span>
-        <span className="annotation-add__keys" aria-hidden="true">
+        Add to Chat
+        <KbdGroup aria-hidden="true">
           {addToChatShortcutKeys(platform).map((key) => (
-            <kbd key={key}>{key}</kbd>
+            <Kbd key={key}>{key}</Kbd>
           ))}
-        </span>
-      </button>
+        </KbdGroup>
+      </Button>
     </div>
   );
 }
@@ -282,7 +290,7 @@ function AnnotationEditor({
   readonly onClose: () => void;
 }) {
   const [value, setValue] = useState(note);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const closingRef = useRef(false);
   const pendingSaveRef = useRef(() => onSave(value.trim()));
   pendingSaveRef.current = () => onSave(value.trim());
@@ -303,44 +311,72 @@ function AnnotationEditor({
   };
 
   return (
-    <div
-      className="annotation-popover annotation-editor"
-      data-testid="annotation-editor"
-      style={{ top: popoverTop(anchor, 44), left: Math.max(POPOVER_GAP, anchor.left - 24) }}
+    <Popover
+      open
+      onOpenChange={(open, details) => {
+        if (!open) finish(details.reason !== "escape-key");
+      }}
     >
-      <input
-        aria-label="Annotation comment"
-        className="annotation-editor__input"
-        placeholder="Add an optional comment…"
-        ref={inputRef}
-        value={value}
-        onBlur={() => finish(true)}
-        onChange={(event) => setValue(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-            event.preventDefault();
-            finish(true);
-          } else if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            finish(false);
-          }
-        }}
+      {/* The box anchors to the marker or selection, which live in transcript rows. */}
+      <PopoverTrigger
+        aria-hidden="true"
+        className="pointer-events-none fixed"
+        nativeButton={false}
+        render={<span />}
+        style={{ top: anchor.top, left: anchor.left, width: anchor.width, height: anchor.height }}
+        tabIndex={-1}
       />
-      <button
-        aria-label="Remove annotation"
-        className="annotation-editor__remove"
-        data-testid="annotation-remove"
-        title="Remove annotation"
-        type="button"
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => {
-          closingRef.current = true;
-          onRemove();
-        }}
+      <PopoverContent
+        align="start"
+        className="w-[min(380px,calc(100vw-32px))] flex-row items-start gap-1"
+        data-annotation-popover=""
+        data-testid="annotation-editor"
+        finalFocus={false}
+        initialFocus={inputRef}
+        side="top"
+        sideOffset={POPOVER_GAP}
       >
-        <CloseIcon />
-      </button>
-    </div>
+        <Textarea
+          aria-label="Annotation comment"
+          className="min-h-8 flex-1 resize-none"
+          placeholder="Add an optional comment…"
+          ref={inputRef}
+          rows={1}
+          value={value}
+          onBlur={() => finish(true)}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              finish(true);
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              finish(false);
+            }
+          }}
+        />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label="Remove annotation"
+                data-testid="annotation-remove"
+                size="icon-sm"
+                variant="ghost"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  closingRef.current = true;
+                  onRemove();
+                }}
+              />
+            }
+          >
+            <CloseIcon />
+          </TooltipTrigger>
+          <TooltipContent>Remove annotation</TooltipContent>
+        </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }

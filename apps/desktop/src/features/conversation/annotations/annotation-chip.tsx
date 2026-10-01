@@ -1,7 +1,11 @@
 import { ChatIcon, CloseIcon } from "../../../ui/icons";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Item, ItemActions, ItemContent, ItemDescription } from "@/ui/shadcn/item";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
 import type { TranscriptAnnotation } from "./annotation-prompt";
 
-/** "N annotations" above the composer; hovering or focusing it lists each quote and comment. */
+/** "N annotations" above the composer; hovering or opening it lists each quote and comment. */
 export function AnnotationChip({
   annotations,
   onRemove,
@@ -13,33 +17,43 @@ export function AnnotationChip({
   const label = `${annotations.length} annotation${annotations.length === 1 ? "" : "s"}`;
   return (
     <div className="annotation-chip" data-testid="annotation-chip">
-      <button className="annotation-chip__button" type="button">
-        <ChatIcon />
-        <span>{label}</span>
-      </button>
-      <div className="annotation-chip__popover" data-testid="annotation-chip-popover">
-        <div className="annotation-chip__list">
+      <Popover>
+        <PopoverTrigger
+          closeDelay={200}
+          delay={0}
+          openOnHover
+          render={<Button size="sm" variant="outline" />}
+        >
+          <ChatIcon />
+          {label}
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="max-h-80 w-[min(420px,calc(100vw-48px))] gap-0.5 overflow-y-auto p-1.5"
+          data-testid="annotation-chip-popover"
+          side="top"
+        >
           {annotations.map((annotation, index) => (
-            <div className="annotation-chip__item" key={annotation.id}>
-              <span className="annotation-chip__number">{index + 1}</span>
-              <div className="annotation-chip__body">
-                <div className="annotation-chip__quote">{annotation.quote}</div>
-                {annotation.note ? (
-                  <div className="annotation-chip__note">{annotation.note}</div>
-                ) : null}
-              </div>
-              <button
-                aria-label={`Remove annotation ${index + 1}`}
-                className="annotation-chip__remove"
-                type="button"
-                onClick={() => onRemove(annotation.id)}
-              >
-                <CloseIcon />
-              </button>
-            </div>
+            <Item className="flex-nowrap items-start" key={annotation.id} size="xs">
+              <Badge>{index + 1}</Badge>
+              <ItemContent className="min-w-0">
+                <ItemDescription className="line-clamp-3">{annotation.quote}</ItemDescription>
+                {annotation.note ? <div className="break-words">{annotation.note}</div> : null}
+              </ItemContent>
+              <ItemActions>
+                <Button
+                  aria-label={`Remove annotation ${index + 1}`}
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={() => onRemove(annotation.id)}
+                >
+                  <CloseIcon />
+                </Button>
+              </ItemActions>
+            </Item>
           ))}
-        </div>
-      </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
