@@ -1,5 +1,7 @@
 import type { DesktopNotificationPermissionStatus } from "../../../contracts/ipc";
 import type { NotificationPreferences } from "../../../contracts/desktop-state";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
 import { SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 
@@ -33,7 +35,9 @@ export function SettingsNotificationsSection({
         description="macOS decides whether pi-garden can show desktop notifications at all."
       >
         <SettingsRow title="macOS notification access" description={statusDescription}>
-          <span className="settings-row__value">{statusLabel}</span>
+          <Badge variant={badgeVariantForPermissionStatus(notificationPermissionStatus)}>
+            {statusLabel}
+          </Badge>
         </SettingsRow>
         {showRecoveryActions ? (
           <SettingsRow
@@ -44,26 +48,26 @@ export function SettingsNotificationsSection({
                 : "macOS notifications are already turned off for pi-garden. Open System Settings to enable them again."
             }
           >
-            <div className="settings-row__actions">
+            <div className="flex flex-wrap justify-end gap-2">
               {showAskMacOs ? (
-                <button
-                  className="button button--secondary"
+                <Button
                   disabled={notificationPermissionPending}
-                  type="button"
+                  size="sm"
+                  variant="secondary"
                   onClick={onRequestNotificationPermission}
                 >
                   Ask macOS
-                </button>
+                </Button>
               ) : null}
               {showOpenSystemSettings ? (
-                <button
-                  className="button button--secondary"
+                <Button
                   disabled={notificationPermissionPending}
-                  type="button"
+                  size="sm"
+                  variant="secondary"
                   onClick={onOpenSystemNotificationSettings}
                 >
                   Open System Settings
-                </button>
+                </Button>
               ) : null}
             </div>
           </SettingsRow>
@@ -107,6 +111,19 @@ export function SettingsNotificationsSection({
       </SettingsGroup>
     </>
   );
+}
+
+function badgeVariantForPermissionStatus(
+  status: DesktopNotificationPermissionStatus,
+): "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "granted":
+      return "secondary";
+    case "denied":
+      return "destructive";
+    default:
+      return "outline";
+  }
 }
 
 function labelForPermissionStatus(status: DesktopNotificationPermissionStatus): string {

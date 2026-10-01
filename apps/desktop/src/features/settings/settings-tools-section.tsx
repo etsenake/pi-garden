@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
+import { Button } from "@/ui/shadcn/button";
+import { Textarea } from "@/ui/shadcn/textarea";
 import { SettingsSwitch } from "./settings-controls";
-import { runSettingsAction, SettingsGroup, SettingsRow } from "./settings-utils";
+import { runSettingsAction, SettingsGroup, SettingsNote, SettingsRow } from "./settings-utils";
 
 const PI_BUILTINS = [
   {
@@ -84,8 +86,9 @@ export function SettingsToolsSection({
           title="Tool list"
           description="One name per line. Use +name or -name to add or remove without replacing defaults, for example +codemode. Leave empty to use Pi defaults (read, bash, edit, write)."
         >
-          <textarea
-            className="settings-textarea"
+          <Textarea
+            aria-label="Default tools"
+            className="w-72"
             rows={5}
             value={draft}
             placeholder={"read\nbash\nedit\nwrite\n+codemode"}
@@ -96,16 +99,16 @@ export function SettingsToolsSection({
           title="Resolved"
           description={(tools?.resolvedDefaultTools ?? []).join(", ") || "Pi defaults"}
         >
-          <button
-            className="button"
-            type="button"
+          <Button
             disabled={pending}
+            size="sm"
+            variant="secondary"
             onClick={() => runSettingsAction(saveDefaultTools(), setError)}
           >
             {pending ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </SettingsRow>
-        {error ? <p className="settings-error">{error}</p> : null}
+        {error ? <SettingsNote tone="warning">{error}</SettingsNote> : null}
       </SettingsGroup>
     </>
   );

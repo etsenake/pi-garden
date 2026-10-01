@@ -1,4 +1,5 @@
 import type { ThemeMode } from "../../../contracts/desktop-state";
+import { Button } from "@/ui/shadcn/button";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 import type { CSSProperties } from "react";
@@ -70,7 +71,7 @@ export function SettingsAppearanceSection({
 
       <SettingsGroup>
         <SettingsRow title="Color preset" description={active.description}>
-          <span className="settings-preset-control">
+          <span className="flex items-center gap-2.5">
             <span aria-hidden="true" className="settings-preset-swatches">
               {swatchesForTheme(active).map((swatch, index) => (
                 <span key={index} style={{ background: swatch }} />
@@ -89,14 +90,14 @@ export function SettingsAppearanceSection({
             title="Garden theme file"
             description="Author a pi-garden.theme/v1 document (seed + syntaxTheme). Pi CLI colors themes are not enough for desktop."
           >
-            <button
-              className="button"
+            <Button
               data-testid="author-garden-theme"
-              type="button"
+              size="sm"
+              variant="secondary"
               onClick={onAuthorGardenTheme}
             >
               Author Garden theme
-            </button>
+            </Button>
           </SettingsRow>
         ) : null}
         <SettingsRow

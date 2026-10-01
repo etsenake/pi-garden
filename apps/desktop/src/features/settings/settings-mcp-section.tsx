@@ -5,8 +5,11 @@ import type {
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
 import type { AddMcpServerInput, UpdateMcpServerInput } from "../../../contracts/ipc";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Input } from "@/ui/shadcn/input";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
-import { runSettingsAction, SettingsGroup, SettingsRow } from "./settings-utils";
+import { runSettingsAction, SettingsGroup, SettingsNote, SettingsRow } from "./settings-utils";
 
 const EXPOSURE_OPTIONS: readonly { readonly value: DesktopMcpExposure; readonly label: string }[] =
   [
@@ -150,8 +153,9 @@ export function SettingsMcpSection({
           />
         </SettingsRow>
         <SettingsRow title="Name">
-          <input
-            className="settings-text-input"
+          <Input
+            aria-label="Name"
+            className="w-60"
             value={name}
             placeholder="filesystem"
             spellCheck={false}
@@ -159,30 +163,21 @@ export function SettingsMcpSection({
           />
         </SettingsRow>
         {mode === "stdio" ? (
-          <>
-            <SettingsRow title="Command">
-              <input
-                className="settings-text-input"
-                value={command}
-                placeholder="npx"
-                spellCheck={false}
-                onChange={(event) => setCommand(event.target.value)}
-              />
-            </SettingsRow>
-            <SettingsRow title="Args" description="Space-separated.">
-              <input
-                className="settings-text-input"
-                value={argsText}
-                placeholder="-y @modelcontextprotocol/server-filesystem ."
-                spellCheck={false}
-                onChange={(event) => setArgsText(event.target.value)}
-              />
-            </SettingsRow>
-          </>
+          <SettingsRow title="Command">
+            <Input
+              aria-label="Command"
+              className="w-60"
+              value={command}
+              placeholder="npx"
+              spellCheck={false}
+              onChange={(event) => setCommand(event.target.value)}
+            />
+          </SettingsRow>
         ) : (
           <SettingsRow title="URL">
-            <input
-              className="settings-text-input"
+            <Input
+              aria-label="URL"
+              className="w-60"
               value={url}
               placeholder="https://example.com/mcp"
               spellCheck={false}
@@ -190,17 +185,29 @@ export function SettingsMcpSection({
             />
           </SettingsRow>
         )}
+        {mode === "stdio" ? (
+          <SettingsRow title="Args" description="Space-separated.">
+            <Input
+              aria-label="Args"
+              className="w-60"
+              value={argsText}
+              placeholder="-y @modelcontextprotocol/server-filesystem ."
+              spellCheck={false}
+              onChange={(event) => setArgsText(event.target.value)}
+            />
+          </SettingsRow>
+        ) : null}
         <SettingsRow title="Add" description="Writes to Pi's mcp.json for the selected scope.">
-          <button
-            className="button"
-            type="button"
+          <Button
             disabled={pending || !name.trim() || (mode === "stdio" ? !command.trim() : !url.trim())}
+            size="sm"
+            variant="secondary"
             onClick={() => runSettingsAction(submit(), setError)}
           >
             {pending ? "Adding…" : "Add server"}
-          </button>
+          </Button>
         </SettingsRow>
-        {error ? <p className="settings-error">{error}</p> : null}
+        {error ? <SettingsNote tone="warning">{error}</SettingsNote> : null}
       </SettingsGroup>
     </>
   );
@@ -219,35 +226,30 @@ function McpServerRow({
   }) => void;
 }) {
   return (
-    <div className="settings-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">
-          {server.name}{" "}
-          <span className="settings-row__meta">
-            {server.scope} · {server.transport}
-          </span>
-        </div>
-        <div className="settings-row__description">{server.sourcePath}</div>
-      </div>
-      <div className="settings-row__control settings-row__control--stack">
-        <SettingsSwitch
-          checked={server.enabled}
-          label="Enabled"
-          onChange={(enabled) => onUpdate({ enabled })}
-        />
-        <SettingsSelect
-          label="Exposure"
-          value={server.exposure}
-          options={EXPOSURE_OPTIONS.map((option) => ({
-            value: option.value,
-            label: option.label,
-          }))}
-          onChange={(value) => onUpdate({ exposure: value as DesktopMcpExposure })}
-        />
-        <button className="button button--secondary" type="button" onClick={onRemove}>
-          Remove
-        </button>
-      </div>
-    </div>
+    <SettingsRow
+      title={
+        <>
+          {server.name}
+          <Badge variant="outline">{server.scope}</Badge>
+          <Badge variant="outline">{server.transport}</Badge>
+        </>
+      }
+      description={server.sourcePath}
+    >
+      <SettingsSwitch
+        checked={server.enabled}
+        label="Enabled"
+        onChange={(enabled) => onUpdate({ enabled })}
+      />
+      <SettingsSelect
+        label="Exposure"
+        value={server.exposure}
+        options={EXPOSURE_OPTIONS}
+        onChange={(value) => onUpdate({ exposure: value })}
+      />
+      <Button size="sm" variant="secondary" onClick={onRemove}>
+        Remove
+      </Button>
+    </SettingsRow>
   );
 }

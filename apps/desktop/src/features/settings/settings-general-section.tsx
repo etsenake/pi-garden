@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import type { ModelSettingsScopeMode, WorkspaceRecord } from "../../../contracts/desktop-state";
+import { Button } from "@/ui/shadcn/button";
+import { Input } from "@/ui/shadcn/input";
 import { SettingsSegmented, SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 
@@ -71,9 +73,9 @@ export function SettingsGeneralSection({
           title="Shell"
           description="The shell the integrated terminal starts. Leave blank to use your login shell."
         >
-          <input
+          <Input
             aria-label="Shell of integrated terminal"
-            className="settings-text-input"
+            className="w-60"
             placeholder="/bin/zsh"
             spellCheck={false}
             type="text"
@@ -98,14 +100,14 @@ export function SettingsGeneralSection({
         ) : (
           workspaces.map((workspace) => (
             <SettingsRow key={workspace.id} title={workspace.name} description={workspace.path}>
-              <button
+              <Button
                 aria-label={`Remove ${workspace.name}`}
-                className="button button--secondary"
-                type="button"
+                size="sm"
+                variant="secondary"
                 onClick={() => onRemoveWorkspace(workspace)}
               >
                 Remove
-              </button>
+              </Button>
             </SettingsRow>
           ))
         )}

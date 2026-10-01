@@ -1,3 +1,4 @@
+import { Kbd, KbdGroup } from "@/ui/shadcn/kbd";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 
 /**
@@ -90,11 +91,11 @@ export function SettingsShortcutsSection({ platform }: { readonly platform: Node
         <SettingsGroup key={group.title} title={group.title}>
           {group.shortcuts.map((shortcut) => (
             <SettingsRow key={shortcut.title} title={shortcut.title}>
-              <span className="settings-keys">
+              <KbdGroup>
                 {shortcutKeys(platform, shortcut).map((key) => (
-                  <kbd key={key}>{key}</kbd>
+                  <Kbd key={key}>{key}</Kbd>
                 ))}
-              </span>
+              </KbdGroup>
             </SettingsRow>
           ))}
         </SettingsGroup>
