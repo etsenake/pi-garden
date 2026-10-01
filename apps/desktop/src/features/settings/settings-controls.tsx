@@ -1,6 +1,8 @@
-import { ChevronDownIcon } from "../../ui/icons";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/shadcn/select";
+import { Switch } from "@/ui/shadcn/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/ui/shadcn/toggle-group";
 
-/** A checkbox drawn as a switch, so it keeps native checkbox keyboard and form behaviour. */
+/** An on/off setting; exposes role="switch" with the label as its accessible name. */
 export function SettingsSwitch({
   label,
   checked,
@@ -13,14 +15,11 @@ export function SettingsSwitch({
   readonly onChange: (checked: boolean) => void;
 }) {
   return (
-    <input
+    <Switch
       aria-label={label}
       checked={checked}
-      className="settings-switch"
       disabled={disabled}
-      role="switch"
-      type="checkbox"
-      onChange={(event) => onChange(event.currentTarget.checked)}
+      onCheckedChange={(next) => onChange(next)}
     />
   );
 }
@@ -43,19 +42,24 @@ export function SettingsSegmented<T extends string>({
   readonly onChange: (value: T) => void;
 }) {
   return (
-    <div aria-label={label} className="settings-segmented" role="group">
+    <ToggleGroup
+      aria-label={label}
+      size="sm"
+      spacing={0}
+      value={value === undefined ? [] : [value]}
+      variant="outline"
+      onValueChange={(next) => {
+        // Pressing the active option would clear the group; a segmented control keeps one value.
+        const selected = options.find((option) => option.value === next[0]);
+        if (selected) onChange(selected.value);
+      }}
+    >
       {options.map((option) => (
-        <button
-          aria-pressed={option.value === value}
-          className="settings-segmented__option"
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-        >
+        <ToggleGroupItem key={option.value} value={option.value}>
           {option.label}
-        </button>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 }
 
@@ -70,31 +74,31 @@ export function SettingsSelect<T extends string>({
   readonly value: T | undefined;
   readonly onChange: (value: T) => void;
 }) {
-  // Without a matching option Chromium shows the first one as chosen, and choosing it
-  // fires no change, so an unset value gets an explicit placeholder instead.
+  // An unset or unknown value shows a placeholder rather than pretending the first option is chosen.
   const hasValue = options.some((option) => option.value === value);
   return (
-    <span className="settings-select-control">
-      <select
+    <Select
+      items={options}
+      value={hasValue ? value : null}
+      onValueChange={(next) => {
+        const selected = options.find((option) => option.value === next);
+        if (selected) onChange(selected.value);
+      }}
+    >
+      <SelectTrigger
         aria-label={label}
-        value={hasValue ? value : ""}
-        onChange={(event) => {
-          const selected = options.find((option) => option.value === event.currentTarget.value);
-          if (selected) onChange(selected.value);
-        }}
+        className="max-w-64 min-w-36"
+        data-value={hasValue ? value : undefined}
       >
-        {hasValue ? null : (
-          <option disabled value="">
-            Choose…
-          </option>
-        )}
+        <SelectValue placeholder="Choose…" />
+      </SelectTrigger>
+      <SelectContent>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <SelectItem data-value={option.value} key={option.value} value={option.value}>
             {option.label}
-          </option>
+          </SelectItem>
         ))}
-      </select>
-      <ChevronDownIcon />
-    </span>
+      </SelectContent>
+    </Select>
   );
 }

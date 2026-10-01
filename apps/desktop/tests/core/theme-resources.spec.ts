@@ -15,6 +15,7 @@ import {
   seedAgentDir,
   waitForWorkspaceByPath,
 } from "../helpers/electron-app";
+import { chooseSettingsOption, settingsOptionLabels } from "../helpers/settings-select";
 
 const require = createRequire(__filename);
 const helperPath = require.resolve("@pi-garden/extension-ui");
@@ -149,11 +150,10 @@ export default function themeView(pi) {
     await openAppearance(window);
     await window.getByRole("radio", { name: "Light", exact: true }).click();
     const preset = window.getByLabel("Color preset");
-    await expect(preset.locator("option", { hasText: "Harbor" })).toHaveCount(1);
-    await expect(preset.locator("option", { hasText: "Kelp" })).toHaveCount(1);
-    await expect(preset.locator("option", { hasText: "Cove" })).toHaveCount(1);
-    await expect(preset.locator("option", { hasText: "broken" })).toHaveCount(0);
-    await preset.selectOption({ label: "Harbor" });
+    const presetLabels = await settingsOptionLabels(preset);
+    expect(presetLabels).toEqual(expect.arrayContaining(["Harbor", "Kelp", "Cove"]));
+    expect(presetLabels.filter((label) => label.includes("broken"))).toHaveLength(0);
+    await chooseSettingsOption(preset, { label: "Harbor" });
     await expect.poll(() => rootThemeId(window)).toBe("harbor");
     await expect.poll(() => rootCssVariable(window, "--main")).toBe("#f3f7fa");
     await expect.poll(() => rootCssVariable(window, "--accent")).toBe("#0b6e99");
@@ -309,10 +309,10 @@ test("project themes stay inside the trusted workspace", async () => {
     await openAppearance(first);
     await first.getByRole("radio", { name: "Dark", exact: true }).click();
     const preset = first.getByLabel("Color preset");
-    await expect(preset.locator("option", { hasText: "Pier" })).toHaveCount(1);
-    await expect(preset.locator("option", { hasText: "Secret" })).toHaveCount(0);
-    await expect(preset.locator("option", { hasText: "Harbor" })).toHaveCount(1);
-    await preset.selectOption({ label: "Pier" });
+    const trustedLabels = await settingsOptionLabels(preset);
+    expect(trustedLabels).toEqual(expect.arrayContaining(["Pier", "Harbor"]));
+    expect(trustedLabels.filter((label) => label.includes("Secret"))).toHaveLength(0);
+    await chooseSettingsOption(preset, { label: "Pier" });
     await expect.poll(() => rootCssVariable(first, "--main")).toBe("#1a1024");
     const pierWindow = presentTheme((await getDesktopState(first)).themeCatalog, "pier", "dark")
       .tokens["--window"];
@@ -321,13 +321,13 @@ test("project themes stay inside the trusted workspace", async () => {
     await selectWorkspace(second, otherPath);
     await openAppearance(second);
     const otherPreset = second.getByLabel("Color preset");
-    await expect(otherPreset.locator("option", { hasText: "Pier" })).toHaveCount(0);
-    await expect(otherPreset.locator("option", { hasText: "Secret" })).toHaveCount(0);
-    await expect(otherPreset.locator("option", { hasText: "Harbor" })).toHaveCount(1);
+    const otherLabels = await settingsOptionLabels(otherPreset);
+    expect(otherLabels).toContain("Harbor");
+    expect(otherLabels.filter((label) => /Pier|Secret/.test(label))).toHaveLength(0);
     await expect.poll(() => rootCssVariable(second, "--main")).not.toBe("#1a1024");
     await expect.poll(() => rootThemeId(first)).toBe("pier");
 
-    await otherPreset.selectOption({ label: "Harbor" });
+    await chooseSettingsOption(otherPreset, { label: "Harbor" });
     await expect.poll(() => rootThemeId(second)).toBe("harbor");
     await expect.poll(() => rootThemeId(first)).toBe("harbor");
     await expect.poll(() => rootCssVariable(first, "--accent")).toBe("#7eb6d6");

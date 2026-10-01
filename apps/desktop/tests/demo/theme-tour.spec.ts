@@ -16,6 +16,7 @@ import {
   waitForWorkspaceByPath,
   writeTextFile,
 } from "../helpers/electron-app";
+import { chooseSettingsOption } from "../helpers/settings-select";
 
 // Walks every theme preset across the main surfaces (sidebar, New thread,
 // timeline, composer, Review, terminal, settings) for screenshots and screen
@@ -118,7 +119,7 @@ async function setTheme(window: Page, presetName: string, variant: ResolvedTheme
   await window
     .getByRole("radio", { name: variant === "light" ? "Light" : "Dark", exact: true })
     .click();
-  await window.getByLabel("Color preset").selectOption({ label: presetName });
+  await chooseSettingsOption(window.getByLabel("Color preset"), { label: presetName });
   await expect
     .poll(() => window.evaluate(() => document.documentElement.classList.contains("dark")))
     .toBe(variant === "dark");

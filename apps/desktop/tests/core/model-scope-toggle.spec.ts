@@ -15,6 +15,11 @@ import {
   startThreadViaIpc,
   waitForWorkspaceByPath,
 } from "../helpers/electron-app";
+import {
+  chooseSettingsOption,
+  expectSettingsValue,
+  settingsOptionLabels,
+} from "../helpers/settings-select";
 
 test("switches between app-global and per-repo model scope while worktrees inherit root repo settings", async () => {
   test.setTimeout(120_000);
@@ -61,7 +66,7 @@ test("switches between app-global and per-repo model scope while worktrees inher
     await openSettings(window);
     await openSettingsSection(window, "Models");
     await expect(settingsWorkspacePicker(window)).toHaveCount(0);
-    await expect(window.getByLabel("Default model", { exact: true })).toHaveValue("openai:gpt-5");
+    await expectSettingsValue(defaultModelPicker(window), "openai:gpt-5");
 
     await openSettingsSection(window, "General");
     await window.getByRole("button", { name: "Per repo" }).click();
@@ -71,16 +76,16 @@ test("switches between app-global and per-repo model scope while worktrees inher
 
     await openSettingsSection(window, "Models");
     await expect(settingsWorkspacePicker(window)).toHaveCount(1);
-    await expect(settingsWorkspacePicker(window).locator("option")).toHaveCount(2);
-    await settingsWorkspacePicker(window).selectOption({ label: rootWorkspaceA.name });
-    await expect(settingsWorkspacePicker(window)).toHaveValue(rootWorkspaceA.id);
-    await expect(window.getByLabel("Default model", { exact: true })).toHaveValue("openai:gpt-5");
+    expect(await settingsOptionLabels(settingsWorkspacePicker(window))).toHaveLength(2);
+    await chooseSettingsOption(settingsWorkspacePicker(window), { label: rootWorkspaceA.name });
+    await expectSettingsValue(settingsWorkspacePicker(window), rootWorkspaceA.id);
+    await expectSettingsValue(defaultModelPicker(window), "openai:gpt-5");
     await setEnabledModels(window, ["openai/gpt-4o", "openai/gpt-4-turbo"], ["openai/gpt-5"]);
-    await window.getByLabel("Default model", { exact: true }).selectOption("openai:gpt-4o");
-    await expect(window.getByLabel("Default model", { exact: true })).toHaveValue("openai:gpt-4o");
+    await chooseSettingsOption(defaultModelPicker(window), { value: "openai:gpt-4o" });
+    await expectSettingsValue(defaultModelPicker(window), "openai:gpt-4o");
 
-    await settingsWorkspacePicker(window).selectOption({ label: rootWorkspaceB.name });
-    await expect(window.getByLabel("Default model", { exact: true })).toHaveValue("openai:gpt-5");
+    await chooseSettingsOption(settingsWorkspacePicker(window), { label: rootWorkspaceB.name });
+    await expectSettingsValue(defaultModelPicker(window), "openai:gpt-5");
 
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
     await selectSession(window, "Repo B global session");
@@ -121,15 +126,12 @@ test("switches between app-global and per-repo model scope while worktrees inher
 
     await openSettings(window);
     await openSettingsSection(window, "Models");
-    await expect(settingsWorkspacePicker(window).locator("option")).toHaveCount(2);
-    expect(
-      (await settingsWorkspacePicker(window).locator("option").allTextContents()).every(
-        (text) => !/Worktree/i.test(text),
-      ),
-    ).toBeTruthy();
+    const workspaceLabels = await settingsOptionLabels(settingsWorkspacePicker(window));
+    expect(workspaceLabels).toHaveLength(2);
+    expect(workspaceLabels.every((text) => !/Worktree/i.test(text))).toBeTruthy();
     await setEnabledModels(window, ["openai/gpt-5", "openai/gpt-4-turbo"], ["openai/gpt-4o"]);
-    await window.getByLabel("Default model", { exact: true }).selectOption("openai:gpt-5");
-    await expect(window.getByLabel("Default model", { exact: true })).toHaveValue("openai:gpt-5");
+    await chooseSettingsOption(defaultModelPicker(window), { value: "openai:gpt-5" });
+    await expectSettingsValue(defaultModelPicker(window), "openai:gpt-5");
 
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
     await expect(window.getByRole("button", { name: "openai:gpt-4-turbo" }).first()).toBeVisible();
@@ -169,7 +171,7 @@ async function setEnabledModel(window: Page, pattern: string, enabled: boolean):
   if ((await toggle.isChecked()) !== enabled) {
     await toggle.click();
   }
-  await expect(toggle).toHaveJSProperty("checked", enabled);
+  await expect(toggle).toBeChecked({ checked: enabled });
   await searchInput.fill("");
 }
 
@@ -253,6 +255,10 @@ async function selectComposerModel(window: Page, label: string): Promise<void> {
   const dropdown = window.locator(".model-selector__dropdown").first();
   await expect(dropdown).toBeVisible();
   await dropdown.getByRole("option", { name: new RegExp(label, "i") }).click();
+}
+
+function defaultModelPicker(window: Page) {
+  return window.getByLabel("Default model", { exact: true });
 }
 
 function settingsWorkspacePicker(window: Page) {

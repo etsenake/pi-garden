@@ -17,6 +17,7 @@ import {
   seedTranscriptMessages,
   waitForWorkspaceByPath,
 } from "../helpers/electron-app";
+import { chooseSettingsOption, expectSettingsValue } from "../helpers/settings-select";
 
 test("toggles and restores window transparency", async () => {
   const userDataDir = await makeUserDataDir();
@@ -157,7 +158,7 @@ test("every preset recolours the same design instead of restyling it", async () 
           .getByRole("radio", { name: variant === "light" ? "Light" : "Dark", exact: true })
           .click();
         await selectThemePreset(window, preset.name);
-        await expect(window.getByLabel("Color preset")).toHaveValue(preset.id);
+        await expectSettingsValue(window.getByLabel("Color preset"), preset.id);
         await expectDerivedTokens(window, preset.id, variant);
         await window.getByRole("button", { name: "Back to app" }).click();
         await expect(window.locator(".main")).toBeVisible();
@@ -251,5 +252,5 @@ async function expectSameDesign(window: Page): Promise<void> {
 }
 
 async function selectThemePreset(window: Page, name: string): Promise<void> {
-  await window.getByLabel("Color preset").selectOption({ label: name });
+  await chooseSettingsOption(window.getByLabel("Color preset"), { label: name });
 }
