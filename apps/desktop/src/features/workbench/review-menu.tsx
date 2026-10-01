@@ -1,5 +1,14 @@
-import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { CheckIcon } from "../../ui/icons";
+import { Fragment, type ReactElement } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/shadcn/dropdown-menu";
 
 export interface ReviewMenuOption {
   readonly id: string;
@@ -11,108 +20,50 @@ export interface ReviewMenuOption {
 
 interface ReviewMenuProps {
   readonly label: string;
-  readonly buttonClassName: string;
-  readonly buttonContent: ReactNode;
+  /** The trigger button; it should carry `label` as its accessible name. */
+  readonly trigger: ReactElement;
   readonly align: "start" | "end";
   readonly options: readonly ReviewMenuOption[];
   readonly onSelect: (id: string) => void;
   /** Read-only lines shown above the options, such as the resolved comparison. */
   readonly details?: readonly string[];
-  /** The current choice, shown on the button and announced alongside its label. */
-  readonly value?: string;
 }
 
-/** A small single-choice popover menu for the Review toolbar. */
-export function ReviewMenu({
-  label,
-  buttonClassName,
-  buttonContent,
-  align,
-  options,
-  onSelect,
-  details,
-  value,
-}: ReviewMenuProps) {
-  const valueId = useId();
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const closeOutside = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
-      setOpen(false);
-      rootRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    };
-    document.addEventListener("pointerdown", closeOutside, true);
-    document.addEventListener("keydown", closeOnEscape, true);
-    return () => {
-      document.removeEventListener("pointerdown", closeOutside, true);
-      document.removeEventListener("keydown", closeOnEscape, true);
-    };
-  }, [open]);
-
+/** A small single-choice menu for the Review toolbar. */
+export function ReviewMenu({ label, trigger, align, options, onSelect, details }: ReviewMenuProps) {
+  const checked = options.find((option) => option.checked)?.id ?? null;
   return (
-    <div
-      className="review-menu"
-      ref={rootRef}
-      onBlur={(event) => {
-        if (!rootRef.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
-      }}
-    >
-      <button
-        className={buttonClassName}
-        type="button"
-        aria-label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        title={label}
-        aria-describedby={value ? valueId : undefined}
-        onClick={() => setOpen((value) => !value)}
-      >
-        {value ? <span id={valueId}>{value}</span> : null}
-        {buttonContent}
-      </button>
-      {open ? (
-        <div
-          className={`workspace-menu review-menu__popover review-menu__popover--${align}`}
-          role="menu"
-          aria-label={label}
-        >
-          {details?.length ? (
-            <div className="review-menu__details" data-testid="review-comparison-identity">
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent align={align} aria-label={label} className="w-auto min-w-50">
+        {details?.length ? (
+          <>
+            <DropdownMenuGroup data-testid="review-comparison-identity">
               {details.map((detail) => (
-                <span key={detail}>{detail}</span>
+                <DropdownMenuLabel className="break-all" key={detail}>
+                  {detail}
+                </DropdownMenuLabel>
               ))}
-            </div>
-          ) : null}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        <DropdownMenuRadioGroup value={checked}>
           {options.map((option) => (
             <Fragment key={option.id}>
-              {option.startsGroup ? (
-                <div className="review-menu__divider" role="separator" />
-              ) : null}
-              <button
-                className="workspace-menu__item review-menu__item"
-                type="button"
-                role="menuitemradio"
-                aria-checked={option.checked}
+              {option.startsGroup ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuRadioItem
+                closeOnClick
                 data-option-id={option.id}
-                onClick={() => {
-                  setOpen(false);
-                  onSelect(option.id);
-                }}
+                onClick={() => onSelect(option.id)}
+                value={option.id}
               >
-                <span>{option.label}</span>
-                {option.checked ? <CheckIcon /> : null}
-              </button>
+                {option.label}
+              </DropdownMenuRadioItem>
             </Fragment>
           ))}
-        </div>
-      ) : null}
-    </div>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

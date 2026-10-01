@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReviewFileEntry, ReviewFileStatus } from "../../../contracts/review";
 import { ChevronDownIcon, ChevronRightIcon, MinusIcon, PlusIcon, SearchIcon } from "../../ui/icons";
 import { buildFileTree, filterWorkspaceFiles, type FileTreeNode } from "./file-tree";
+import { Button } from "@/ui/shadcn/button";
+import { Checkbox } from "@/ui/shadcn/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import { PanelEmpty } from "./panel-empty";
+import { WithTooltip } from "./workbench-tooltip";
 
 interface ReviewFileTreeProps {
   readonly checkoutId: string;
@@ -61,23 +67,34 @@ export function ReviewFileTree({
     });
 
   const renderNode = (node: FileTreeNode, depth: number) => {
-    const indent = { paddingInlineStart: `${8 + depth * 14}px` };
+    const indent = 8 + depth * 14;
     if (node.kind === "directory") {
       const open = filtering || !collapsed.has(node.path);
       return (
-        <div key={`dir:${node.path}`} role="group" aria-label={node.name}>
-          <button
-            className="review-tree__folder"
-            type="button"
-            style={indent}
-            aria-expanded={open}
-            onClick={() => toggleFolder(node.path)}
+        <Collapsible
+          aria-label={node.name}
+          key={`dir:${node.path}`}
+          onOpenChange={() => toggleFolder(node.path)}
+          open={open}
+          role="group"
+        >
+          <CollapsibleTrigger
+            render={
+              <Button
+                className="w-full justify-start"
+                size="sm"
+                style={{ paddingInlineStart: indent }}
+                variant="ghost"
+              />
+            }
           >
             {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
-            <span>{node.name}</span>
-          </button>
-          {open ? node.children.map((child) => renderNode(child, depth + 1)) : null}
-        </div>
+            <span className="truncate">{node.name}</span>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {node.children.map((child) => renderNode(child, depth + 1))}
+          </CollapsibleContent>
+        </Collapsible>
       );
     }
     const file = byPath.get(node.path);
@@ -90,53 +107,55 @@ export function ReviewFileTree({
         key={file.id}
         data-workspace-id={checkoutId}
         data-file-path={file.path}
-        style={indent}
+        style={{ paddingInlineStart: indent }}
       >
-        <button
-          className="diff-panel__file-name"
-          title={formatPathForDisplay(file.path)}
-          type="button"
+        <Button
           aria-current={selected ? "true" : undefined}
+          className="diff-panel__file-name min-w-0 flex-1 justify-start font-sans"
           onClick={() => onSelect(file.path)}
+          size="sm"
+          title={formatPathForDisplay(file.path)}
+          variant={selected ? "secondary" : "ghost"}
         >
-          <span className="diff-panel__file-path">{formatPathForDisplay(node.name)}</span>
-        </button>
+          <span className="diff-panel__file-path truncate">{formatPathForDisplay(node.name)}</span>
+        </Button>
         {stageActions.length ? (
           <span className="review-panel__stage-actions">
             {file.hasStagedChanges && stageActions.includes("unstage") ? (
-              <button
-                className="icon-button review-tree__stage"
-                type="button"
-                aria-label="Unstage"
-                title="Unstage file"
-                disabled={busy || stale || file.conflicted}
-                onClick={() => onStage(file, "unstage")}
-              >
-                <MinusIcon />
-              </button>
+              <WithTooltip label="Unstage file">
+                <Button
+                  aria-label="Unstage"
+                  disabled={busy || stale || file.conflicted}
+                  onClick={() => onStage(file, "unstage")}
+                  size="icon-xs"
+                  variant="ghost"
+                >
+                  <MinusIcon />
+                </Button>
+              </WithTooltip>
             ) : null}
             {file.hasUnstagedChanges && stageActions.includes("stage") ? (
-              <button
-                className="icon-button review-tree__stage"
-                type="button"
-                aria-label="Stage"
-                title="Stage file"
-                disabled={busy || stale || file.conflicted}
-                onClick={() => onStage(file, "stage")}
-              >
-                <PlusIcon />
-              </button>
+              <WithTooltip label="Stage file">
+                <Button
+                  aria-label="Stage"
+                  disabled={busy || stale || file.conflicted}
+                  onClick={() => onStage(file, "stage")}
+                  size="icon-xs"
+                  variant="ghost"
+                >
+                  <PlusIcon />
+                </Button>
+              </WithTooltip>
             ) : null}
           </span>
         ) : null}
-        <input
+        <Checkbox
           aria-label={`Mark ${file.path} reviewed`}
-          className="diff-panel__reviewed-checkbox"
-          data-testid={`diff-panel-reviewed-${file.path}`}
-          type="checkbox"
           checked={file.reviewed}
+          className="mx-1"
+          data-testid={`diff-panel-reviewed-${file.path}`}
           disabled={busy || stale}
-          onChange={() => onToggleReviewed(file)}
+          onCheckedChange={() => onToggleReviewed(file)}
         />
         <span
           className={`review-tree__status review-tree__status--${file.conflicted ? "conflicted" : file.status}`}
@@ -151,15 +170,17 @@ export function ReviewFileTree({
   return (
     <section className="review-tree" aria-label="Changed files">
       <div className="review-tree__header">
-        <label className="review-tree__filter">
-          <SearchIcon />
-          <input
+        <InputGroup>
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput
             aria-label="Filter changed files"
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter files…"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
           />
-        </label>
+        </InputGroup>
         <span className="review-tree__counter" data-testid="diff-panel-counter">
           Reviewed {reviewedCount} of {files.length}
         </span>
@@ -168,7 +189,7 @@ export function ReviewFileTree({
         {tree.length ? (
           tree.map((node) => renderNode(node, 0))
         ) : (
-          <div className="diff-panel__empty">No files match.</div>
+          <PanelEmpty title="No files match." />
         )}
       </div>
     </section>

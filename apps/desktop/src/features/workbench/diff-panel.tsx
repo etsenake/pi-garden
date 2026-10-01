@@ -20,6 +20,13 @@ import { ChevronDownIcon, FileIcon, MoreIcon, RefreshIcon, SidePanelIcon } from 
 import { extensionToLanguage } from "../../ui/syntax-highlight";
 import { formatPathForDisplay, ReviewFileTree, reviewTreeOrder } from "./review-file-tree";
 import { ReviewMenu } from "./review-menu";
+import { Badge } from "@/ui/shadcn/badge";
+import { Button } from "@/ui/shadcn/button";
+import { Input } from "@/ui/shadcn/input";
+import { Label } from "@/ui/shadcn/label";
+import { Toggle } from "@/ui/shadcn/toggle";
+import { PanelEmpty } from "./panel-empty";
+import { WithTooltip } from "./workbench-tooltip";
 
 interface DiffPanelProps {
   readonly workspaceId: string;
@@ -429,36 +436,38 @@ export function DiffPanel({
       <div className="review-panel__toolbar">
         <ReviewMenu
           label="Review scope"
-          value={SCOPE_LABELS[selectedScope]}
-          buttonClassName="review-panel__scope"
-          buttonContent={<ChevronDownIcon />}
+          trigger={
+            <Button aria-label="Review scope" size="sm" variant="ghost">
+              <span>{SCOPE_LABELS[selectedScope]}</span>
+              <ChevronDownIcon />
+            </Button>
+          }
           align="start"
           options={SCOPE_OPTIONS.filter(
             (option) => option.id !== "selected-turn" || selectedScope === "selected-turn",
           ).map((option) => ({ ...option, checked: option.id === selectedScope }))}
           onSelect={chooseScope}
         />
-        {totals ? (
-          <span className="review-panel__totals" data-testid="review-line-totals">
-            <span className="review-panel__added">+{totals.added}</span>
-            <span className="review-panel__removed">-{totals.removed}</span>
-          </span>
-        ) : null}
+        {totals ? <LineTotals {...totals} data-testid="review-line-totals" /> : null}
         <span className="review-panel__toolbar-spacer" />
-        <button
-          className="icon-button review-panel__tool"
-          type="button"
-          onClick={refresh}
-          aria-label="Refresh"
-          title="Refresh comparison"
-          disabled={loading}
-        >
-          <RefreshIcon />
-        </button>
+        <WithTooltip label="Refresh comparison">
+          <Button
+            aria-label="Refresh"
+            disabled={loading}
+            onClick={refresh}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <RefreshIcon />
+          </Button>
+        </WithTooltip>
         <ReviewMenu
           label="Review options"
-          buttonClassName="icon-button review-panel__tool"
-          buttonContent={<MoreIcon />}
+          trigger={
+            <Button aria-label="Review options" size="icon-sm" variant="ghost">
+              <MoreIcon />
+            </Button>
+          }
           align="end"
           details={comparisonDetails}
           options={[
@@ -484,16 +493,16 @@ export function DiffPanel({
             });
           }}
         />
-        <button
-          className={`icon-button review-panel__tool${treeVisible ? " review-panel__tool--active" : ""}`}
-          type="button"
-          onClick={() => setTreeVisible(!treeVisible)}
-          aria-label={treeVisible ? "Hide file tree" : "Show file tree"}
-          aria-pressed={treeVisible}
-          title={treeVisible ? "Hide file tree" : "Show file tree"}
-        >
-          <SidePanelIcon />
-        </button>
+        <WithTooltip label={treeVisible ? "Hide file tree" : "Show file tree"}>
+          <Toggle
+            aria-label={treeVisible ? "Hide file tree" : "Show file tree"}
+            onPressedChange={setTreeVisible}
+            pressed={treeVisible}
+            size="sm"
+          >
+            <SidePanelIcon />
+          </Toggle>
+        </WithTooltip>
       </div>
       {requestedScope.kind === "branch" ? (
         <form
@@ -510,8 +519,8 @@ export function DiffPanel({
               });
           }}
         >
-          <label htmlFor="review-base-ref">Base</label>
-          <input
+          <Label htmlFor="review-base-ref">Base</Label>
+          <Input
             id="review-base-ref"
             aria-label="Base branch"
             value={baseDraft}
@@ -522,9 +531,9 @@ export function DiffPanel({
                 : "Repository default"
             }
           />
-          <button type="submit" className="button" disabled={loading}>
+          <Button type="submit" disabled={loading} variant="outline">
             Compare
-          </button>
+          </Button>
         </form>
       ) : null}
       {actionIssue ? <ReviewIssueBanner issue={actionIssue} onRefresh={refresh} /> : null}
@@ -532,30 +541,27 @@ export function DiffPanel({
       <div className={`review-panel__body${treeVisible ? "" : " review-panel__body--no-tree"}`}>
         <div className="diff-panel__viewer review-panel__viewer">
           {loading || !result ? (
-            <div className="diff-panel__empty" role="status">
-              Loading comparison…
-            </div>
+            <PanelEmpty loading role="status" title="Loading comparison…" />
           ) : result.state !== "available" ? (
-            <div
-              className="diff-panel__empty diff-panel__unavailable"
+            <PanelEmpty
               data-testid="changed-files-unavailable"
               role="status"
+              title={result.message}
             >
-              <p>{result.message}</p>
-              <button className="button" type="button" onClick={refresh}>
+              <Button onClick={refresh} size="sm" variant="outline">
                 Retry
-              </button>
-            </div>
+              </Button>
+            </PanelEmpty>
           ) : result.files.length === 0 ? (
-            <div className="diff-panel__empty">
-              {result.coverage.state === "partial"
-                ? "No changes in the captured files."
-                : "No changes"}
-            </div>
+            <PanelEmpty
+              title={
+                result.coverage.state === "partial"
+                  ? "No changes in the captured files."
+                  : "No changes"
+              }
+            />
           ) : !selectedFile ? (
-            <div className="diff-panel__empty">
-              This file is not part of the selected comparison.
-            </div>
+            <PanelEmpty title="This file is not part of the selected comparison." />
           ) : (
             <>
               <div className="review-panel__file-header">
@@ -565,23 +571,19 @@ export function DiffPanel({
                 >
                   <PathLabel path={selectedFile.path} />
                 </span>
-                {selectedFile.lines ? (
-                  <span className="review-panel__totals">
-                    <span className="review-panel__added">+{selectedFile.lines.added}</span>
-                    <span className="review-panel__removed">-{selectedFile.lines.removed}</span>
-                  </span>
-                ) : null}
+                {selectedFile.lines ? <LineTotals {...selectedFile.lines} /> : null}
                 <span className="review-panel__toolbar-spacer" />
                 {selectedFile.status !== "deleted" ? (
-                  <button
-                    className="icon-button review-panel__open-file"
-                    type="button"
-                    aria-label="Open in Files"
-                    title="Open in Files"
-                    onClick={() => openCurrentFile(result, selectedFile)}
-                  >
-                    <FileIcon />
-                  </button>
+                  <WithTooltip label="Open in Files">
+                    <Button
+                      aria-label="Open in Files"
+                      onClick={() => openCurrentFile(result, selectedFile)}
+                      size="icon-xs"
+                      variant="ghost"
+                    >
+                      <FileIcon />
+                    </Button>
+                  </WithTooltip>
                 ) : null}
               </div>
               {selectedFile.previousPath ? (
@@ -591,7 +593,7 @@ export function DiffPanel({
               ) : null}
               <div className="review-panel__patches">
                 {fileLoading ? (
-                  <div className="diff-panel__empty">Loading diff…</div>
+                  <PanelEmpty loading title="Loading diff…" />
                 ) : displayedFileResult?.state === "available" ? (
                   <>
                     <CoverageNotice coverage={displayedFileResult.coverage} />
@@ -607,13 +609,13 @@ export function DiffPanel({
                         />
                       </section>
                     ) : displayedFileResult.summary ? null : (
-                      <p className="diff-panel__empty">No text diff is available for this file.</p>
+                      <PanelEmpty title="No text diff is available for this file." />
                     )}
                   </>
                 ) : displayedFileResult ? (
                   <ReviewIssueBanner issue={displayedFileResult} onRefresh={refresh} />
                 ) : (
-                  <div className="diff-panel__empty">Loading diff…</div>
+                  <PanelEmpty loading title="Loading diff…" />
                 )}
               </div>
             </>
@@ -693,6 +695,24 @@ function PathLabel({ path }: { readonly path: string }) {
   );
 }
 
+/** Added and removed line counts, coloured like the diff. */
+function LineTotals({
+  added,
+  removed,
+  ...props
+}: {
+  readonly added: number;
+  readonly removed: number;
+  readonly "data-testid"?: string;
+}) {
+  return (
+    <Badge variant="ghost" {...props}>
+      <span className="review-panel__added">+{added}</span>
+      <span className="review-panel__removed">-{removed}</span>
+    </Badge>
+  );
+}
+
 function lineTotals(files: readonly ReviewFileEntry[]) {
   return files.reduce(
     (total, file) => ({
@@ -717,9 +737,9 @@ function ReviewIssueBanner({
       role="status"
     >
       <p>{issue.message}</p>
-      <button className="button" type="button" onClick={onRefresh}>
+      <Button onClick={onRefresh} size="sm" variant="outline">
         {issue.state === "stale" ? "Refresh comparison" : "Retry"}
-      </button>
+      </Button>
     </div>
   );
 }
