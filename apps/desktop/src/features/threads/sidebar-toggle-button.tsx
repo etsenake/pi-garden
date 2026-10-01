@@ -1,4 +1,7 @@
 import { SidebarToggleIcon } from "../../ui/icons";
+import { Button } from "@/ui/shadcn/button";
+import { Kbd } from "@/ui/shadcn/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 interface SidebarToggleButtonProps {
   readonly collapsed: boolean;
@@ -12,21 +15,27 @@ export function SidebarToggleButton({
   onToggle,
 }: SidebarToggleButtonProps) {
   return (
-    <div className="shortcut-tooltip-wrap sidebar-toggle">
-      <button
-        aria-label="Toggle sidebar"
-        aria-pressed={!collapsed}
-        className="icon-button sidebar-toggle__button"
-        data-testid="sidebar-toggle"
-        type="button"
-        onClick={onToggle}
-      >
-        <SidebarToggleIcon />
-      </button>
-      <span className="shortcut-tooltip sidebar-toggle__tooltip" role="tooltip">
-        <span>Toggle sidebar</span>
-        <kbd>{shortcutLabel}</kbd>
-      </span>
+    <div className="sidebar-toggle flex">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              aria-label="Toggle sidebar"
+              aria-pressed={!collapsed}
+              data-testid="sidebar-toggle"
+              variant="ghost"
+              size="icon-sm"
+              onClick={onToggle}
+            />
+          }
+        >
+          <SidebarToggleIcon />
+        </TooltipTrigger>
+        <TooltipContent role="tooltip" side="bottom">
+          <span>Toggle sidebar</span>
+          <Kbd>{shortcutLabel}</Kbd>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
