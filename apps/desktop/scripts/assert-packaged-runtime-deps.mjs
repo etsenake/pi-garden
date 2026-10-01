@@ -7,6 +7,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 import semver from "semver";
+import { assertReferenceComplete } from "./build-reference.mjs";
 
 const requiredPackages = [
   // Keep packaging-sensitive runtime transitive deps explicit; electron-builder
@@ -187,6 +188,7 @@ try {
   await verifyPackagedPiRuntime(extractedDir);
   await verifyPackagedRuntimeImports(extractedDir);
   await verifyNativeNodePty(asarPath);
+  assertReferenceComplete(path.join(path.dirname(asarPath), "reference"));
 } finally {
   try {
     rmSync(extractedDir, {

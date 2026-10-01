@@ -38,6 +38,9 @@ extraResources:
     filter:
       - package.json
       - "dist/**/*"
+  # Searchable Pi and Pi Garden docs, types and source (build:reference).
+  - from: build/reference
+    to: reference
 
 asar: true
 asarUnpack:
