@@ -66,11 +66,6 @@
   -webkit-app-region: no-drag;
 }
 
-.icon-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
 .sidebar__section {
   padding-right: 8px;
 }
@@ -91,26 +86,8 @@
   gap: 8px;
 }
 
-.icon-button {
-  border: 1px solid transparent;
-  transition:
-    background var(--motion-base) var(--ease-out),
-    border-color var(--motion-base) var(--ease-out),
-    color var(--motion-base) var(--ease-out);
-}
-
-.icon-button {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  display: grid;
-  place-items: center;
-  color: var(--muted-strong);
-}
-
 .workspace-row:hover,
-.session-row:hover,
-.icon-button:hover:not(:disabled) {
+.session-row:hover {
   background: var(--overlay-hover);
   border-color: var(--border-heavy);
 }
