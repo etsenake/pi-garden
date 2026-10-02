@@ -458,10 +458,19 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
     const dialog = window.getByTestId("custom-endpoint-dialog");
     const providerIdInput = dialog.getByLabel("Provider ID");
     const cancelButton = dialog.getByRole("button", { name: "Cancel", exact: true });
+    // At 900x600 the form overflows, so Base UI's ScrollArea makes its viewport a tab stop
+    // (tabIndex 0 while a scrollbar shows) for keyboard scrolling. It precedes the fields.
+    const contentViewport = dialog
+      .getByTestId("custom-endpoint-dialog-content")
+      .locator('[data-slot="scroll-area-viewport"]');
     await expect(providerIdInput).toBeFocused();
     await providerIdInput.press("Shift+Tab");
+    await expect(contentViewport).toBeFocused();
+    await contentViewport.press("Shift+Tab");
     await expect(cancelButton).toBeFocused();
     await cancelButton.press("Tab");
+    await expect(contentViewport).toBeFocused();
+    await contentViewport.press("Tab");
     await expect(providerIdInput).toBeFocused();
     await window.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
@@ -493,7 +502,6 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
       const content = element.querySelector<HTMLElement>(
         '.custom-endpoint-dialog__content [data-slot="scroll-area-viewport"]',
       );
-      const footer = element.querySelector<HTMLElement>(".custom-endpoint-dialog__footer");
       const list = element.querySelector<HTMLElement>(".custom-endpoint-model-list");
       const rect = element.getBoundingClientRect();
       const scrollableElements = [...element.querySelectorAll<HTMLElement>("*")].filter(
@@ -513,7 +521,6 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
         contentScrollHeight: content?.scrollHeight ?? 0,
         dialogBottom: rect.bottom,
         dialogTop: rect.top,
-        footerPosition: footer ? getComputedStyle(footer).position : "",
         listClientHeight: list?.clientHeight ?? 0,
         listOverflowY: list ? getComputedStyle(list).overflowY : "",
         listScrollHeight: list?.scrollHeight ?? 0,
@@ -525,7 +532,6 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
     expect(layout.dialogBottom).toBeLessThanOrEqual(layout.viewportHeight - 23);
     expect(layout.contentScrollHeight).toBeGreaterThan(layout.contentClientHeight);
     expect(layout.contentOverflowY).toBe("scroll");
-    expect(layout.footerPosition).toBe("sticky");
     expect(layout.listScrollHeight).toBeLessThanOrEqual(layout.listClientHeight + 1);
     expect(layout.listOverflowY).toBe("visible");
     expect(layout.scrollableElementCount).toBe(1);
@@ -542,15 +548,14 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
     await expect(addEndpointButton).toHaveCSS("opacity", "1");
     await saveCustomEndpointProof(window, proofDir, "02-keyboard-selection.png");
 
-    const content = dialog
-      .getByTestId("custom-endpoint-dialog-content")
-      .locator('[data-slot="scroll-area-viewport"]');
     const footer = dialog.getByTestId("custom-endpoint-dialog-footer");
     const footerBeforeScroll = await footer.boundingBox();
-    await content.evaluate((element) => {
+    await contentViewport.evaluate((element) => {
       element.scrollTop = element.scrollHeight;
     });
-    await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect
+      .poll(() => contentViewport.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0);
     const footerAfterScroll = await footer.boundingBox();
     expect(footerBeforeScroll).not.toBeNull();
     expect(footerAfterScroll).not.toBeNull();

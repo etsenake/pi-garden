@@ -387,10 +387,7 @@ function CustomEndpointDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter
-          className="custom-endpoint-dialog__footer sm:items-center"
-          data-testid="custom-endpoint-dialog-footer"
-        >
+        <DialogFooter className="sm:items-center" data-testid="custom-endpoint-dialog-footer">
           {formError ? <FieldError className="sm:mr-auto">{formError}</FieldError> : null}
           <Button disabled={savePending} variant="outline" onClick={onClose}>
             Cancel
