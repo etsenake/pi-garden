@@ -42,7 +42,11 @@ function markLayout(pane: HTMLDivElement | null, layout: "settling" | "settled")
   if (pane && pane.dataset.layout !== layout) pane.dataset.layout = layout;
 }
 
-/** The only writer of timeline scroll position. Size changes never select a new intent. */
+/**
+ * Owns timeline scroll position. MessageScroller scrolls only when its content first mounts,
+ * which this model's alignment then overrides, and from its jump button, which jumpToLatest
+ * adopts. Size changes never select a new intent.
+ */
 export function useTimelineViewport({
   sessionKey,
   active,
@@ -396,6 +400,7 @@ export function useTimelineViewport({
     };
   }, [pane, active, schedule, savePosition]);
 
+  /** MessageScrollerButton performs the scroll; this makes the model follow from there. */
   const jumpToLatest = useCallback(() => {
     model.current.state = { kind: "following" };
     model.current.pendingNavigation = true;

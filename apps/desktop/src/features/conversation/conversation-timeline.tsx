@@ -25,6 +25,13 @@ import type { OpenTurnChange } from "./turn-changes-card";
 import type { WorkspaceFileLine } from "./workspace-file-line";
 import { SparkIcon } from "../../ui/icons";
 import { Button } from "@/ui/shadcn/button";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/ui/shadcn/message-scroller";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/shadcn/empty";
 import { Skeleton } from "@/ui/shadcn/skeleton";
 import { Spinner } from "@/ui/shadcn/spinner";
@@ -144,77 +151,90 @@ export function ConversationTimeline({
             onClose={threadSearch.close}
           />
         ) : null}
-        <div
-          className="timeline-pane timeline-pane--thread"
-          data-testid="timeline-pane"
-          ref={viewport.attachPane}
-          tabIndex={0}
-        >
-          {transcriptFailed ? (
-            <div className="timeline" data-testid="transcript">
-              <TranscriptHydrateError
-                retrying={transcriptFailed.retrying}
-                onRetry={onRetryTranscript}
-              />
-            </div>
-          ) : isTranscriptLoading ? (
-            <div className="timeline" data-testid="transcript">
-              <TranscriptSkeleton />
-            </div>
-          ) : transcript.length === 0 ? (
-            <div className="timeline" data-testid="transcript">
-              <TranscriptEmptyState />
-            </div>
-          ) : (
-            <div
-              className="timeline timeline--virtualized"
-              data-testid="transcript"
-              style={{ height: viewport.totalHeight }}
+        {/* MessageScroller owns the scroll frame, its scroll-state attributes and the
+            jump control. Rows stay windowed: mounting every row of a 2000-row transcript
+            took ~1.3s to open and dropped frames while streaming. So, as upstream documents
+            for virtualized lists, the virtual list is Content's only child and
+            useTimelineViewport keeps owning follow/reading position (autoScroll stays off). */}
+        <MessageScrollerProvider>
+          <MessageScroller className="flex-1">
+            <MessageScrollerViewport
+              className="timeline-pane timeline-pane--thread"
+              data-testid="timeline-pane"
+              preserveScrollOnPrepend={false}
+              ref={viewport.attachPane}
+              tabIndex={0}
             >
-              {viewport.visibleRows.map(({ item, top }) => (
-                <MeasuredTimelineItem
-                  key={item.id}
-                  item={item}
-                  top={top}
-                  className="timeline__virtual-row"
-                  onHeightChange={viewport.measureRow}
-                  generation={viewport.layoutGeneration}
-                  toggledToolCallIds={toggledToolCallIds}
-                  extensionUi={extensionUi}
-                  richTools={richTools}
-                  onToggleToolCall={toggleToolCall}
-                  onViewFileInDiff={onViewFileInDiff}
-                  onOpenTurnChange={onOpenTurnChange}
-                  sourceMessageIndex={renderedMessageIndexById.get(item.id)}
-                  onForkFromMessage={onForkFromMessage}
-                  onOpenWorkspaceFileLine={onOpenWorkspaceFileLine}
-                  workspacePath={workspacePath}
-                  annotationMarkers={
-                    markersByMessage.get(item.id) ??
-                    (item.kind === "message" && item.sourceMessageId
-                      ? markersByMessage.get(item.sourceMessageId)
-                      : undefined) ??
-                    NO_MARKERS
-                  }
-                  onOpenAnnotation={annotationSelection.openAnnotation}
-                  scheduledOrigin={
-                    item.kind === "message" ? scheduledOrigins?.get(item.id) : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-          {!transcriptFailed && viewport.showJumpToLatest ? (
-            <Button
-              className="sticky bottom-3 mx-auto mt-[18px] flex w-fit"
-              data-testid="timeline-jump"
-              variant="outline"
-              onClick={viewport.jumpToLatest}
-            >
-              New activity below
-            </Button>
-          ) : null}
-        </div>
+              {transcriptFailed ? (
+                <div className="timeline" data-testid="transcript">
+                  <TranscriptHydrateError
+                    retrying={transcriptFailed.retrying}
+                    onRetry={onRetryTranscript}
+                  />
+                </div>
+              ) : isTranscriptLoading ? (
+                <div className="timeline" data-testid="transcript">
+                  <TranscriptSkeleton />
+                </div>
+              ) : transcript.length === 0 ? (
+                <div className="timeline" data-testid="transcript">
+                  <TranscriptEmptyState />
+                </div>
+              ) : (
+                <MessageScrollerContent className="block min-h-full">
+                  <div
+                    className="timeline timeline--virtualized"
+                    data-testid="transcript"
+                    style={{ height: viewport.totalHeight }}
+                  >
+                    {viewport.visibleRows.map(({ item, top }) => (
+                      <MeasuredTimelineItem
+                        key={item.id}
+                        item={item}
+                        top={top}
+                        className="timeline__virtual-row"
+                        onHeightChange={viewport.measureRow}
+                        generation={viewport.layoutGeneration}
+                        toggledToolCallIds={toggledToolCallIds}
+                        extensionUi={extensionUi}
+                        richTools={richTools}
+                        onToggleToolCall={toggleToolCall}
+                        onViewFileInDiff={onViewFileInDiff}
+                        onOpenTurnChange={onOpenTurnChange}
+                        sourceMessageIndex={renderedMessageIndexById.get(item.id)}
+                        onForkFromMessage={onForkFromMessage}
+                        onOpenWorkspaceFileLine={onOpenWorkspaceFileLine}
+                        workspacePath={workspacePath}
+                        annotationMarkers={
+                          markersByMessage.get(item.id) ??
+                          (item.kind === "message" && item.sourceMessageId
+                            ? markersByMessage.get(item.sourceMessageId)
+                            : undefined) ??
+                          NO_MARKERS
+                        }
+                        onOpenAnnotation={annotationSelection.openAnnotation}
+                        scheduledOrigin={
+                          item.kind === "message" ? scheduledOrigins?.get(item.id) : undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                </MessageScrollerContent>
+              )}
+            </MessageScrollerViewport>
+            {/* The button scrolls to the end; jumpToLatest records the intent to follow. */}
+            {!transcriptFailed && viewport.showJumpToLatest ? (
+              <MessageScrollerButton
+                behavior="auto"
+                data-testid="timeline-jump"
+                size="default"
+                onClick={viewport.jumpToLatest}
+              >
+                New activity below
+              </MessageScrollerButton>
+            ) : null}
+          </MessageScroller>
+        </MessageScrollerProvider>
       </div>
       {annotationSelection.layer}
     </div>
