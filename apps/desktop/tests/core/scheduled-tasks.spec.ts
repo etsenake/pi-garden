@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { format } from "date-fns";
 import type { PiSdkDriver } from "@pi-garden/pi-sdk-driver";
 import {
   createNamedThread,
@@ -65,6 +66,91 @@ test("manual create, tabs, pause, and restart keep scheduled tasks", async () =>
     expect((await getDesktopState(window)).scheduledTasks[0]?.status).toBe("paused");
   } finally {
     await second.close();
+  }
+});
+
+/** Opens the "Run at" date picker and picks `date` through the calendar grid. */
+async function pickOnceDate(window: Page, date: Date): Promise<void> {
+  await window.getByTestId("scheduled-task-once-at").click();
+  const calendar = window.locator('[data-slot="popover-content"] [data-slot="calendar"]');
+  await expect(calendar).toBeVisible();
+  const month = calendar.getByRole("grid", { name: format(date, "MMMM yyyy") });
+  for (let step = 0; step < 24 && (await month.count()) === 0; step += 1) {
+    await calendar.getByRole("button", { name: "Go to the Next Month" }).click();
+  }
+  await expect(month).toBeVisible();
+  await month
+    .getByRole("button", { name: new RegExp(`^(Today, )?${format(date, "PPPP")}(, selected)?$`) })
+    .click();
+  await expect(calendar).toHaveCount(0);
+}
+
+test("once schedules pick their date through the calendar and keep the local run time", async () => {
+  test.setTimeout(60_000);
+  const userDataDir = await makeUserDataDir();
+  const workspacePath = await makeWorkspace("scheduled-once-calendar");
+  const harness = await launchDesktop(userDataDir, {
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+  });
+  try {
+    const window = await harness.firstWindow();
+    await window.getByTestId("sidebar-scheduled").click();
+    await window.getByTestId("scheduled-task-create").click();
+    await window.getByTestId("scheduled-task-setup-manually").click();
+    await expect(window.getByTestId("scheduled-task-editor")).toBeVisible();
+    await window.getByTestId("scheduled-task-title").fill("Launch reminder");
+    await window.getByTestId("scheduled-task-instruction").fill("Remind me about the launch");
+    await window
+      .getByTestId("scheduled-task-frequency")
+      .getByRole("button", { name: "Once" })
+      .click();
+
+    const trigger = window.getByTestId("scheduled-task-once-at");
+    await expect(window.getByRole("button", { name: "Run at" })).toBeVisible();
+    await expect(window.getByLabel("Time", { exact: true })).toHaveAttribute("type", "time");
+
+    const now = new Date();
+    const runDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 40);
+    await pickOnceDate(window, runDate);
+    await expect(trigger).toHaveText(format(runDate, "PPP"));
+    await window.getByTestId("scheduled-task-once-time").fill("14:30");
+    await window.getByTestId("scheduled-task-save").click();
+    await expect(window.getByTestId("scheduled-task-editor")).toHaveCount(0);
+
+    const expectedAt = new Date(
+      runDate.getFullYear(),
+      runDate.getMonth(),
+      runDate.getDate(),
+      14,
+      30,
+    ).toISOString();
+    await expect
+      .poll(async () => (await getDesktopState(window)).scheduledTasks[0]?.schedule)
+      .toEqual({ kind: "once", at: expectedAt });
+
+    await window.getByTestId("scheduled-task-row").click();
+    await expect(window.getByTestId("scheduled-task-editor")).toBeVisible();
+    await expect(trigger).toHaveText(format(runDate, "PPP"));
+    await expect(window.getByTestId("scheduled-task-once-time")).toHaveValue("14:30");
+    const laterDate = new Date(runDate.getFullYear(), runDate.getMonth(), runDate.getDate() + 1);
+    await pickOnceDate(window, laterDate);
+    await window.getByTestId("scheduled-task-save").click();
+    await expect(window.getByTestId("scheduled-task-editor")).toHaveCount(0);
+    await expect
+      .poll(async () => (await getDesktopState(window)).scheduledTasks[0]?.schedule)
+      .toEqual({
+        kind: "once",
+        at: new Date(
+          laterDate.getFullYear(),
+          laterDate.getMonth(),
+          laterDate.getDate(),
+          14,
+          30,
+        ).toISOString(),
+      });
+  } finally {
+    await harness.close();
   }
 });
 

@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import { ChevronDownIcon } from "lucide-react";
 import type {
   CreateScheduledTaskInput,
   ScheduledTaskRecord,
@@ -14,6 +16,7 @@ import {
   type Weekday,
 } from "../../../contracts/scheduled-tasks";
 import { Button } from "@/ui/shadcn/button";
+import { Calendar } from "@/ui/shadcn/calendar";
 import {
   Field,
   FieldError,
@@ -23,6 +26,7 @@ import {
   FieldSet,
 } from "@/ui/shadcn/field";
 import { Input } from "@/ui/shadcn/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
 import { RadioGroup, RadioGroupItem } from "@/ui/shadcn/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/shadcn/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/ui/shadcn/sheet";
@@ -71,6 +75,25 @@ function fromDatetimeLocalValue(value: string): string {
   return date.toISOString();
 }
 
+/** Calendar date of a `YYYY-MM-DDTHH:mm` local value, as a local-midnight Date. */
+function onceDateOf(value: string): Date | undefined {
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) {
+    return undefined;
+  }
+  return new Date(year, month - 1, day);
+}
+
+function withOnceDate(value: string, date: Date): string {
+  const time = value.slice(11, 16) || defaultOnceValue().slice(11, 16);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${time}`;
+}
+
+function withOnceTime(value: string, time: string): string {
+  const date = value.slice(0, 10) || defaultOnceValue().slice(0, 10);
+  return `${date}T${time}`;
+}
+
 function defaultOnceValue(): string {
   return toDatetimeLocalValue(new Date(Date.now() + 60 * 60 * 1000).toISOString());
 }
@@ -114,6 +137,8 @@ export function ScheduledTaskEditor({
         ? toDatetimeLocalValue(prefill.schedule.at)
         : defaultOnceValue(),
   );
+  const [onceDateOpen, setOnceDateOpen] = useState(false);
+  const onceDate = onceDateOf(onceAt);
   const [clock, setClock] = useState(timeFromSchedule(source?.schedule ?? prefill?.schedule));
   const [days, setDays] = useState<Weekday[]>(
     source?.schedule.kind === "weekly"
@@ -359,16 +384,56 @@ export function ScheduledTaskEditor({
           </FieldSet>
 
           {frequency === "once" ? (
-            <Field>
-              <FieldLabel htmlFor="scheduled-task-once-at">Run at</FieldLabel>
-              <Input
-                data-testid="scheduled-task-once-at"
-                id="scheduled-task-once-at"
-                type="datetime-local"
-                value={onceAt}
-                onChange={(event) => setOnceAt(event.target.value)}
-              />
-            </Field>
+            <FieldGroup className="flex-row">
+              <Field>
+                <FieldLabel htmlFor="scheduled-task-once-at">Run at</FieldLabel>
+                <Popover open={onceDateOpen} onOpenChange={setOnceDateOpen}>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        className="justify-between font-normal"
+                        data-testid="scheduled-task-once-at"
+                        id="scheduled-task-once-at"
+                        variant="outline"
+                      />
+                    }
+                  >
+                    {onceDate ? format(onceDate, "PPP") : "Select date"}
+                    <ChevronDownIcon data-icon="inline-end" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={onceDate}
+                      captionLayout="dropdown"
+                      defaultMonth={onceDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setOnceAt((current) => withOnceDate(current, date));
+                        }
+                        setOnceDateOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </Field>
+              <Field className="w-32">
+                <FieldLabel htmlFor="scheduled-task-once-time">Time</FieldLabel>
+                <Input
+                  className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  data-testid="scheduled-task-once-time"
+                  id="scheduled-task-once-time"
+                  type="time"
+                  value={onceAt.slice(11, 16)}
+                  onChange={(event) => {
+                    const time = event.target.value;
+                    if (time) {
+                      setOnceAt((current) => withOnceTime(current, time));
+                    }
+                  }}
+                />
+              </Field>
+            </FieldGroup>
           ) : null}
           {frequency === "daily" || frequency === "weekly" ? (
             <Field>
