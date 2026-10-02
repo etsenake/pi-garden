@@ -123,14 +123,17 @@ svg {
   background-color: var(--scrollbar-thumb-hover);
 }
 
-/* Tokenized focus ring for interactive elements. */
-button:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible,
-[tabindex]:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+/* Tokenized focus ring for legacy interactive elements. shadcn components
+   (data-slot) draw their own ring, so this skips them; unstyled primitive
+   triggers such as a CollapsibleTrigger on legacy markup still get it. The
+   :where() keeps the original specificity so legacy overrides still win. */
+button:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))),
+a:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))),
+[role="button"]:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))),
+[tabindex]:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))),
+input:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))),
+textarea:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))),
+select:focus-visible:not(:where([data-slot]:not([data-slot$="-trigger"]))) {
   outline: none;
   box-shadow: var(--focus-ring);
 }
