@@ -13,7 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/shadcn/dialog";
-import { Field, FieldError } from "@/ui/shadcn/field";
+import { CircleAlertIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/ui/shadcn/alert";
+import { Field } from "@/ui/shadcn/field";
 import { Input } from "@/ui/shadcn/input";
 import { SettingsCustomEndpointsSection } from "./settings-custom-endpoints-section";
 import {
@@ -268,8 +270,13 @@ function ProviderApiKeyDialog({
               }
             }}
           />
-          {error ? <FieldError className="settings-warning">{error}</FieldError> : null}
         </Field>
+        {error ? (
+          <Alert className="settings-warning" variant="destructive">
+            <CircleAlertIcon />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         <DialogFooter>
           <Button disabled={pending} variant="outline" onClick={onClose}>
             Cancel

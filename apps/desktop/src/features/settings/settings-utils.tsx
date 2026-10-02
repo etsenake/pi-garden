@@ -3,11 +3,11 @@ import type {
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
 } from "@pi-garden/session-driver/runtime-types";
-import { SearchIcon } from "lucide-react";
+import { CircleAlertIcon, SearchIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/ui/shadcn/alert";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { Card } from "@/ui/shadcn/card";
-import { FieldError } from "@/ui/shadcn/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
 import {
   Item,
@@ -178,7 +178,10 @@ export function SettingsNote({
     <Item className="settings-row">
       <ItemContent className="min-w-0">
         {tone === "warning" ? (
-          <FieldError className="settings-warning">{children}</FieldError>
+          <Alert className="settings-warning" variant="destructive">
+            <CircleAlertIcon />
+            <AlertDescription className="wrap-anywhere">{children}</AlertDescription>
+          </Alert>
         ) : (
           <ItemDescription className="line-clamp-none wrap-anywhere">{children}</ItemDescription>
         )}

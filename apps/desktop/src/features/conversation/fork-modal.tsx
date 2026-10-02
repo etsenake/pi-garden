@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import type { NewThreadEnvironment } from "../../../contracts/desktop-state";
 import { CloseIcon } from "../../ui/icons";
+import { CircleAlertIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/ui/shadcn/alert";
 import { Button } from "@/ui/shadcn/button";
 import {
   Dialog,
@@ -82,9 +84,10 @@ export function ForkModal({
         </DialogHeader>
 
         {error ? (
-          <div className="error-banner" data-testid="fork-modal-error">
-            {error}
-          </div>
+          <Alert data-testid="fork-modal-error" variant="destructive">
+            <CircleAlertIcon />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
 
         {messagePreview ? (

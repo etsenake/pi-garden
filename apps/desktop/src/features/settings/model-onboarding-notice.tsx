@@ -1,3 +1,4 @@
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/shadcn/alert";
 import { Button } from "@/ui/shadcn/button";
 import type { ModelOnboardingNotice } from "./model-onboarding";
 
@@ -15,19 +16,14 @@ export function ModelOnboardingNoticeBanner({
   }
 
   return (
-    <div className="model-onboarding-notice" data-testid="model-onboarding-notice">
-      <div className="model-onboarding-notice__body">
-        <span className="model-onboarding-notice__title">{notice.title}</span>
-        <span className="model-onboarding-notice__description">{notice.description}</span>
-      </div>
-      <Button
-        className="shrink-0"
-        size="xs"
-        variant="link"
-        onClick={() => onOpenSettings(notice.actionSection)}
-      >
-        {notice.actionLabel}
-      </Button>
-    </div>
+    <Alert data-testid="model-onboarding-notice">
+      <AlertTitle>{notice.title}</AlertTitle>
+      <AlertDescription>{notice.description}</AlertDescription>
+      <AlertAction>
+        <Button size="xs" variant="link" onClick={() => onOpenSettings(notice.actionSection)}>
+          {notice.actionLabel}
+        </Button>
+      </AlertAction>
+    </Alert>
   );
 }

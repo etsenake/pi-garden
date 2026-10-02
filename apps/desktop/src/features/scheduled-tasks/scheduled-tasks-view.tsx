@@ -30,7 +30,8 @@ import {
   ItemTitle,
 } from "@/ui/shadcn/item";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
-import { MoreHorizontalIcon } from "lucide-react";
+import { CircleAlertIcon, MoreHorizontalIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/ui/shadcn/alert";
 
 interface ScheduledTasksViewProps {
   readonly tasks: readonly ScheduledTaskRecord[];
@@ -129,7 +130,12 @@ export function ScheduledTasksView({
         </Tabs>
       </div>
 
-      {lastError ? <p className="error-banner">{lastError}</p> : null}
+      {lastError ? (
+        <Alert className="mb-4" data-testid="scheduled-tasks-error" variant="destructive">
+          <CircleAlertIcon />
+          <AlertDescription>{lastError}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {visible.length === 0 ? (
         <Empty className="border" data-testid="scheduled-tasks-empty">

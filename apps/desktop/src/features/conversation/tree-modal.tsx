@@ -13,6 +13,8 @@ import type {
   SessionTreeSnapshot,
 } from "@pi-garden/session-driver/types";
 import { ChevronDownIcon, ChevronRightIcon, CloseIcon } from "../../ui/icons";
+import { CircleAlertIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/ui/shadcn/alert";
 import { Button } from "@/ui/shadcn/button";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/ui/shadcn/command";
 import {
@@ -326,9 +328,10 @@ export function TreeModal({
 
         <div className="flex min-h-0 flex-col gap-4">
           {error ? (
-            <div className="error-banner" data-testid="tree-modal-error">
-              {error}
-            </div>
+            <Alert data-testid="tree-modal-error" variant="destructive">
+              <CircleAlertIcon />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : null}
 
           {loading ? (

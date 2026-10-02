@@ -35,7 +35,8 @@ import {
   SparkIcon,
   StatusIcon,
 } from "../../ui/icons";
-import { XIcon } from "lucide-react";
+import { CircleAlertIcon, XIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/ui/shadcn/alert";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { CommandEmpty, CommandGroup, CommandItem, CommandShortcut } from "@/ui/shadcn/command";
@@ -280,9 +281,10 @@ export function ComposerSurface({
         </div>
       ) : null}
       {lastError ? (
-        <div className="composer__error error-banner" data-testid="composer-error-banner">
-          {lastError}
-        </div>
+        <Alert className="mb-3" data-testid="composer-error-banner" variant="destructive">
+          <CircleAlertIcon />
+          <AlertDescription>{lastError}</AlertDescription>
+        </Alert>
       ) : null}
       <div className="composer__editor">
         {topNotice}
