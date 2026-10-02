@@ -3,6 +3,7 @@ import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { Item, ItemActions, ItemContent, ItemDescription } from "@/ui/shadcn/item";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
+import { ScrollArea } from "@/ui/shadcn/scroll-area";
 import type { TranscriptAnnotation } from "./annotation-prompt";
 
 /** "N annotations" above the composer; hovering or opening it lists each quote and comment. */
@@ -29,29 +30,33 @@ export function AnnotationChip({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="max-h-80 w-[min(420px,calc(100vw-48px))] gap-0.5 overflow-y-auto p-1.5"
+          className="max-h-80 w-[min(420px,calc(100vw-48px))] p-0"
           data-testid="annotation-chip-popover"
           side="top"
         >
-          {annotations.map((annotation, index) => (
-            <Item className="flex-nowrap items-start" key={annotation.id} size="xs">
-              <Badge>{index + 1}</Badge>
-              <ItemContent className="min-w-0">
-                <ItemDescription className="line-clamp-3">{annotation.quote}</ItemDescription>
-                {annotation.note ? <div className="break-words">{annotation.note}</div> : null}
-              </ItemContent>
-              <ItemActions>
-                <Button
-                  aria-label={`Remove annotation ${index + 1}`}
-                  size="icon-xs"
-                  variant="ghost"
-                  onClick={() => onRemove(annotation.id)}
-                >
-                  <CloseIcon />
-                </Button>
-              </ItemActions>
-            </Item>
-          ))}
+          <ScrollArea className="flex min-h-0 flex-col">
+            <div className="flex flex-col gap-0.5 p-1.5">
+              {annotations.map((annotation, index) => (
+                <Item className="flex-nowrap items-start" key={annotation.id} size="xs">
+                  <Badge>{index + 1}</Badge>
+                  <ItemContent className="min-w-0">
+                    <ItemDescription className="line-clamp-3">{annotation.quote}</ItemDescription>
+                    {annotation.note ? <div className="break-words">{annotation.note}</div> : null}
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      aria-label={`Remove annotation ${index + 1}`}
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => onRemove(annotation.id)}
+                    >
+                      <CloseIcon />
+                    </Button>
+                  </ItemActions>
+                </Item>
+              ))}
+            </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
     </div>

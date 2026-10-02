@@ -27,6 +27,7 @@ import { ButtonGroup } from "@/ui/shadcn/button-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
 import { Input } from "@/ui/shadcn/input";
 import { Label } from "@/ui/shadcn/label";
+import { ScrollArea } from "@/ui/shadcn/scroll-area";
 import { Toggle } from "@/ui/shadcn/toggle";
 import { PanelEmpty } from "./panel-empty";
 import { WithTooltip } from "./workbench-tooltip";
@@ -763,15 +764,17 @@ function CoverageNotice({ coverage }: { readonly coverage: ReviewCoverage }) {
         />
       </CollapsibleTrigger>
       <CollapsibleContent keepMounted>
-        {coverage.notes.length ? (
-          <ul>
-            {coverage.notes.map((note, index) => (
-              <li key={index}>{note}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>Some changes could not be included.</p>
-        )}
+        <ScrollArea className="flex max-h-28 flex-col">
+          {coverage.notes.length ? (
+            <ul>
+              {coverage.notes.map((note, index) => (
+                <li key={index}>{note}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Some changes could not be included.</p>
+          )}
+        </ScrollArea>
       </CollapsibleContent>
     </Collapsible>
   );

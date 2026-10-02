@@ -144,8 +144,6 @@
 
 .review-panel__coverage {
   flex-shrink: 0;
-  max-height: 140px;
-  overflow-y: auto;
 }
 
 .review-panel__coverage [data-slot="collapsible-content"] {

@@ -31,6 +31,7 @@ import {
 } from "@/ui/shadcn/input-group";
 import { Item } from "@/ui/shadcn/item";
 import { Label } from "@/ui/shadcn/label";
+import { ScrollArea } from "@/ui/shadcn/scroll-area";
 import { SettingsGroup, SettingsNote, SettingsRow } from "./settings-utils";
 
 interface SettingsCustomEndpointsSectionProps {
@@ -289,99 +290,102 @@ function CustomEndpointDialog({
         data-testid="custom-endpoint-dialog"
         showCloseButton={false}
       >
-        <div
-          className="custom-endpoint-dialog__content -mx-4 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-1"
+        <ScrollArea
+          className="custom-endpoint-dialog__content -mx-4 flex min-h-0 flex-1 flex-col"
           data-testid="custom-endpoint-dialog-content"
         >
-          <DialogHeader>
-            <DialogTitle>{isEdit ? "Edit custom endpoint" : "Add custom endpoint"}</DialogTitle>
-            <DialogDescription>
-              Configure an OpenAI-compatible server. The endpoint and API key are stored in
-              plaintext at <code>~/.pi/agent/models.json</code>.
-            </DialogDescription>
-          </DialogHeader>
-          <FieldGroup>
-            <Field data-invalid={showIdError ? true : undefined}>
-              <FieldLabel htmlFor={providerIdInputId}>Provider ID</FieldLabel>
-              <Input
-                aria-invalid={showIdError ? true : undefined}
-                disabled={isEdit || savePending}
-                id={providerIdInputId}
-                placeholder="ollama-local"
-                value={providerId}
-                onChange={(event) => setProviderId(event.target.value.trim().toLowerCase())}
-              />
-              {showIdError ? (
-                <FieldError>{idValidationError}</FieldError>
-              ) : (
+          <div className="flex flex-col gap-5 px-4 py-1">
+            <DialogHeader>
+              <DialogTitle>{isEdit ? "Edit custom endpoint" : "Add custom endpoint"}</DialogTitle>
+              <DialogDescription>
+                Configure an OpenAI-compatible server. The endpoint and API key are stored in
+                plaintext at <code>~/.pi/agent/models.json</code>.
+              </DialogDescription>
+            </DialogHeader>
+            <FieldGroup>
+              <Field data-invalid={showIdError ? true : undefined}>
+                <FieldLabel htmlFor={providerIdInputId}>Provider ID</FieldLabel>
+                <Input
+                  aria-invalid={showIdError ? true : undefined}
+                  disabled={isEdit || savePending}
+                  id={providerIdInputId}
+                  placeholder="ollama-local"
+                  value={providerId}
+                  onChange={(event) => setProviderId(event.target.value.trim().toLowerCase())}
+                />
+                {showIdError ? (
+                  <FieldError>{idValidationError}</FieldError>
+                ) : (
+                  <FieldDescription>
+                    Lowercase letters, digits, and dashes. Cannot be changed later.
+                  </FieldDescription>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={baseUrlInputId}>Base URL</FieldLabel>
+                <Input
+                  disabled={savePending}
+                  id={baseUrlInputId}
+                  placeholder="http://localhost:11434/v1"
+                  value={baseUrl}
+                  onChange={(event) => setBaseUrl(event.target.value)}
+                />
                 <FieldDescription>
-                  Lowercase letters, digits, and dashes. Cannot be changed later.
+                  Include the <code>/v1</code> suffix. Ollama:{" "}
+                  <code>http://localhost:11434/v1</code>. vLLM:{" "}
+                  <code>http://localhost:8000/v1</code>.
                 </FieldDescription>
-              )}
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={baseUrlInputId}>Base URL</FieldLabel>
-              <Input
-                disabled={savePending}
-                id={baseUrlInputId}
-                placeholder="http://localhost:11434/v1"
-                value={baseUrl}
-                onChange={(event) => setBaseUrl(event.target.value)}
-              />
-              <FieldDescription>
-                Include the <code>/v1</code> suffix. Ollama: <code>http://localhost:11434/v1</code>.
-                vLLM: <code>http://localhost:8000/v1</code>.
-              </FieldDescription>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={apiKeyInputId}>API key</FieldLabel>
-              <Input
-                disabled={savePending}
-                id={apiKeyInputId}
-                placeholder="vLLM: pass through; Ollama: leave blank"
-                type="password"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-              />
-              <FieldDescription>
-                Required by the storage format. For vLLM started with <code>--api-key</code>, enter
-                that key. For Ollama or other servers without auth, leave blank and a placeholder is
-                saved.
-              </FieldDescription>
-            </Field>
-            <Field>
-              <div className="flex items-center justify-between gap-3">
-                <FieldTitle>Models</FieldTitle>
-                <Button
-                  disabled={probePending || savePending}
-                  focusableWhenDisabled
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    void handleProbe().catch((error: unknown) => {
-                      setProbePending(false);
-                      setProbeError(error instanceof Error ? error.message : String(error));
-                    })
-                  }
-                >
-                  {probePending ? "Detecting…" : "Detect models"}
-                </Button>
-              </div>
-              {probeError ? <FieldError>{probeError}</FieldError> : null}
-              <ModelChecklist
-                probed={probeCandidates}
-                selected={models}
-                onToggle={toggleModel}
-                onManualAdd={handleManualAdd}
-                disabled={savePending}
-              />
-              <FieldDescription>
-                Tool calling is required. Smaller models (&lt; 7B) often do not emit OpenAI-style
-                function calls cleanly.
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
-        </div>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={apiKeyInputId}>API key</FieldLabel>
+                <Input
+                  disabled={savePending}
+                  id={apiKeyInputId}
+                  placeholder="vLLM: pass through; Ollama: leave blank"
+                  type="password"
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                />
+                <FieldDescription>
+                  Required by the storage format. For vLLM started with <code>--api-key</code>,
+                  enter that key. For Ollama or other servers without auth, leave blank and a
+                  placeholder is saved.
+                </FieldDescription>
+              </Field>
+              <Field>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldTitle>Models</FieldTitle>
+                  <Button
+                    disabled={probePending || savePending}
+                    focusableWhenDisabled
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      void handleProbe().catch((error: unknown) => {
+                        setProbePending(false);
+                        setProbeError(error instanceof Error ? error.message : String(error));
+                      })
+                    }
+                  >
+                    {probePending ? "Detecting…" : "Detect models"}
+                  </Button>
+                </div>
+                {probeError ? <FieldError>{probeError}</FieldError> : null}
+                <ModelChecklist
+                  probed={probeCandidates}
+                  selected={models}
+                  onToggle={toggleModel}
+                  onManualAdd={handleManualAdd}
+                  disabled={savePending}
+                />
+                <FieldDescription>
+                  Tool calling is required. Smaller models (&lt; 7B) often do not emit OpenAI-style
+                  function calls cleanly.
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </div>
+        </ScrollArea>
 
         <DialogFooter
           className="custom-endpoint-dialog__footer sm:items-center"

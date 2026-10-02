@@ -489,7 +489,10 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
     await expect(addEndpointButton).toBeDisabled();
 
     const layout = await dialog.evaluate((element) => {
-      const content = element.querySelector<HTMLElement>(".custom-endpoint-dialog__content");
+      // The content is a shadcn ScrollArea; its viewport is the element that scrolls.
+      const content = element.querySelector<HTMLElement>(
+        '.custom-endpoint-dialog__content [data-slot="scroll-area-viewport"]',
+      );
       const footer = element.querySelector<HTMLElement>(".custom-endpoint-dialog__footer");
       const list = element.querySelector<HTMLElement>(".custom-endpoint-model-list");
       const rect = element.getBoundingClientRect();
@@ -521,7 +524,7 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
     expect(layout.dialogTop).toBeGreaterThanOrEqual(23);
     expect(layout.dialogBottom).toBeLessThanOrEqual(layout.viewportHeight - 23);
     expect(layout.contentScrollHeight).toBeGreaterThan(layout.contentClientHeight);
-    expect(layout.contentOverflowY).toBe("auto");
+    expect(layout.contentOverflowY).toBe("scroll");
     expect(layout.footerPosition).toBe("sticky");
     expect(layout.listScrollHeight).toBeLessThanOrEqual(layout.listClientHeight + 1);
     expect(layout.listOverflowY).toBe("visible");
@@ -539,7 +542,9 @@ test("custom endpoint dialog supports a long-list keyboard flow with sticky acti
     await expect(addEndpointButton).toHaveCSS("opacity", "1");
     await saveCustomEndpointProof(window, proofDir, "02-keyboard-selection.png");
 
-    const content = dialog.getByTestId("custom-endpoint-dialog-content");
+    const content = dialog
+      .getByTestId("custom-endpoint-dialog-content")
+      .locator('[data-slot="scroll-area-viewport"]');
     const footer = dialog.getByTestId("custom-endpoint-dialog-footer");
     const footerBeforeScroll = await footer.boundingBox();
     await content.evaluate((element) => {

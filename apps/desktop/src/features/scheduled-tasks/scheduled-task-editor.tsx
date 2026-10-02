@@ -28,6 +28,7 @@ import {
 import { Input } from "@/ui/shadcn/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
 import { RadioGroup, RadioGroupItem } from "@/ui/shadcn/radio-group";
+import { ScrollArea } from "@/ui/shadcn/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/shadcn/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/ui/shadcn/sheet";
 import { Textarea } from "@/ui/shadcn/textarea";
@@ -266,229 +267,231 @@ export function ScheduledTaskEditor({
           </SheetTitle>
         </SheetHeader>
 
-        <FieldGroup className="min-h-0 flex-1 overflow-y-auto px-4">
-          <Field>
-            <FieldLabel htmlFor="scheduled-task-title">Title</FieldLabel>
-            <Input
-              data-testid="scheduled-task-title"
-              id="scheduled-task-title"
-              ref={titleRef}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Weekly status"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="scheduled-task-instruction">Instructions</FieldLabel>
-            <Textarea
-              data-testid="scheduled-task-instruction"
-              id="scheduled-task-instruction"
-              value={instruction}
-              onChange={(event) => setInstruction(event.target.value)}
-              placeholder="What should pi do when this runs?"
-              rows={5}
-            />
-          </Field>
+        <ScrollArea className="min-h-0 flex-1">
+          <FieldGroup className="px-4">
+            <Field>
+              <FieldLabel htmlFor="scheduled-task-title">Title</FieldLabel>
+              <Input
+                data-testid="scheduled-task-title"
+                id="scheduled-task-title"
+                ref={titleRef}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Weekly status"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="scheduled-task-instruction">Instructions</FieldLabel>
+              <Textarea
+                data-testid="scheduled-task-instruction"
+                id="scheduled-task-instruction"
+                value={instruction}
+                onChange={(event) => setInstruction(event.target.value)}
+                placeholder="What should pi do when this runs?"
+                rows={5}
+              />
+            </Field>
 
-          <Field>
-            <FieldLabel htmlFor="scheduled-task-workspace">Workspace</FieldLabel>
-            <Select
-              items={workspaces.map((entry) => ({ value: entry.id, label: entry.name }))}
-              value={workspaceId}
-              onValueChange={(value) => {
-                if (value) {
-                  setWorkspaceId(value);
-                  setSessionId("");
-                }
-              }}
-            >
-              <SelectTrigger
-                className="w-full"
-                data-testid="scheduled-task-workspace"
-                id="scheduled-task-workspace"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaces.map((entry) => (
-                  <SelectItem key={entry.id} value={entry.id}>
-                    {entry.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <FieldSet>
-            <FieldLegend variant="label">Runs in</FieldLegend>
-            <RadioGroup
-              value={targetKind}
-              onValueChange={(value) => setTargetKind(value as typeof targetKind)}
-            >
-              <Field orientation="horizontal">
-                <RadioGroupItem id="scheduled-target-new" value="new-thread" />
-                <FieldLabel className="font-normal" htmlFor="scheduled-target-new">
-                  New thread for this task
-                </FieldLabel>
-              </Field>
-              <Field orientation="horizontal">
-                <RadioGroupItem id="scheduled-target-existing" value="existing-thread" />
-                <FieldLabel className="font-normal" htmlFor="scheduled-target-existing">
-                  Existing thread
-                </FieldLabel>
-              </Field>
-            </RadioGroup>
-            {targetKind === "existing-thread" ? (
+            <Field>
+              <FieldLabel htmlFor="scheduled-task-workspace">Workspace</FieldLabel>
               <Select
-                items={sessions.map((session) => ({ value: session.id, label: session.title }))}
-                value={sessionId || null}
-                onValueChange={(value) => setSessionId(value ?? "")}
+                items={workspaces.map((entry) => ({ value: entry.id, label: entry.name }))}
+                value={workspaceId}
+                onValueChange={(value) => {
+                  if (value) {
+                    setWorkspaceId(value);
+                    setSessionId("");
+                  }
+                }}
               >
                 <SelectTrigger
-                  aria-label="Thread"
                   className="w-full"
-                  data-testid="scheduled-task-session"
+                  data-testid="scheduled-task-workspace"
+                  id="scheduled-task-workspace"
                 >
-                  <SelectValue placeholder="Select a thread" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {sessions.map((session) => (
-                    <SelectItem key={session.id} value={session.id}>
-                      {session.title}
+                  {workspaces.map((entry) => (
+                    <SelectItem key={entry.id} value={entry.id}>
+                      {entry.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            ) : null}
-          </FieldSet>
-
-          <FieldSet>
-            <FieldLegend variant="label">Frequency</FieldLegend>
-            <ToggleGroup
-              data-testid="scheduled-task-frequency"
-              variant="outline"
-              value={[frequency]}
-              onValueChange={(value) => {
-                const next = value[0] as FrequencyKind | undefined;
-                if (next) {
-                  setFrequency(next);
-                }
-              }}
-            >
-              {FREQUENCIES.map((entry) => (
-                <ToggleGroupItem key={entry.id} value={entry.id}>
-                  {entry.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </FieldSet>
-
-          {frequency === "once" ? (
-            <FieldGroup className="flex-row">
-              <Field>
-                <FieldLabel htmlFor="scheduled-task-once-at">Run at</FieldLabel>
-                <Popover open={onceDateOpen} onOpenChange={setOnceDateOpen}>
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        className="justify-between font-normal"
-                        data-testid="scheduled-task-once-at"
-                        id="scheduled-task-once-at"
-                        variant="outline"
-                      />
-                    }
-                  >
-                    {onceDate ? format(onceDate, "PPP") : "Select date"}
-                    <ChevronDownIcon data-icon="inline-end" />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={onceDate}
-                      captionLayout="dropdown"
-                      defaultMonth={onceDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setOnceAt((current) => withOnceDate(current, date));
-                        }
-                        setOnceDateOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </Field>
-              <Field className="w-32">
-                <FieldLabel htmlFor="scheduled-task-once-time">Time</FieldLabel>
-                <Input
-                  className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                  data-testid="scheduled-task-once-time"
-                  id="scheduled-task-once-time"
-                  type="time"
-                  value={onceAt.slice(11, 16)}
-                  onChange={(event) => {
-                    const time = event.target.value;
-                    if (time) {
-                      setOnceAt((current) => withOnceTime(current, time));
-                    }
-                  }}
-                />
-              </Field>
-            </FieldGroup>
-          ) : null}
-          {frequency === "daily" || frequency === "weekly" ? (
-            <Field>
-              <FieldLabel htmlFor="scheduled-task-time">Time</FieldLabel>
-              <Input
-                data-testid="scheduled-task-time"
-                id="scheduled-task-time"
-                type="time"
-                value={clock}
-                onChange={(event) => setClock(event.target.value)}
-              />
             </Field>
-          ) : null}
-          {frequency === "weekly" ? (
+
             <FieldSet>
-              <FieldLegend variant="label">Days</FieldLegend>
-              <ToggleGroup
-                className="flex-wrap"
-                multiple
-                size="sm"
-                variant="outline"
-                value={days.map(String)}
-                onValueChange={(value) =>
-                  setDays(
-                    value
-                      .map((entry) => Number(entry) as Weekday)
-                      .sort((left, right) => left - right),
-                  )
-                }
+              <FieldLegend variant="label">Runs in</FieldLegend>
+              <RadioGroup
+                value={targetKind}
+                onValueChange={(value) => setTargetKind(value as typeof targetKind)}
               >
-                {WEEKDAY_NAMES.map((name, index) => (
-                  <ToggleGroupItem aria-label={name} key={name} value={String(index)}>
-                    {name.slice(0, 3)}
+                <Field orientation="horizontal">
+                  <RadioGroupItem id="scheduled-target-new" value="new-thread" />
+                  <FieldLabel className="font-normal" htmlFor="scheduled-target-new">
+                    New thread for this task
+                  </FieldLabel>
+                </Field>
+                <Field orientation="horizontal">
+                  <RadioGroupItem id="scheduled-target-existing" value="existing-thread" />
+                  <FieldLabel className="font-normal" htmlFor="scheduled-target-existing">
+                    Existing thread
+                  </FieldLabel>
+                </Field>
+              </RadioGroup>
+              {targetKind === "existing-thread" ? (
+                <Select
+                  items={sessions.map((session) => ({ value: session.id, label: session.title }))}
+                  value={sessionId || null}
+                  onValueChange={(value) => setSessionId(value ?? "")}
+                >
+                  <SelectTrigger
+                    aria-label="Thread"
+                    className="w-full"
+                    data-testid="scheduled-task-session"
+                  >
+                    <SelectValue placeholder="Select a thread" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessions.map((session) => (
+                      <SelectItem key={session.id} value={session.id}>
+                        {session.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+            </FieldSet>
+
+            <FieldSet>
+              <FieldLegend variant="label">Frequency</FieldLegend>
+              <ToggleGroup
+                data-testid="scheduled-task-frequency"
+                variant="outline"
+                value={[frequency]}
+                onValueChange={(value) => {
+                  const next = value[0] as FrequencyKind | undefined;
+                  if (next) {
+                    setFrequency(next);
+                  }
+                }}
+              >
+                {FREQUENCIES.map((entry) => (
+                  <ToggleGroupItem key={entry.id} value={entry.id}>
+                    {entry.label}
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
             </FieldSet>
-          ) : null}
-          {frequency === "interval" ? (
-            <Field>
-              <FieldLabel htmlFor="scheduled-task-interval">Every (minutes)</FieldLabel>
-              <Input
-                data-testid="scheduled-task-interval"
-                id="scheduled-task-interval"
-                type="number"
-                min={1}
-                max={7 * 24 * 60}
-                value={intervalMinutes}
-                onChange={(event) => setIntervalMinutes(Number(event.target.value))}
-              />
-            </Field>
-          ) : null}
 
-          {error ? <FieldError>{error}</FieldError> : null}
-        </FieldGroup>
+            {frequency === "once" ? (
+              <FieldGroup className="flex-row">
+                <Field>
+                  <FieldLabel htmlFor="scheduled-task-once-at">Run at</FieldLabel>
+                  <Popover open={onceDateOpen} onOpenChange={setOnceDateOpen}>
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          className="justify-between font-normal"
+                          data-testid="scheduled-task-once-at"
+                          id="scheduled-task-once-at"
+                          variant="outline"
+                        />
+                      }
+                    >
+                      {onceDate ? format(onceDate, "PPP") : "Select date"}
+                      <ChevronDownIcon data-icon="inline-end" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={onceDate}
+                        captionLayout="dropdown"
+                        defaultMonth={onceDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setOnceAt((current) => withOnceDate(current, date));
+                          }
+                          setOnceDateOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </Field>
+                <Field className="w-32">
+                  <FieldLabel htmlFor="scheduled-task-once-time">Time</FieldLabel>
+                  <Input
+                    className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                    data-testid="scheduled-task-once-time"
+                    id="scheduled-task-once-time"
+                    type="time"
+                    value={onceAt.slice(11, 16)}
+                    onChange={(event) => {
+                      const time = event.target.value;
+                      if (time) {
+                        setOnceAt((current) => withOnceTime(current, time));
+                      }
+                    }}
+                  />
+                </Field>
+              </FieldGroup>
+            ) : null}
+            {frequency === "daily" || frequency === "weekly" ? (
+              <Field>
+                <FieldLabel htmlFor="scheduled-task-time">Time</FieldLabel>
+                <Input
+                  data-testid="scheduled-task-time"
+                  id="scheduled-task-time"
+                  type="time"
+                  value={clock}
+                  onChange={(event) => setClock(event.target.value)}
+                />
+              </Field>
+            ) : null}
+            {frequency === "weekly" ? (
+              <FieldSet>
+                <FieldLegend variant="label">Days</FieldLegend>
+                <ToggleGroup
+                  className="flex-wrap"
+                  multiple
+                  size="sm"
+                  variant="outline"
+                  value={days.map(String)}
+                  onValueChange={(value) =>
+                    setDays(
+                      value
+                        .map((entry) => Number(entry) as Weekday)
+                        .sort((left, right) => left - right),
+                    )
+                  }
+                >
+                  {WEEKDAY_NAMES.map((name, index) => (
+                    <ToggleGroupItem aria-label={name} key={name} value={String(index)}>
+                      {name.slice(0, 3)}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </FieldSet>
+            ) : null}
+            {frequency === "interval" ? (
+              <Field>
+                <FieldLabel htmlFor="scheduled-task-interval">Every (minutes)</FieldLabel>
+                <Input
+                  data-testid="scheduled-task-interval"
+                  id="scheduled-task-interval"
+                  type="number"
+                  min={1}
+                  max={7 * 24 * 60}
+                  value={intervalMinutes}
+                  onChange={(event) => setIntervalMinutes(Number(event.target.value))}
+                />
+              </Field>
+            ) : null}
+
+            {error ? <FieldError>{error}</FieldError> : null}
+          </FieldGroup>
+        </ScrollArea>
 
         <SheetFooter className="flex-row flex-wrap justify-end">
           {openChatTarget && onOpenChat ? (

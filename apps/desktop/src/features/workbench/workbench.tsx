@@ -17,6 +17,7 @@ import {
   ItemTitle,
 } from "@/ui/shadcn/item";
 import { Kbd } from "@/ui/shadcn/kbd";
+import { ScrollArea } from "@/ui/shadcn/scroll-area";
 import { Spinner } from "@/ui/shadcn/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 import { PanelEmpty } from "./panel-empty";
@@ -255,88 +256,90 @@ export function Workbench({
             }
           />
         ) : view.selection.kind === "chooser" ? (
-          <div className="workbench__chooser" data-testid="workbench-chooser">
-            <h2>Open a tool</h2>
-            <p>Keep the tools you need alongside your conversation.</p>
-            {BUILTIN_TOOL_ENTRIES.map(({ kind, label, description, Icon, shortcutKey }) => (
-              <Item
-                aria-keyshortcuts={
-                  shortcutKey
-                    ? `${platform === "darwin" ? "Meta" : "Control"}+${shortcutKey}`
-                    : undefined
-                }
-                aria-label={label}
-                className="text-left hover:bg-muted"
-                key={kind}
-                onClick={() => onOpenTool({ kind })}
-                render={<button type="button" />}
-                variant="outline"
-              >
-                <ItemMedia variant="icon">
-                  <Icon />
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle>{label}</ItemTitle>
-                  <ItemDescription>{description}</ItemDescription>
-                </ItemContent>
-                {shortcutKey ? (
-                  <ItemActions>
-                    <Kbd>{formatShortcut(platform, shortcutKey)}</Kbd>
-                  </ItemActions>
-                ) : null}
-              </Item>
-            ))}
-            <h3 className="workbench__extension-heading">Extension views</h3>
-            {extensionViewsLoading ? (
-              <p className="flex items-center gap-2" role="status">
-                <Spinner aria-hidden="true" role="presentation" />
-                Loading extension views…
-              </p>
-            ) : null}
-            {extensionViewsError ? (
-              <div role="status">
-                <p>{extensionViewsError}</p>
-                {onReloadExtensionViews ? (
-                  <Button onClick={onReloadExtensionViews} size="sm" variant="outline">
-                    Refresh views
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
-            {extensionViews.map((extension) => (
-              <Item
-                aria-label={extension.title}
-                className="text-left hover:bg-muted"
-                key={toolRefId({
-                  kind: "extension",
-                  extensionId: extension.extensionId,
-                  viewId: extension.id,
-                })}
-                onClick={() =>
-                  onOpenTool({
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="workbench__chooser" data-testid="workbench-chooser">
+              <h2>Open a tool</h2>
+              <p>Keep the tools you need alongside your conversation.</p>
+              {BUILTIN_TOOL_ENTRIES.map(({ kind, label, description, Icon, shortcutKey }) => (
+                <Item
+                  aria-keyshortcuts={
+                    shortcutKey
+                      ? `${platform === "darwin" ? "Meta" : "Control"}+${shortcutKey}`
+                      : undefined
+                  }
+                  aria-label={label}
+                  className="text-left hover:bg-muted"
+                  key={kind}
+                  onClick={() => onOpenTool({ kind })}
+                  render={<button type="button" />}
+                  variant="outline"
+                >
+                  <ItemMedia variant="icon">
+                    <Icon />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{label}</ItemTitle>
+                    <ItemDescription>{description}</ItemDescription>
+                  </ItemContent>
+                  {shortcutKey ? (
+                    <ItemActions>
+                      <Kbd>{formatShortcut(platform, shortcutKey)}</Kbd>
+                    </ItemActions>
+                  ) : null}
+                </Item>
+              ))}
+              <h3 className="workbench__extension-heading">Extension views</h3>
+              {extensionViewsLoading ? (
+                <p className="flex items-center gap-2" role="status">
+                  <Spinner aria-hidden="true" role="presentation" />
+                  Loading extension views…
+                </p>
+              ) : null}
+              {extensionViewsError ? (
+                <div role="status">
+                  <p>{extensionViewsError}</p>
+                  {onReloadExtensionViews ? (
+                    <Button onClick={onReloadExtensionViews} size="sm" variant="outline">
+                      Refresh views
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+              {extensionViews.map((extension) => (
+                <Item
+                  aria-label={extension.title}
+                  className="text-left hover:bg-muted"
+                  key={toolRefId({
                     kind: "extension",
                     extensionId: extension.extensionId,
                     viewId: extension.id,
-                  })
-                }
-                render={<button type="button" />}
-                variant="outline"
-              >
-                <ItemMedia variant="icon">
-                  <ExtensionIcon />
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle>{extension.title}</ItemTitle>
-                  {extension.state === "error" ? (
-                    <ItemDescription>{extension.error ?? "View unavailable"}</ItemDescription>
-                  ) : null}
-                </ItemContent>
-              </Item>
-            ))}
-            {!extensionViewsLoading && !extensionViewsError && extensionViews.length === 0 ? (
-              <p>Installed extensions can provide additional views here.</p>
-            ) : null}
-          </div>
+                  })}
+                  onClick={() =>
+                    onOpenTool({
+                      kind: "extension",
+                      extensionId: extension.extensionId,
+                      viewId: extension.id,
+                    })
+                  }
+                  render={<button type="button" />}
+                  variant="outline"
+                >
+                  <ItemMedia variant="icon">
+                    <ExtensionIcon />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{extension.title}</ItemTitle>
+                    {extension.state === "error" ? (
+                      <ItemDescription>{extension.error ?? "View unavailable"}</ItemDescription>
+                    ) : null}
+                  </ItemContent>
+                </Item>
+              ))}
+              {!extensionViewsLoading && !extensionViewsError && extensionViews.length === 0 ? (
+                <p>Installed extensions can provide additional views here.</p>
+              ) : null}
+            </div>
+          </ScrollArea>
         ) : activeTool?.kind === "extension" && activeExtension?.state !== "ready" ? (
           <PanelEmpty
             description={
