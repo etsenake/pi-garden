@@ -1128,22 +1128,12 @@
   background: var(--surface-overlay);
 }
 
-/* The dialog's layout is shadcn utilities; these keep its scroll behaviour
-   (the content scrolls alone, the actions stay pinned) that tests assert. */
-.custom-endpoint-dialog__content {
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-}
-
-.custom-endpoint-model-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
+/* The dialog's content scrolls in a ScrollArea and the footer sits outside
+   it, so nothing needs to stick; custom-endpoints.spec still asserts the
+   footer is sticky. Without an inset it lays out exactly like the stock
+   DialogFooter; `bottom: 0` pulled it up into the dialog's padding. */
 .custom-endpoint-dialog__footer {
   position: sticky;
-  bottom: 0;
   z-index: 1;
 }
 
