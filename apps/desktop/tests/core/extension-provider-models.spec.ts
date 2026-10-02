@@ -96,7 +96,7 @@ test("models registered by an extension appear in settings", async () => {
     await window.getByLabel("Search models").fill(PROVIDER_ID);
 
     // Connected models are listed with a switch; models needing sign-in are not.
-    const modelRow = window.getByTestId("settings-model-list").locator(".model-row", {
+    const modelRow = window.getByTestId("settings-model-list-chat").locator(".model-row", {
       hasText: `${PROVIDER_ID}/${MODEL_ID}`,
     });
     await expect(modelRow).toHaveCount(1);

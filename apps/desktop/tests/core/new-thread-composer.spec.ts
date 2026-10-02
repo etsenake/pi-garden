@@ -295,13 +295,17 @@ test("settings do not show stale enabled-model pills when no providers are conne
     await window.getByRole("button", { name: "Models", exact: true }).click();
     await expect(window.locator(".view-header__title")).toHaveText("Models");
 
-    const enabledModelsSection = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Enabled models" }),
+    const modelsSection = window.locator(".settings-section", {
+      has: window.locator("h3.settings-section__title", { hasText: /^Models/ }),
     });
-    await expect(enabledModelsSection).toContainText("No connected models available yet.");
-    await expect(enabledModelsSection).not.toContainText("openai/gpt-5");
-    await expect(enabledModelsSection).not.toContainText("openai/gpt-4o");
-    await expect(enabledModelsSection.locator(".settings-section__title")).toContainText("0 of 0");
+    await expect(modelsSection.getByTestId("settings-model-list")).toContainText(
+      "No connected models available yet.",
+    );
+    await expect(modelsSection).not.toContainText("openai/gpt-5");
+    await expect(modelsSection).not.toContainText("openai/gpt-4o");
+    await expect(modelsSection.locator("h3.settings-section__title")).toContainText(
+      "0 of 0 enabled for chat",
+    );
   } finally {
     await harness.close();
   }
