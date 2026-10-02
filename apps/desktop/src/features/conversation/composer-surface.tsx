@@ -37,6 +37,15 @@ import {
 } from "../../ui/icons";
 import { CircleAlertIcon, XIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/ui/shadcn/alert";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/ui/shadcn/attachment";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { CommandEmpty, CommandGroup, CommandItem, CommandShortcut } from "@/ui/shadcn/command";
@@ -237,48 +246,57 @@ export function ComposerSurface({
       />
       {annotationChip}
       {attachments.length > 0 ? (
-        <div className="composer__attachments">
+        <AttachmentGroup className="mb-2.5 items-center">
           {attachments.map((attachment) =>
             attachment.kind === "image" ? (
-              <div
-                className="composer-attachment composer-attachment--image group relative"
+              <Attachment
+                className="composer-attachment composer-attachment--image"
                 key={attachment.id}
+                orientation="vertical"
               >
-                <ImageAttachmentThumb
-                  className="composer-attachment__preview"
-                  name={attachment.name}
-                  src={`data:${attachment.mimeType};base64,${attachment.data}`}
-                />
-                <Button
-                  aria-label={`Remove ${attachment.name}`}
-                  className="absolute -top-2 -right-2 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-                  size="icon-xs"
-                  variant="outline"
-                  onClick={() => onRemoveAttachment(attachment.id)}
-                >
-                  <XIcon />
-                </Button>
-              </div>
+                <AttachmentMedia variant="image">
+                  <ImageAttachmentThumb
+                    className="composer-attachment__preview size-full"
+                    name={attachment.name}
+                    src={`data:${attachment.mimeType};base64,${attachment.data}`}
+                  />
+                </AttachmentMedia>
+                <AttachmentActions>
+                  <AttachmentAction
+                    aria-label={`Remove ${attachment.name}`}
+                    variant="outline"
+                    onClick={() => onRemoveAttachment(attachment.id)}
+                  >
+                    <XIcon />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
             ) : (
-              <Badge
-                className={`composer-attachment composer-attachment--${attachment.kind} h-7 max-w-72 pr-0.5`}
+              <Attachment
+                className={`composer-attachment composer-attachment--${attachment.kind} max-w-72`}
                 key={attachment.id}
-                variant="outline"
+                size="sm"
               >
-                <FileIcon />
-                <span className="composer-attachment__name truncate">{attachment.name}</span>
-                <Button
-                  aria-label={`Remove ${attachment.name}`}
-                  size="icon-xs"
-                  variant="ghost"
-                  onClick={() => onRemoveAttachment(attachment.id)}
-                >
-                  <XIcon />
-                </Button>
-              </Badge>
+                <AttachmentMedia>
+                  <FileIcon />
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle className="composer-attachment__name">
+                    {attachment.name}
+                  </AttachmentTitle>
+                </AttachmentContent>
+                <AttachmentActions>
+                  <AttachmentAction
+                    aria-label={`Remove ${attachment.name}`}
+                    onClick={() => onRemoveAttachment(attachment.id)}
+                  >
+                    <XIcon />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
             ),
           )}
-        </div>
+        </AttachmentGroup>
       ) : null}
       {lastError ? (
         <Alert className="mb-3" data-testid="composer-error-banner" variant="destructive">

@@ -1,6 +1,12 @@
 import type { ComposerAttachment, QueuedComposerMessage } from "../../../contracts/desktop-state";
 import { FileIcon } from "../../ui/icons";
-import { Badge } from "@/ui/shadcn/badge";
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/ui/shadcn/attachment";
 import { Button } from "@/ui/shadcn/button";
 import { ImageAttachmentThumb } from "./image-attachment-thumb";
 import { parseAnnotatedPrompt } from "./annotations/annotation-prompt";
@@ -77,14 +83,14 @@ export function QueuedComposerMessages({
             </div>
           </div>
           {message.attachments.length > 0 ? (
-            <div className="queued-composer-message__attachments">
+            <AttachmentGroup>
               {message.attachments.map((attachment, index) => (
                 <QueuedAttachmentPreview
                   attachment={attachment}
                   key={`${message.id}:${attachment.name}:${index}`}
                 />
               ))}
-            </div>
+            </AttachmentGroup>
           ) : null}
         </div>
       ))}
@@ -93,24 +99,29 @@ export function QueuedComposerMessages({
 }
 
 function QueuedAttachmentPreview({ attachment }: { readonly attachment: ComposerAttachment }) {
-  if (attachment.kind === "image") {
-    return (
-      <div className="queued-composer-attachment queued-composer-attachment--image">
-        <ImageAttachmentThumb
-          className="queued-composer-attachment__preview"
-          name={attachment.name}
-          src={`data:${attachment.mimeType};base64,${attachment.data}`}
-        />
-      </div>
-    );
-  }
   return (
-    <Badge
+    <Attachment
       className={`queued-composer-attachment queued-composer-attachment--${attachment.kind} max-w-56`}
-      variant="outline"
+      size="xs"
     >
-      <FileIcon />
-      <span className="queued-composer-attachment__name truncate">{attachment.name}</span>
-    </Badge>
+      {attachment.kind === "image" ? (
+        <AttachmentMedia variant="image">
+          <ImageAttachmentThumb
+            className="queued-composer-attachment__preview size-full"
+            name={attachment.name}
+            src={`data:${attachment.mimeType};base64,${attachment.data}`}
+          />
+        </AttachmentMedia>
+      ) : (
+        <AttachmentMedia>
+          <FileIcon />
+        </AttachmentMedia>
+      )}
+      <AttachmentContent>
+        <AttachmentTitle className="queued-composer-attachment__name">
+          {attachment.name}
+        </AttachmentTitle>
+      </AttachmentContent>
+    </Attachment>
   );
 }
