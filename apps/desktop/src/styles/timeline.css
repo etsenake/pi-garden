@@ -147,15 +147,6 @@
   transform: none;
 }
 
-.timeline-item__bubble {
-  width: min(620px, 100%);
-  min-width: 0;
-  padding: 12px 16px;
-  border-radius: var(--radius-xl);
-  border: 1px solid transparent;
-  background: var(--surface-muted);
-}
-
 .timeline-item__attachments {
   display: flex;
   flex-wrap: wrap;

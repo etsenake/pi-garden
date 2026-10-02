@@ -4,13 +4,6 @@
   margin: 0 auto;
 }
 
-.timeline-item__user-stack {
-  display: grid;
-  justify-items: end;
-  gap: 4px;
-  min-width: 0;
-}
-
 .timeline-item__scheduled-origin {
   color: var(--muted-subtle);
   font-size: 12px;

@@ -34,6 +34,7 @@ import {
   TerminalIcon,
 } from "../../ui/icons";
 import { extensionToLanguage } from "../../ui/syntax-highlight";
+import { Bubble, BubbleContent, BubbleGroup } from "@/ui/shadcn/bubble";
 import { Button } from "@/ui/shadcn/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
@@ -185,42 +186,44 @@ function TimelineMessage({
     const body = annotated ? annotated.body : item.text;
     return (
       <article className="timeline-item timeline-item--user" ref={articleRef}>
-        <div className="timeline-item__user-stack">
+        <BubbleGroup className="w-full items-end gap-1">
           {scheduledOrigin ? (
             <div className="timeline-item__scheduled-origin" data-testid="sent-by-scheduled-task">
               Sent by scheduled task
             </div>
           ) : null}
-          <div className="timeline-item__bubble">
-            {item.attachments?.length ? (
-              <div className="timeline-item__attachments">
-                {item.attachments.map((attachment, index) =>
-                  attachment.kind === "image" ? (
-                    <ImageAttachmentThumb
-                      className="timeline-item__attachment timeline-item__attachment--image"
-                      key={`${item.id}:${index}`}
-                      name={attachment.name ?? `Attachment ${index + 1}`}
-                      src={`data:${attachment.mimeType};base64,${attachment.data}`}
-                    />
-                  ) : (
-                    <div
-                      className="timeline-item__attachment timeline-item__attachment--file"
-                      key={`${item.id}:${index}`}
-                      title={attachment.fsPath}
-                    >
-                      <span className="timeline-item__attachment-icon" aria-hidden="true">
-                        <FileIcon />
-                      </span>
-                      <span className="timeline-item__attachment-name">{attachment.name}</span>
-                    </div>
-                  ),
-                )}
-              </div>
-            ) : null}
-            {annotated ? <SentAnnotations annotations={annotated.annotations} /> : null}
-            {annotated && !body.trim() ? null : <MessageMarkdown annotationRoot text={body} />}
-          </div>
-        </div>
+          <Bubble align="end" variant="secondary">
+            <BubbleContent className="timeline-item__bubble">
+              {item.attachments?.length ? (
+                <div className="timeline-item__attachments">
+                  {item.attachments.map((attachment, index) =>
+                    attachment.kind === "image" ? (
+                      <ImageAttachmentThumb
+                        className="timeline-item__attachment timeline-item__attachment--image"
+                        key={`${item.id}:${index}`}
+                        name={attachment.name ?? `Attachment ${index + 1}`}
+                        src={`data:${attachment.mimeType};base64,${attachment.data}`}
+                      />
+                    ) : (
+                      <div
+                        className="timeline-item__attachment timeline-item__attachment--file"
+                        key={`${item.id}:${index}`}
+                        title={attachment.fsPath}
+                      >
+                        <span className="timeline-item__attachment-icon" aria-hidden="true">
+                          <FileIcon />
+                        </span>
+                        <span className="timeline-item__attachment-name">{attachment.name}</span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : null}
+              {annotated ? <SentAnnotations annotations={annotated.annotations} /> : null}
+              {annotated && !body.trim() ? null : <MessageMarkdown annotationRoot text={body} />}
+            </BubbleContent>
+          </Bubble>
+        </BubbleGroup>
         {markers}
       </article>
     );
