@@ -19,7 +19,7 @@ import {
 import { Kbd } from "@/ui/shadcn/kbd";
 import { ScrollArea } from "@/ui/shadcn/scroll-area";
 import { Spinner } from "@/ui/shadcn/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 import { PanelEmpty } from "./panel-empty";
 import { WithTooltip } from "./workbench-tooltip";
 import { BUILTIN_TOOL_ENTRIES, BUILTIN_TOOLS } from "./builtin-tools";
@@ -125,83 +125,80 @@ export function Workbench({
   if (view.visibility === "hidden") return null;
 
   return (
-    <aside
+    <Tabs
       aria-label="Side workspace"
-      className="workbench side-panel"
+      className="workbench side-panel gap-0"
       data-testid="workbench"
       id="task-workbench"
+      onValueChange={(toolId) => {
+        if (typeof toolId === "string") onActivateTool(toolId);
+      }}
+      render={<aside />}
+      value={view.selection.kind === "tool" ? view.selection.toolId : null}
     >
       <WorkbenchResizeHandle onResize={onResize} />
       <div className="workbench__tabbar">
-        <Tabs
-          className="min-w-0 flex-1"
-          onValueChange={(toolId) => {
-            if (typeof toolId === "string") onActivateTool(toolId);
-          }}
-          value={view.selection.kind === "tool" ? view.selection.toolId : null}
+        <TabsList
+          activateOnFocus
+          aria-label="Workspace tools"
+          className="min-w-0 flex-1 justify-start overflow-x-auto [scrollbar-width:none]"
+          variant="line"
         >
-          <TabsList
-            activateOnFocus
-            aria-label="Workspace tools"
-            className="w-full min-w-0 justify-start overflow-x-auto [scrollbar-width:none]"
-            variant="line"
-          >
-            {view.tools.map((tool, index) => {
-              const toolId = toolRefId(tool);
-              const label =
-                tool.kind === "extension"
-                  ? (extensionViews.find(
-                      (entry) => entry.extensionId === tool.extensionId && entry.id === tool.viewId,
-                    )?.title ?? workbenchToolLabel(tool))
-                  : workbenchToolLabel(tool);
-              const slot = index < SIDE_PANEL_TAB_SHORTCUT_SLOT_COUNT ? index + 1 : undefined;
-              const shortcut = slot ? getSidePanelTabShortcutLabel(platform, slot) : undefined;
-              return (
-                <div className="flex max-w-45 min-w-0 flex-none items-center" key={toolId}>
-                  <WithTooltip label={label} shortcut={shortcut}>
-                    <TabsTrigger
-                      aria-controls={panelId}
-                      aria-keyshortcuts={
-                        slot ? `${platform === "darwin" ? "Control" : "Alt"}+${slot}` : undefined
-                      }
-                      aria-label={label}
-                      className="min-w-0"
-                      data-tab-shortcut={tabHintsVisible && slot ? String(slot) : undefined}
-                      data-testid={`workbench-tab-${toolId}`}
-                      disabled={loading}
-                      id={tabId(toolId)}
-                      onKeyDown={(event) => onTabKeyDown(event, toolId)}
-                      ref={(button: HTMLButtonElement | null) => {
-                        if (button) tabRefs.current.set(toolId, button);
-                        else tabRefs.current.delete(toolId);
-                      }}
-                      value={toolId}
-                    >
-                      {tabHintsVisible && shortcut ? (
-                        <Kbd aria-hidden="true" className="workbench__tab-shortcut">
-                          {shortcut}
-                        </Kbd>
-                      ) : (
-                        <ToolIcon tool={tool} />
-                      )}
-                      <span className="truncate">{label}</span>
-                    </TabsTrigger>
-                  </WithTooltip>
-                  <Button
-                    aria-label={`Close ${label} tab`}
+          {view.tools.map((tool, index) => {
+            const toolId = toolRefId(tool);
+            const label =
+              tool.kind === "extension"
+                ? (extensionViews.find(
+                    (entry) => entry.extensionId === tool.extensionId && entry.id === tool.viewId,
+                  )?.title ?? workbenchToolLabel(tool))
+                : workbenchToolLabel(tool);
+            const slot = index < SIDE_PANEL_TAB_SHORTCUT_SLOT_COUNT ? index + 1 : undefined;
+            const shortcut = slot ? getSidePanelTabShortcutLabel(platform, slot) : undefined;
+            return (
+              <div className="flex max-w-45 min-w-0 flex-none items-center" key={toolId}>
+                <WithTooltip label={label} shortcut={shortcut}>
+                  <TabsTrigger
+                    aria-controls={panelId}
+                    aria-keyshortcuts={
+                      slot ? `${platform === "darwin" ? "Control" : "Alt"}+${slot}` : undefined
+                    }
+                    aria-label={label}
+                    className="min-w-0"
+                    data-tab-shortcut={tabHintsVisible && slot ? String(slot) : undefined}
+                    data-testid={`workbench-tab-${toolId}`}
                     disabled={loading}
-                    onClick={() => closeAndFocus(toolId)}
-                    size="icon-xs"
-                    tabIndex={-1}
-                    variant="ghost"
+                    id={tabId(toolId)}
+                    onKeyDown={(event) => onTabKeyDown(event, toolId)}
+                    ref={(button: HTMLButtonElement | null) => {
+                      if (button) tabRefs.current.set(toolId, button);
+                      else tabRefs.current.delete(toolId);
+                    }}
+                    value={toolId}
                   >
-                    <CloseIcon />
-                  </Button>
-                </div>
-              );
-            })}
-          </TabsList>
-        </Tabs>
+                    {tabHintsVisible && shortcut ? (
+                      <Kbd aria-hidden="true" className="workbench__tab-shortcut">
+                        {shortcut}
+                      </Kbd>
+                    ) : (
+                      <ToolIcon tool={tool} />
+                    )}
+                    <span className="truncate">{label}</span>
+                  </TabsTrigger>
+                </WithTooltip>
+                <Button
+                  aria-label={`Close ${label} tab`}
+                  disabled={loading}
+                  onClick={() => closeAndFocus(toolId)}
+                  size="icon-xs"
+                  tabIndex={-1}
+                  variant="ghost"
+                >
+                  <CloseIcon />
+                </Button>
+              </div>
+            );
+          })}
+        </TabsList>
         <WithTooltip label="Add tab">
           <Button
             aria-label="Add tab"
@@ -239,11 +236,10 @@ export function Workbench({
           ) : null}
         </div>
       ) : null}
-      <div
-        aria-labelledby={activeTool ? tabId(toolRefId(activeTool)) : undefined}
-        className="workbench__content"
+      <WorkbenchContent
         id={panelId}
-        role={activeTool ? "tabpanel" : undefined}
+        labelledBy={activeTool ? tabId(toolRefId(activeTool)) : undefined}
+        toolId={activeTool ? toolRefId(activeTool) : undefined}
       >
         {loading ? (
           <PanelEmpty
@@ -374,7 +370,33 @@ export function Workbench({
         ) : (
           children
         )}
+      </WorkbenchContent>
+    </Tabs>
+  );
+}
+
+/** The active tool's tab panel; the chooser has no selected tab, so it is a plain region. */
+function WorkbenchContent({
+  id,
+  labelledBy,
+  toolId,
+  children,
+}: {
+  readonly id: string;
+  readonly labelledBy: string | undefined;
+  readonly toolId: string | undefined;
+  readonly children: ReactNode;
+}) {
+  if (toolId === undefined) {
+    return (
+      <div className="workbench__content" id={id}>
+        {children}
       </div>
-    </aside>
+    );
+  }
+  return (
+    <TabsContent aria-labelledby={labelledBy} className="workbench__content" id={id} value={toolId}>
+      {children}
+    </TabsContent>
   );
 }
