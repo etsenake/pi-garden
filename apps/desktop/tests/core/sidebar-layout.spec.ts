@@ -48,7 +48,7 @@ test("the sidebar can be dragged wider, remembers its width and resets on double
   const userDataDir = await makeUserDataDir();
   const workspace = await makeWorkspace("sidebar-width");
   const sidebarWidth = async (window: Page) =>
-    Math.round((await window.locator("aside.sidebar").boundingBox())!.width);
+    Math.round((await window.locator(".sidebar").boundingBox())!.width);
 
   let harness = await launchDesktop(userDataDir, { initialWorkspaces: [workspace] });
   try {
@@ -66,7 +66,7 @@ test("the sidebar can be dragged wider, remembers its width and resets on double
 
     // Hiding the sidebar right after a drag still keeps the new width.
     await window.getByTestId("sidebar-toggle").click();
-    await expect(window.locator("aside.sidebar")).toHaveCount(0);
+    await expect(window.locator(".sidebar")).toHaveCount(0);
     await window.getByTestId("sidebar-toggle").click();
     await expect.poll(() => sidebarWidth(window)).toBe(defaultWidth + 100);
 

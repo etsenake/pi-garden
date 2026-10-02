@@ -111,21 +111,16 @@ test("right-click thread menu supports rename, archive/restore, mark read, and c
     await window.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await row.hover();
 
+    // The select button spans the row and the hover actions sit over its right
+    // edge, so the space just left of them still selects the thread.
     const selectBox = await row.locator(".session-row__select").boundingBox();
-    const trailingBox = await row.locator(".session-row__trailing").boundingBox();
     const rowBox = await row.boundingBox();
-    const clusterBox = await row.locator(".session-row__action-cluster").boundingBox();
+    const firstActionBox = await row.locator(".session-row__action").first().boundingBox();
     expect(selectBox).not.toBeNull();
-    expect(trailingBox).not.toBeNull();
     expect(rowBox).not.toBeNull();
-    expect(clusterBox).not.toBeNull();
-    expect(trailingBox!.width).toBeGreaterThanOrEqual(clusterBox!.width);
-    const gapStart = selectBox!.x + selectBox!.width;
-    const gapWidth = trailingBox!.x - gapStart;
-    expect(gapWidth).toBeGreaterThanOrEqual(1);
-    expect(gapWidth).toBeLessThanOrEqual(3);
-    expect(trailingBox!.width).toBeLessThan(92);
-    const gapPoint = { x: gapStart + gapWidth / 2, y: rowBox!.y + rowBox!.height / 2 };
+    expect(firstActionBox).not.toBeNull();
+    expect(selectBox!.x + selectBox!.width).toBeGreaterThan(firstActionBox!.x);
+    const gapPoint = { x: firstActionBox!.x - 3, y: rowBox!.y + rowBox!.height / 2 };
     const hitIsAction = await window.evaluate(
       ({ x, y }) => document.elementFromPoint(x, y)?.closest(".session-row__action") !== null,
       gapPoint,

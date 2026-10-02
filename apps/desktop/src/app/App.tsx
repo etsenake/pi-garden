@@ -65,6 +65,9 @@ import {
 } from "../features/threads/thread-switcher-order";
 import { useThreadSwitcher } from "../features/threads/hooks/use-thread-switcher";
 import { SidebarToggleButton } from "../features/threads/sidebar-toggle-button";
+import { ThreadSidebarProvider } from "../features/threads/thread-sidebar-provider";
+import { SidebarInset } from "@/ui/shadcn/sidebar";
+import { cn } from "@/lib/utils";
 import { Topbar } from "./topbar";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import { TerminalPanel } from "../features/workbench/terminal-panel";
@@ -961,50 +964,54 @@ export default function App() {
   const shellClassName = `shell isolate${snapshot.sidebarCollapsed ? " shell--sidebar-collapsed" : ""}`;
 
   return (
-    <div className={shellClassName}>
+    <ThreadSidebarProvider
+      className={shellClassName}
+      collapsed={snapshot.sidebarCollapsed}
+      onToggle={commands.togglePrimarySidebar}
+    >
       {primarySidebarToggleVisible ? (
         <SidebarToggleButton
-          collapsed={snapshot.sidebarCollapsed}
           shortcutLabel={sidebarToggleShortcutLabel}
           onToggle={commands.togglePrimarySidebar}
         />
       ) : null}
-      {!snapshot.sidebarCollapsed ? (
-        <Sidebar
-          activeView={snapshot.activeView}
-          selectedWorkspace={selectedWorkspace}
-          selectedSession={selectedSession}
-          visibleWorkspaces={visibleWorkspaces}
-          threadSidebarModel={threadSidebarModel ?? buildThreadSidebarModel(snapshot)}
-          threadShortcutOrderRef={threadShortcutOrderRef}
-          threadGrouping={snapshot.threadGrouping}
-          linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
-          wsMenu={wsMenu}
-          threadMenu={threadMenu}
-          api={api}
-          setSnapshot={setSnapshot}
-          updateSnapshot={updateSnapshot}
-          onNewThread={(workspaceId) =>
-            newThread.openSurface(
-              workspaceId ?? selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id,
-            )
-          }
-          onSetActiveView={setActiveView}
-          onOpenSkills={openSkills}
-          onOpenExtensions={openExtensions}
-          onOpenSettings={openSettings}
-          onArchiveSession={threadMenu.archive}
-          onSelectSession={handleSelectSession}
-          onSetSessionPinned={threadMenu.setPinned}
-          onUnarchiveSession={threadMenu.restore}
-          sidebarFooter={selectedSession ? sidebarFooter : []}
-          sidebarSection={selectedSession ? sidebarSection : []}
-          richSections={selectedSession ? rich.slot("sidebar", "sidebar section") : null}
-          onInvokeExtensionAction={invokeExtensionAction}
-        />
-      ) : null}
+      <Sidebar
+        activeView={snapshot.activeView}
+        selectedWorkspace={selectedWorkspace}
+        selectedSession={selectedSession}
+        visibleWorkspaces={visibleWorkspaces}
+        threadSidebarModel={threadSidebarModel ?? buildThreadSidebarModel(snapshot)}
+        threadShortcutOrderRef={threadShortcutOrderRef}
+        threadGrouping={snapshot.threadGrouping}
+        linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
+        wsMenu={wsMenu}
+        threadMenu={threadMenu}
+        api={api}
+        setSnapshot={setSnapshot}
+        updateSnapshot={updateSnapshot}
+        onNewThread={(workspaceId) =>
+          newThread.openSurface(
+            workspaceId ?? selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id,
+          )
+        }
+        onSetActiveView={setActiveView}
+        onOpenSkills={openSkills}
+        onOpenExtensions={openExtensions}
+        onOpenSettings={openSettings}
+        onArchiveSession={threadMenu.archive}
+        onSelectSession={handleSelectSession}
+        onSetSessionPinned={threadMenu.setPinned}
+        onUnarchiveSession={threadMenu.restore}
+        sidebarFooter={selectedSession ? sidebarFooter : []}
+        sidebarSection={selectedSession ? sidebarSection : []}
+        richSections={selectedSession ? rich.slot("sidebar", "sidebar section") : null}
+        onInvokeExtensionAction={invokeExtensionAction}
+      />
 
-      <main className={mainClassName} style={workbenchWidth.style}>
+      <SidebarInset
+        className={cn(mainClassName, "grid min-h-0 min-w-0 overflow-hidden")}
+        style={workbenchWidth.style}
+      >
         <Topbar
           activeView={snapshot.activeView}
           rootWorkspace={
@@ -1410,7 +1417,7 @@ export default function App() {
             ) : null}
           </Workbench>
         ) : null}
-      </main>
+      </SidebarInset>
       {scheduledEditor ? (
         <ScheduledTaskEditor
           editor={scheduledEditor}
@@ -1433,6 +1440,6 @@ export default function App() {
       ) : null}
       {commandPalette}
       {rich.overlay}
-    </div>
+    </ThreadSidebarProvider>
   );
 }

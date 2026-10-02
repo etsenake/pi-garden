@@ -361,7 +361,10 @@ test("renders header badges and sidebar footer contributions from Pi's loaded ex
     const garden = await window.locator("[data-badge-id='garden']").boundingBox();
     const sidebar = await window.locator("#primary-sidebar").boundingBox();
     const section = await window.getByTestId("sidebar-section").boundingBox();
-    const footer = await window.getByTestId("sidebar-footer").boundingBox();
+    // Footer contributions render inside the stock SidebarFooter slot.
+    const footer = await window
+      .locator('[data-slot="sidebar-footer"]', { has: window.getByTestId("sidebar-footer") })
+      .boundingBox();
     const threadList = await window.getByTestId("workspace-list").boundingBox();
     const composerSurface = await window.getByTestId("composer-surface").boundingBox();
     const before = await window.getByTestId("composer-before").boundingBox();

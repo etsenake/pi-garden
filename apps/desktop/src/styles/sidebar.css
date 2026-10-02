@@ -1,5 +1,9 @@
+/* The app shell is the shadcn SidebarProvider wrapper (features/threads/
+ * thread-sidebar-provider.tsx); the stock Sidebar and SidebarInset own the
+ * layout. What remains here is titlebar geometry, status marks and the resize
+ * handle, none of which the stock components provide. */
+
 .shell {
-  --sidebar-width: 236px;
   --titlebar-toggle-left: 86px;
   --titlebar-toggle-size: 30px;
   --titlebar-toggle-main-gap: 16px;
@@ -8,512 +12,37 @@
   );
   width: 100%;
   height: 100%;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0;
-  padding: 0;
   position: relative;
   background: var(--window);
 }
 
 .shell--loading {
-  grid-template-columns: 1fr;
-  place-items: center;
-}
-
-.shell--sidebar-collapsed {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.sidebar,
-.main {
-  min-height: 0;
-}
-
-.sidebar {
-  position: relative;
-  /* A remembered width never crowds out the main area on a smaller window. */
-  width: min(var(--sidebar-width), 45vw);
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  overflow: hidden;
-  background: var(--sidebar);
-  border-right: 1px solid var(--line);
+  place-items: center;
 }
 
 .enable-transparency .sidebar {
   backdrop-filter: var(--glass-blur) var(--glass-saturation);
 }
 
-.sidebar__top,
-.sidebar__section,
-.sidebar__host-section,
-.sidebar__footer {
-  padding: 12px;
+/* Transparency mode re-enables the sidebar backdrop blur in dark. */
+.enable-transparency.dark .sidebar {
+  backdrop-filter: var(--glass-blur) var(--glass-saturation);
 }
 
-.sidebar__top {
-  padding-top: var(--titlebar-inset-top);
-}
-
-.sidebar__nav {
-  display: grid;
-  gap: 2px;
-  margin-top: 8px;
-}
-
-.sidebar__new {
-  -webkit-app-region: no-drag;
-}
-
-.sidebar__section {
-  padding-right: 8px;
-}
-
-.section__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: var(--font-medium);
-  margin-bottom: 8px;
-}
-
-.section__tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.workspace-row:hover,
-.session-row:hover {
-  background: var(--overlay-hover);
-  border-color: var(--border-heavy);
-}
-
-.workspace-list {
-  display: grid;
-  gap: 8px;
-}
-
-.workspace-group {
-  display: grid;
-  gap: 2px;
-}
-
-.workspace-row,
-.session-row {
-  width: 100%;
-  display: grid;
-  align-items: center;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  text-align: left;
-  color: var(--text);
-  border: 1px solid transparent;
-}
-
-.workspace-row {
-  padding: 2px 4px 1px;
-  border-radius: var(--radius-md);
-  position: relative;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.workspace-row__select--draggable {
-  cursor: grab;
-}
-
-.workspace-row__select--draggable:active {
-  cursor: grabbing;
-}
-
-.workspace-group--dragging {
-  opacity: 0.3;
-}
-
-.workspace-group--overlay {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.workspace-row__select {
-  width: 100%;
-  display: grid;
-  align-items: center;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  min-width: 0;
-  padding-left: 23px;
-  text-align: left;
-  color: inherit;
-  position: relative;
-}
-
-.workspace-row--active {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-strong);
-}
-
-.workspace-row__icon {
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  color: var(--muted-icon);
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.workspace-row__icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.workspace-row__icon-folder {
-  display: grid;
-  place-items: center;
-}
-
-.workspace-row__name,
-.session-row__title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workspace-row__name {
-  font-size: 14px;
-  font-weight: var(--font-medium);
-  color: var(--muted-strong);
-}
-
-.session-row__time {
-  color: var(--muted-soft);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.workspace-row__actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.workspace-rename {
-  display: grid;
-  gap: 8px;
-  margin: 4px 0 2px 22px;
-  padding: 10px 10px 11px;
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.workspace-rename__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.session-list {
-  padding-left: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.pinned-thread-group {
-  display: grid;
-  gap: 4px;
-  padding-bottom: 4px;
-}
-
-.recency-thread-group {
-  display: grid;
-  gap: 2px;
-  padding-top: 8px;
-}
-
-.recency-thread-group__head {
-  height: 24px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  color: var(--muted-subtle);
-  font-size: 12px;
-  font-weight: 620;
-}
-
-.pinned-thread-group__head {
-  height: 24px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted-subtle);
-  font-size: 12px;
-  font-weight: 620;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-}
-
-.pinned-thread-group__head svg {
-  width: 14px;
-  height: 14px;
-}
-
-.session-row {
-  padding: 6px 8px;
-  border-radius: var(--radius-md);
-  min-height: 32px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px;
-  position: relative;
-  overflow: visible;
-}
-
-.session-list--pinned .session-row {
-  cursor: grab;
-}
-
-.session-list--pinned .session-row:active {
-  cursor: grabbing;
-}
-
-.session-row--dragging {
-  box-shadow: var(--shadow-md);
-}
-
-.session-row--overlay {
-  min-width: 260px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-lg);
-}
-
-.session-row--active {
-  background: var(--surface);
-  border-color: var(--line);
-  color: var(--text-strong);
-}
-
-.session-row__select {
-  width: 100%;
-  min-width: 0;
-  display: grid;
-  align-items: center;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  padding-left: 18px;
-  text-align: left;
-  color: inherit;
-  position: relative;
-}
-
-.session-row__leading {
-  width: 12px;
-  height: 12px;
-  display: grid;
-  place-items: center;
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.session-row__status {
-  display: block;
-}
-
-.session-row__status--running {
-  width: 11px;
-  height: 11px;
-  border-radius: var(--radius-pill);
-  border: 2px solid var(--border-heavy);
-  border-top-color: var(--status-running);
-  border-right-color: var(--status-running);
-  animation: session-row-spin 900ms linear infinite;
-}
-
-.session-row__status--failed {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--status-error);
-}
-
+.session-row__status--failed,
 .session-row__status--unseen {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);
+}
+
+.session-row__status--failed {
+  background: var(--status-error);
+}
+
+.session-row__status--unseen {
   background: var(--accent);
-}
-
-.session-row__body {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-
-.session-row__title-line {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.session-row__title {
-  font-size: 14px;
-  font-weight: var(--font-normal);
-  color: var(--text-strong);
-  min-width: 0;
-}
-
-.session-row__context {
-  font-size: 12px;
-  color: var(--muted-soft);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.session-row__trailing {
-  min-width: 0;
-  height: 24px;
-  position: relative;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-.session-row__action-cluster {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 1px;
-}
-
-.session-row:hover .session-row__trailing,
-.session-row:focus-within .session-row__trailing,
-.session-row--pinned .session-row__trailing {
-  min-width: 58px;
-}
-
-.session-row__trailing:has(.session-row__workspace-icon) {
-  padding-left: 18px;
-}
-
-.session-row__time,
-.session-row__action {
-  transition:
-    opacity var(--motion-base) var(--ease-out),
-    transform var(--motion-base) var(--ease-out);
-}
-
-.session-row__time {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  position: static;
-}
-
-.session-row__workspace-icon {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 14px;
-  height: 14px;
-  display: grid;
-  place-items: center;
-  color: var(--muted-soft);
-  transition: opacity var(--motion-base) var(--ease-out);
-}
-
-@keyframes session-row-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.session-row__workspace-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.session-row--active .session-row__workspace-icon {
-  color: var(--muted-strong);
-}
-
-.session-row .session-row__action {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: scale(0.92);
-}
-
-.session-rename {
-  margin-left: 18px;
-}
-
-.session-row:hover .session-row__time,
-.session-row:focus-within .session-row__time {
-  opacity: 0;
-}
-
-.session-row:hover .session-row__action,
-.session-row:focus-within .session-row__action {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: scale(1);
-}
-
-.session-row--pinned .session-row__time {
-  opacity: 0;
-}
-
-.session-row--pinned .session-row__pin-action {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: scale(1);
-}
-
-.session-row--shortcut .session-row__workspace-icon,
-.session-row--shortcut .session-row__action,
-.session-row--shortcut.session-row--pinned .session-row__pin-action,
-.session-row--shortcut:hover .session-row__action,
-.session-row--shortcut:focus-within .session-row__action {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.archived-thread-group {
-  padding-left: 24px;
-  display: grid;
-  gap: 4px;
-}
-
-.session-list--archived {
-  padding-left: 0;
 }
 
 .sidebar__host-section {
@@ -522,11 +51,6 @@
   align-items: flex-start;
   gap: 4px;
   min-width: 0;
-  border-top: 1px solid var(--line);
-}
-
-.sidebar__footer {
-  border-top: 1px solid var(--line);
 }
 
 .sidebar-footer-contributions {
@@ -537,40 +61,15 @@
   min-width: 0;
 }
 
-@media (max-width: 1180px) {
-  .shell {
-    --sidebar-width: 220px;
-  }
-}
-
-/* Narrow window: the sidebar becomes an overlay drawer over the main surface
-   so content keeps the full width instead of being squeezed or stacked.
-   The always-visible titlebar toggle (z-index 80) stays reachable to dismiss it. */
-@media (max-width: 760px) {
-  .shell:not(.shell--sidebar-collapsed) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .shell:not(.shell--sidebar-collapsed) > .sidebar {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: min(var(--sidebar-width), 84vw);
-    z-index: 40;
-    box-shadow: var(--shadow-xl);
-  }
-}
-
-/* Sits over the sidebar's right border; the sidebar owns its own width. */
+/* Sits over the sidebar's right border; --sidebar-width sizes both. */
 .sidebar__resize-handle {
   -webkit-app-region: no-drag;
+  pointer-events: auto;
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
   width: 4px;
-  z-index: 30;
   cursor: col-resize;
   touch-action: none;
 }
@@ -591,7 +90,8 @@
   pointer-events: none;
 }
 
-/* Transparency mode re-enables the sidebar backdrop blur in dark. */
-.enable-transparency.dark .sidebar {
-  backdrop-filter: var(--glass-blur) var(--glass-saturation);
+/* The stock width transition would trail the pointer while dragging. */
+.shell:has(.sidebar__resize-handle[data-resizing="true"]) [data-slot="sidebar-gap"],
+.shell:has(.sidebar__resize-handle[data-resizing="true"]) [data-slot="sidebar-container"] {
+  transition: none;
 }

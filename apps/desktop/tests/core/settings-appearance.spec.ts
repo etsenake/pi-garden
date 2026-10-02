@@ -239,11 +239,17 @@ async function elementCssProperty(
 async function expectSameDesign(window: Page): Promise<void> {
   const surfaces: readonly (readonly [selector: string, property: string, token: string])[] = [
     [".main", "background-color", "var(--main)"],
-    [".sidebar", "background-color", "var(--sidebar)"],
+    // The stock Sidebar paints its inner panel; its container only draws the border.
+    ['.sidebar [data-slot="sidebar-inner"]', "background-color", "var(--color-sidebar)"],
     [".topbar", "background-color", "var(--main)"],
     // New thread is a shadcn secondary Button.
     [".sidebar__new", "background-color", "var(--secondary)"],
-    [".session-row--active", "background-color", "var(--surface)"],
+    // The active thread is a SidebarMenuButton with data-active.
+    [
+      ".session-row--active .session-row__select",
+      "background-color",
+      "var(--color-sidebar-accent)",
+    ],
     [".composer__surface", "background-color", "var(--surface)"],
     [".message__content pre", "background-color", "var(--code-block-bg)"],
   ];
