@@ -48,6 +48,8 @@ export interface MentionMenuState {
   readonly showMentionMenu: boolean;
   readonly mentionOptions: readonly MentionOption[];
   readonly selectedIndex: number;
+  /** Selects the option with this id, as the pointer moves over it. */
+  readonly highlightMention: (id: string) => void;
   readonly handleMentionKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
   readonly insertMention: (option: MentionOption) => void;
   readonly enableMentionExtension: (option: Extract<MentionOption, { kind: "extension" }>) => void;
@@ -269,10 +271,19 @@ export function useMentionMenu({
     [showMentionMenu, mentionOptions, selectedIndex, enableMentionExtension, insertMention],
   );
 
+  const highlightMention = useCallback(
+    (id: string) => {
+      const index = mentionOptions.findIndex((option) => option.id === id);
+      if (index >= 0) setSelectedIndex(index);
+    },
+    [mentionOptions],
+  );
+
   return {
     showMentionMenu,
     mentionOptions,
     selectedIndex,
+    highlightMention,
     handleMentionKeyDown,
     insertMention,
     enableMentionExtension,

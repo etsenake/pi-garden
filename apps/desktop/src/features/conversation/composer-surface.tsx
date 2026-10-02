@@ -80,9 +80,12 @@ interface ComposerSurfaceProps {
   readonly onSteerQueuedMessage: (messageId: string) => void;
   readonly onSelectSlashCommand: (command: ComposerSlashCommand) => void;
   readonly onSelectSlashOption: (option: ComposerSlashOption) => void;
+  readonly onHighlightSlashCommand: (id: string) => void;
+  readonly onHighlightSlashOption: (value: string) => void;
   readonly showMentionMenu: boolean;
   readonly mentionOptions: readonly MentionOption[];
   readonly selectedMentionIndex: number;
+  readonly onHighlightMention: (id: string) => void;
   readonly onSelectMention: (option: MentionOption) => void;
   readonly onEnableMentionExtension: (option: ExtensionMentionOption) => void;
   readonly textareaLabel: string;
@@ -127,9 +130,12 @@ export function ComposerSurface({
   onSteerQueuedMessage,
   onSelectSlashCommand,
   onSelectSlashOption,
+  onHighlightSlashCommand,
+  onHighlightSlashOption,
   showMentionMenu,
   mentionOptions,
   selectedMentionIndex,
+  onHighlightMention,
   onSelectMention,
   onEnableMentionExtension,
   textareaLabel,
@@ -285,6 +291,7 @@ export function ComposerSurface({
             label="Mentions"
             selectedValue={mentionOptions[selectedMentionIndex]?.id}
             testId="mention-menu"
+            onSelectedValueChange={onHighlightMention}
           >
             <MentionMenuSections
               options={mentionOptions}
@@ -297,6 +304,7 @@ export function ComposerSurface({
             label="Slash commands"
             selectedValue={selectedSlashCommand?.id}
             testId="slash-menu"
+            onSelectedValueChange={onHighlightSlashCommand}
           >
             {slashSections.map((section) => (
               <CommandGroup
@@ -346,6 +354,7 @@ export function ComposerSurface({
             label={selectedSlashCommand.title}
             selectedValue={selectedSlashOption?.value}
             testId="slash-options-menu"
+            onSelectedValueChange={onHighlightSlashOption}
           >
             <CommandGroup heading={selectedSlashCommand.title}>
               {slashOptions.map((option) => (

@@ -7,8 +7,10 @@ interface ComposerMenuPopoverProps {
   readonly testId: string;
   /** Accessible name for the listbox. */
   readonly label: string;
-  /** The `value` of the keyboard-selected item. */
+  /** The `value` of the selected item. */
   readonly selectedValue: string | undefined;
+  /** Moves the selection to the item the pointer moves over. */
+  readonly onSelectedValueChange: (value: string) => void;
   readonly children: ReactNode;
 }
 
@@ -18,19 +20,27 @@ interface ComposerMenuPopoverProps {
  * menu is open, inside the `.composer__editor` box it anchors to.
  *
  * Focus stays in the editor: the textarea's key handlers own arrow/enter/tab/escape and
- * pass the selected item in as `selectedValue`, so the popover never takes or returns focus
- * and pointer hover does not move the selection.
+ * pass the selected item in as `selectedValue`, so the popover never takes or returns focus.
+ * Moving the pointer over a row selects it through `onSelectedValueChange`, so the one
+ * highlighted row is always what Enter or Tab picks.
  */
 export function ComposerMenuPopover({
   testId,
   label,
   selectedValue,
+  onSelectedValueChange,
   children,
 }: ComposerMenuPopoverProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
+  // The row the pointer selected is already in view; scrolling it would slide rows under
+  // the pointer and select those instead.
+  const pointerValueRef = useRef<string | undefined>(undefined);
 
   // cmdk only scrolls the selection into view for its own keyboard handling.
   useLayoutEffect(() => {
+    const fromPointer = selectedValue !== undefined && selectedValue === pointerValueRef.current;
+    pointerValueRef.current = undefined;
+    if (fromPointer) return;
     listRef.current
       ?.querySelector<HTMLElement>("[cmdk-item][data-selected='true']")
       ?.scrollIntoView({ block: "nearest" });
@@ -55,11 +65,14 @@ export function ComposerMenuPopover({
         onWheel={(event) => event.stopPropagation()}
       >
         <Command
-          disablePointerSelection
           label={label}
           loop={false}
           shouldFilter={false}
           value={selectedValue ?? ""}
+          onValueChange={(value) => {
+            pointerValueRef.current = value;
+            onSelectedValueChange(value);
+          }}
         >
           <CommandList className="max-h-[min(420px,48vh)]" ref={listRef}>
             {children}

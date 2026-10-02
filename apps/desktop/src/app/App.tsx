@@ -1119,6 +1119,7 @@ export default function App() {
                 showMentionMenu={newThread.mentionMenu.showMentionMenu}
                 mentionOptions={newThread.mentionMenu.mentionOptions}
                 selectedMentionIndex={newThread.mentionMenu.selectedIndex}
+                onHighlightMention={newThread.mentionMenu.highlightMention}
                 onChangePrompt={newThread.setPrompt}
                 onSelectEnvironment={newThread.setEnvironment}
                 onSelectWorkspace={newThread.selectWorkspace}
@@ -1138,6 +1139,8 @@ export default function App() {
                 onSelectSlashOption={(option) => {
                   newThread.slashMenu.applySlashOptionSelection(option);
                 }}
+                onHighlightSlashCommand={newThread.slashMenu.highlightSlashCommand}
+                onHighlightSlashOption={newThread.slashMenu.highlightSlashOption}
                 onSelectMention={newThread.mentionMenu.insertMention}
                 onEnableMentionExtension={newThread.mentionMenu.enableMentionExtension}
                 onAddAttachments={newThread.addAttachments}
@@ -1242,6 +1245,8 @@ export default function App() {
                 onSelectSlashOption={(option) => {
                   slashMenu.applySlashOptionSelection(option);
                 }}
+                onHighlightSlashCommand={slashMenu.highlightSlashCommand}
+                onHighlightSlashOption={slashMenu.highlightSlashOption}
                 onSetModel={handleSetSessionModel}
                 onSetThinking={handleSetSessionThinking}
                 modelOnboarding={selectedSessionModelOnboarding}
@@ -1272,6 +1277,7 @@ export default function App() {
                 showMentionMenu={mentionMenu.showMentionMenu}
                 mentionOptions={mentionMenu.mentionOptions}
                 selectedMentionIndex={mentionMenu.selectedIndex}
+                onHighlightMention={mentionMenu.highlightMention}
                 onSelectMention={mentionMenu.insertMention}
                 onEnableMentionExtension={mentionMenu.enableMentionExtension}
                 extensionUi={selectedExtensionUi}

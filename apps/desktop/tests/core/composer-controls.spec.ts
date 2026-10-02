@@ -95,9 +95,19 @@ test("supports keyboard shortcuts, slash menus, and topbar controls through the 
       (composerBox?.y ?? 0) + 2,
     );
 
+    // Moving the pointer over a row selects it, and Tab inserts the row under the pointer.
+    const slashRow = (command: string) =>
+      slashMenu.locator(".slash-menu__item", { hasText: command });
+    await slashRow("/skill:observe-state").hover();
+    await expect(slashRow("/skill:observe-state")).toHaveAttribute("aria-selected", "true");
+    await expect(slashRow("/status")).toHaveAttribute("aria-selected", "false");
+    await slashRow("/status").hover();
+    await expect(slashRow("/status")).toHaveAttribute("aria-selected", "true");
+    await expect(composer).toBeFocused();
     await composer.press("Tab");
     await expect(slashMenu).toHaveCount(0);
     await expect(composer).toHaveValue("/status");
+    await window.mouse.move(0, 0);
     await composer.press("Enter");
     await expect(window.getByTestId("transcript")).toContainText(/Model |No session overrides set/);
     await expect(composer).toHaveValue("");
@@ -132,6 +142,22 @@ test("supports keyboard shortcuts, slash menus, and topbar controls through the 
     await composer.press("Enter");
     await expect(optionsMenu).toHaveCount(0);
     await expect(composer).toHaveValue("Keep the draft /thinking medium");
+
+    // Arrow keys continue from the option the pointer selected.
+    await composer.fill("Hover the draft /thinking");
+    await expect(optionsMenu).toBeVisible();
+    const highOption = optionsMenu.getByRole("option", { name: /^High/ });
+    await highOption.hover();
+    await expect(highOption).toHaveAttribute("aria-selected", "true");
+    await composer.press("ArrowDown");
+    await expect(optionsMenu.getByRole("option", { name: /^Extra High/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await composer.press("Enter");
+    await expect(optionsMenu).toHaveCount(0);
+    await expect(composer).toHaveValue("Hover the draft /thinking xhigh");
+    await window.mouse.move(0, 0);
 
     const selectedWorkspaceId = (await getDesktopState(window)).selectedWorkspaceId;
     expect(selectedWorkspaceId).toBeTruthy();

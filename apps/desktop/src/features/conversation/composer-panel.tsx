@@ -84,6 +84,8 @@ interface ComposerPanelProps {
   readonly onSteerQueuedMessage: (messageId: string) => void;
   readonly onSelectSlashCommand: (command: ComposerSlashCommand) => void;
   readonly onSelectSlashOption: (option: ComposerSlashOption) => void;
+  readonly onHighlightSlashCommand: (id: string) => void;
+  readonly onHighlightSlashOption: (value: string) => void;
   readonly onSetModel: (provider: string, modelId: string) => void;
   readonly onSetThinking: (level: string) => void;
   readonly modelOnboarding: ModelOnboardingState;
@@ -93,6 +95,7 @@ interface ComposerPanelProps {
   readonly showMentionMenu: boolean;
   readonly mentionOptions: readonly MentionOption[];
   readonly selectedMentionIndex: number;
+  readonly onHighlightMention: (id: string) => void;
   readonly onSelectMention: (option: MentionOption) => void;
   readonly onEnableMentionExtension: (
     option: Extract<MentionOption, { kind: "extension" }>,
@@ -144,6 +147,8 @@ export function ComposerPanel({
   onSteerQueuedMessage,
   onSelectSlashCommand,
   onSelectSlashOption,
+  onHighlightSlashCommand,
+  onHighlightSlashOption,
   onSetModel,
   onSetThinking,
   modelOnboarding,
@@ -153,6 +158,7 @@ export function ComposerPanel({
   showMentionMenu,
   mentionOptions,
   selectedMentionIndex,
+  onHighlightMention,
   onSelectMention,
   onEnableMentionExtension,
   extensionUi,
@@ -216,9 +222,12 @@ export function ComposerPanel({
           onSteerQueuedMessage={onSteerQueuedMessage}
           onSelectSlashCommand={onSelectSlashCommand}
           onSelectSlashOption={onSelectSlashOption}
+          onHighlightSlashCommand={onHighlightSlashCommand}
+          onHighlightSlashOption={onHighlightSlashOption}
           showMentionMenu={showMentionMenu}
           mentionOptions={mentionOptions}
           selectedMentionIndex={selectedMentionIndex}
+          onHighlightMention={onHighlightMention}
           onSelectMention={onSelectMention}
           onEnableMentionExtension={onEnableMentionExtension}
           textareaLabel="Composer"

@@ -43,6 +43,12 @@ test("shows workspace file mentions from the composer and inserts the selected f
     await expect(mentionMenu.locator(".mention-menu__item")).toHaveCount(4);
     await expect(mentionMenu).toContainText("Thread orchestration");
     await expect(mentionMenu).toContainText("Scheduled tasks");
+    // Moving the pointer over a row selects it.
+    const mentionRows = mentionMenu.locator(".mention-menu__item");
+    await mentionRows.last().hover();
+    await expect(mentionRows.last()).toHaveAttribute("aria-selected", "true");
+    await expect(mentionRows.first()).toHaveAttribute("aria-selected", "false");
+    await window.mouse.move(0, 0);
 
     await composer.pressSequentially("README");
     await expect(mentionMenu.locator(".mention-menu__item")).toHaveCount(1);

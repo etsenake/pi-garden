@@ -59,6 +59,7 @@ interface NewThreadViewProps {
   readonly showMentionMenu: boolean;
   readonly mentionOptions: readonly MentionOption[];
   readonly selectedMentionIndex: number;
+  readonly onHighlightMention: (id: string) => void;
   readonly onChangePrompt: (prompt: string) => void;
   readonly onSelectEnvironment: (environment: NewThreadEnvironment) => void;
   readonly onSelectWorkspace: (workspaceId: string) => void;
@@ -71,6 +72,8 @@ interface NewThreadViewProps {
   readonly onClearSlashCommand: () => void;
   readonly onSelectSlashCommand: (command: ComposerSlashCommand) => void;
   readonly onSelectSlashOption: (option: ComposerSlashOption) => void;
+  readonly onHighlightSlashCommand: (id: string) => void;
+  readonly onHighlightSlashOption: (value: string) => void;
   readonly onSelectMention: (option: MentionOption) => void;
   readonly onEnableMentionExtension: (
     option: Extract<MentionOption, { kind: "extension" }>,
@@ -105,6 +108,7 @@ export function NewThreadView({
   showMentionMenu,
   mentionOptions,
   selectedMentionIndex,
+  onHighlightMention,
   onChangePrompt,
   onSelectEnvironment,
   onSelectWorkspace,
@@ -117,6 +121,8 @@ export function NewThreadView({
   onClearSlashCommand,
   onSelectSlashCommand,
   onSelectSlashOption,
+  onHighlightSlashCommand,
+  onHighlightSlashOption,
   onSelectMention,
   onEnableMentionExtension,
   onAddAttachments,
@@ -208,9 +214,12 @@ export function NewThreadView({
               onRemoveAttachment={onRemoveAttachment}
               onSelectSlashCommand={onSelectSlashCommand}
               onSelectSlashOption={onSelectSlashOption}
+              onHighlightSlashCommand={onHighlightSlashCommand}
+              onHighlightSlashOption={onHighlightSlashOption}
               showMentionMenu={showMentionMenu}
               mentionOptions={mentionOptions}
               selectedMentionIndex={selectedMentionIndex}
+              onHighlightMention={onHighlightMention}
               onSelectMention={onSelectMention}
               onEnableMentionExtension={onEnableMentionExtension}
               textareaLabel="New thread prompt"

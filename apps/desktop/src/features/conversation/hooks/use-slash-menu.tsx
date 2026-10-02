@@ -123,6 +123,9 @@ export interface SlashMenuState {
     mode: "click" | "tab" | "enter",
   ) => void;
   readonly applySlashOptionSelection: (option: ComposerSlashOption) => void;
+  /** Selects the command or option with this id or value, as the pointer moves over it. */
+  readonly highlightSlashCommand: (id: string) => void;
+  readonly highlightSlashOption: (value: string) => void;
   readonly handleSlashKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => boolean;
   readonly fillComposerFromSlash: (draft: string, options?: { suppressMenu?: boolean }) => void;
 }
@@ -328,6 +331,16 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
   const resetSlashUi = () => {
     closeSlashOptionMenu();
     setSlashMenuSuppressedDraft("");
+  };
+
+  const highlightSlashCommand = (id: string) => {
+    const index = slashSuggestions.findIndex((command) => command.id === id);
+    if (index >= 0) setSlashIndex(index);
+  };
+
+  const highlightSlashOption = (value: string) => {
+    const index = slashOptions.findIndex((option) => option.value === value);
+    if (index >= 0) setSlashOptionIndex(index);
   };
 
   const fillComposerFromSlash = (draft: string, options?: { suppressMenu?: boolean }) => {
@@ -600,6 +613,8 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
     resetSlashUi,
     applySlashCommandSelection,
     applySlashOptionSelection,
+    highlightSlashCommand,
+    highlightSlashOption,
     handleSlashKeyDown,
     fillComposerFromSlash,
   };

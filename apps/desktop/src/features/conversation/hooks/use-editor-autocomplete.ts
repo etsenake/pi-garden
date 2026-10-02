@@ -204,5 +204,13 @@ export function useEditorAutocomplete({
     return false;
   };
 
-  return { menu, accept, handleKeyDown };
+  const highlight = (index: number) => {
+    setMenu((current) =>
+      current.open && index >= 0 && index < current.items.length && index !== current.selectedIndex
+        ? { ...current, selectedIndex: index }
+        : current,
+    );
+  };
+
+  return { menu, accept, highlight, handleKeyDown };
 }

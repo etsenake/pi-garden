@@ -110,6 +110,7 @@ export function composerEditorRegionSlots(
       <EditorAutocompleteMenu
         menu={region.autocomplete.menu}
         onAccept={region.autocomplete.accept}
+        onHighlight={region.autocomplete.highlight}
       />
     ),
     editorNotice: region.winner ? <DesktopEditorConflictNotice editor={region.winner} /> : null,
@@ -156,9 +157,11 @@ function addEditorFiles(
 function EditorAutocompleteMenu({
   menu,
   onAccept,
+  onHighlight,
 }: {
   readonly menu: EditorAutocompleteMenuState;
   readonly onAccept: (item: EditorAutocompleteItem) => void;
+  readonly onHighlight: (index: number) => void;
 }) {
   if (!menu.open) return null;
   return (
@@ -166,6 +169,9 @@ function EditorAutocompleteMenu({
       label="Suggestions"
       selectedValue={String(menu.selectedIndex)}
       testId="editor-autocomplete-menu"
+      onSelectedValueChange={(value) => {
+        if (value) onHighlight(Number(value));
+      }}
     >
       {menu.items.map((item, index) => (
         <CommandItem
