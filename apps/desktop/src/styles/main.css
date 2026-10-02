@@ -750,52 +750,6 @@
 .secondary-surface {
   min-height: 0;
   height: 100vh;
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
-  background: var(--window);
-}
-
-.secondary-surface__sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 0;
-  padding: var(--titlebar-inset-top) var(--space-3) var(--space-4);
-  border-right: 1px solid var(--border-default);
-  background: var(--sidebar);
-  overflow-y: auto;
-}
-
-.secondary-surface__title {
-  padding: 0 var(--space-2);
-  color: var(--muted-soft);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-}
-
-.secondary-surface__nav {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.secondary-surface__nav-group {
-  display: grid;
-  gap: 1px;
-}
-
-.secondary-surface__nav-group-label {
-  padding: 0 var(--space-2) var(--space-1);
-  color: var(--muted-soft);
-  font-size: 13px;
-}
-
-.secondary-surface__nav-empty {
-  margin: 0;
-  padding: 0 var(--space-2);
-  color: var(--muted-soft);
-  font-size: 13px;
 }
 
 .secondary-surface__content {
@@ -1356,10 +1310,6 @@
 /* Very narrow: settings/skills rows stack so the label text keeps a usable
    width instead of collapsing to one character per line beside the control. */
 @media (max-width: 700px) {
-  .secondary-surface {
-    grid-template-columns: 168px minmax(0, 1fr);
-  }
-
   .secondary-surface__content {
     padding: var(--space-6) var(--space-4) var(--space-5);
   }
