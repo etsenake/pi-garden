@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type {
   DiffPanelFileRequest,
   DiffPanelSelection,
@@ -22,6 +23,7 @@ import { formatPathForDisplay, ReviewFileTree, reviewTreeOrder } from "./review-
 import { ReviewMenu } from "./review-menu";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
 import { Input } from "@/ui/shadcn/input";
 import { Label } from "@/ui/shadcn/label";
 import { Toggle } from "@/ui/shadcn/toggle";
@@ -747,20 +749,28 @@ function ReviewIssueBanner({
 function CoverageNotice({ coverage }: { readonly coverage: ReviewCoverage }) {
   if (coverage.state === "complete" && coverage.notes.length === 0) return null;
   return (
-    <details className="review-panel__coverage" data-testid="review-coverage">
-      <summary>
+    <Collapsible className="review-panel__coverage" data-testid="review-coverage">
+      <CollapsibleTrigger
+        render={<Button className="group/coverage -ml-2.5" size="sm" variant="ghost" />}
+      >
         {coverage.state === "partial" ? "Comparison has limits" : "Comparison details"}
-      </summary>
-      {coverage.notes.length ? (
-        <ul>
-          {coverage.notes.map((note, index) => (
-            <li key={index}>{note}</li>
-          ))}
-        </ul>
-      ) : (
-        <p>Some changes could not be included.</p>
-      )}
-    </details>
+        <ChevronRight
+          className="transition-transform group-data-panel-open/coverage:rotate-90"
+          data-icon="inline-end"
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent keepMounted>
+        {coverage.notes.length ? (
+          <ul>
+            {coverage.notes.map((note, index) => (
+              <li key={index}>{note}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>Some changes could not be included.</p>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

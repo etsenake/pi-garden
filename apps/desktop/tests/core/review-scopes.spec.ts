@@ -354,11 +354,15 @@ test("large changed-file lists scroll with bounded row layout and expandable cov
     const rows = panel.locator(".diff-panel__file");
     await expect(rows).toHaveCount(2000, { timeout: 30_000 });
     const notice = panel.getByTestId("review-coverage").first();
-    await expect(notice.locator("summary")).toHaveText("Comparison has limits");
+    const disclosure = notice.getByRole("button", { name: "Comparison has limits" });
+    await expect(disclosure).toHaveAttribute("aria-expanded", "false");
     await expect(notice.locator("ul")).toBeHidden();
-    await notice.locator("summary").click();
+    await disclosure.click();
+    await expect(disclosure).toHaveAttribute("aria-expanded", "true");
     await expect(notice.locator("ul")).toBeVisible();
-    await notice.locator("summary").click();
+    await disclosure.click();
+    await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    await expect(notice.locator("ul")).toBeHidden();
     await expect(rows.first()).toHaveCSS("content-visibility", "auto");
     await expect(rows.first()).toHaveCSS("height", "30px");
     const list = panel.locator(".diff-panel__file-list");

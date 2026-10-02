@@ -148,13 +148,8 @@
   overflow-y: auto;
 }
 
-.review-panel__coverage summary {
-  cursor: pointer;
-  font-weight: var(--font-medium);
-}
-
-.review-panel__coverage[open] summary {
-  margin-bottom: 8px;
+.review-panel__coverage [data-slot="collapsible-content"] {
+  margin-top: 4px;
 }
 
 .review-panel__summary,
