@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState, type RefObject } from "react";
+import { Badge } from "@/ui/shadcn/badge";
 import { offsetsToRange } from "./text-offsets";
 
 /**
@@ -119,19 +120,19 @@ export function AnnotationMarkers({
   return (
     <div className="annotation-markers">
       {placed.map((marker) => (
-        <button
+        <Badge
           aria-label={`Edit annotation ${marker.number}`}
           className="annotation-marker"
           data-annotation-id={marker.id}
           data-testid="annotation-marker"
           key={marker.id}
+          render={<button type="button" />}
           style={{ top: marker.top, left: marker.left }}
-          type="button"
           onMouseDown={(event) => event.preventDefault()}
           onClick={(event) => onOpen(marker.id, event.currentTarget.getBoundingClientRect())}
         >
           {marker.number}
-        </button>
+        </Badge>
       ))}
     </div>
   );

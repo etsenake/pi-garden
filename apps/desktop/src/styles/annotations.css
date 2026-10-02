@@ -14,34 +14,12 @@
   pointer-events: none;
 }
 
-/* A speech bubble whose tail sits on the end of the annotated text. */
+/* The marker sits on the end of the annotated text; the Badge supplies its look. */
 .annotation-marker {
   position: absolute;
-  display: grid;
-  place-items: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
   transform: translate(-3px, -100%);
-  border: 2px solid var(--surface);
-  border-radius: 11px 11px 11px 3px;
-  background: var(--accent);
-  box-shadow: var(--shadow-sm);
-  color: #fff;
-  font-size: 12px;
-  font-weight: var(--font-semibold);
-  line-height: 1;
   pointer-events: auto;
   cursor: pointer;
-}
-
-.annotation-marker:hover {
-  filter: brightness(1.08);
-}
-
-.annotation-marker:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
 }
 
 .annotation-add {
