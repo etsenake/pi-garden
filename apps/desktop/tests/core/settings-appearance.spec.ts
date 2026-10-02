@@ -162,6 +162,8 @@ test("every preset recolours the same design instead of restyling it", async () 
         await expectDerivedTokens(window, preset.id, variant);
         await window.getByRole("button", { name: "Back to app" }).click();
         await expect(window.locator(".main")).toBeVisible();
+        // Back to app sits where New thread lands; sample resting colours, not its hover.
+        await window.mouse.move(0, 0);
         await expectSameDesign(window);
       }
     }
@@ -239,7 +241,8 @@ async function expectSameDesign(window: Page): Promise<void> {
     [".main", "background-color", "var(--main)"],
     [".sidebar", "background-color", "var(--sidebar)"],
     [".topbar", "background-color", "var(--main)"],
-    [".sidebar__new", "background-color", "var(--surface)"],
+    // New thread is a shadcn secondary Button.
+    [".sidebar__new", "background-color", "var(--secondary)"],
     [".session-row--active", "background-color", "var(--surface)"],
     [".composer__surface", "background-color", "var(--surface)"],
     [".message__content pre", "background-color", "var(--code-block-bg)"],
