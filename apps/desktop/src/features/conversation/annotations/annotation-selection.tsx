@@ -260,7 +260,9 @@ function AddToChatButton({
       <Button
         data-testid="add-to-chat"
         size="sm"
-        variant="outline"
+        // Floats over transcript text: outline and secondary fills are
+        // translucent in this theme, so use the opaque primary variant.
+        variant="default"
         // Keep the transcript selection alive through the click.
         onMouseDown={(event) => event.preventDefault()}
         onClick={onAdd}
