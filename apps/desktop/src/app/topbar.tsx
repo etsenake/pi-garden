@@ -57,18 +57,25 @@ export function Topbar({
   return (
     <header className="topbar" data-testid="topbar" onDoubleClick={handleDoubleClick}>
       <div className="topbar__title">
-        <span
-          className="topbar__workspace"
-          title={checkoutLabel ? `${rootWorkspace?.name ?? ""} · ${checkoutLabel}` : undefined}
-        >
-          {rootWorkspace ? rootWorkspace.name : "Open a folder to begin"}
-        </span>
+        <Tooltip disabled={!checkoutLabel}>
+          <TooltipTrigger render={<span className="topbar__workspace" />}>
+            {rootWorkspace ? rootWorkspace.name : "Open a folder to begin"}
+          </TooltipTrigger>
+          <TooltipContent align="start" side="bottom">
+            {rootWorkspace?.name ?? ""} · {checkoutLabel}
+          </TooltipContent>
+        </Tooltip>
         {sessionTitle ? (
           <>
             <span className="topbar__separator">/</span>
-            <h1 className="chat-header__title" title={sessionTitle}>
-              {sessionTitle}
-            </h1>
+            <Tooltip>
+              <TooltipTrigger render={<h1 className="chat-header__title" />}>
+                {sessionTitle}
+              </TooltipTrigger>
+              <TooltipContent align="start" side="bottom">
+                {sessionTitle}
+              </TooltipContent>
+            </Tooltip>
             <HeaderBadges badges={headerBadges} onInvokeAction={onInvokeExtensionAction} />
             {richHeader}
           </>

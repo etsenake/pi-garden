@@ -32,22 +32,24 @@ export function StartupDiagnosticsBanner({
               )
             : undefined;
           return (
-            <span
-              className="startup-diagnostics__item"
+            <Tooltip
+              disabled={!diagnostic.workspacePath}
               key={`${diagnostic.workspacePath ?? diagnostic.scope}:${index}`}
-              title={diagnostic.workspacePath}
             >
-              {workspaceName ? `${workspaceName} is unavailable.` : diagnostic.message}
-              {savedWorkspace ? (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => onRemoveWorkspace(savedWorkspace)}
-                >
-                  Remove folder
-                </Button>
-              ) : null}
-            </span>
+              <TooltipTrigger render={<span className="startup-diagnostics__item" />}>
+                {workspaceName ? `${workspaceName} is unavailable.` : diagnostic.message}
+                {savedWorkspace ? (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => onRemoveWorkspace(savedWorkspace)}
+                  >
+                    Remove folder
+                  </Button>
+                ) : null}
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{diagnostic.workspacePath}</TooltipContent>
+            </Tooltip>
           );
         })}
       </div>

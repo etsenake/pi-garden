@@ -212,16 +212,21 @@ function TimelineMessage({
                           src={`data:${attachment.mimeType};base64,${attachment.data}`}
                         />
                       ) : (
-                        <div
-                          className="timeline-item__attachment timeline-item__attachment--file"
-                          key={`${item.id}:${index}`}
-                          title={attachment.fsPath}
-                        >
-                          <span className="timeline-item__attachment-icon" aria-hidden="true">
-                            <FileIcon />
-                          </span>
-                          <span className="timeline-item__attachment-name">{attachment.name}</span>
-                        </div>
+                        <Tooltip disabled={!attachment.fsPath} key={`${item.id}:${index}`}>
+                          <TooltipTrigger
+                            render={
+                              <div className="timeline-item__attachment timeline-item__attachment--file" />
+                            }
+                          >
+                            <span className="timeline-item__attachment-icon" aria-hidden="true">
+                              <FileIcon />
+                            </span>
+                            <span className="timeline-item__attachment-name">
+                              {attachment.name}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{attachment.fsPath}</TooltipContent>
+                        </Tooltip>
                       ),
                     )}
                   </div>

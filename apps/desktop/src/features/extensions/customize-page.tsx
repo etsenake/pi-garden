@@ -15,6 +15,7 @@ import { Button } from "@/ui/shadcn/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/shadcn/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 import { RefreshIcon, SearchIcon } from "../../ui/icons";
 import { extensionScopeLabel } from "./extension-display";
 import { ExtensionsTab } from "./extensions-view";
@@ -120,15 +121,16 @@ export function CustomizePage({
           </div>
           <div className="view-header__actions">
             {workspacePicker}
-            <Button
-              aria-label="Refresh"
-              size="icon"
-              title="Refresh"
-              variant="ghost"
-              onClick={onRefresh}
-            >
-              <RefreshIcon />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button aria-label="Refresh" size="icon" variant="ghost" onClick={onRefresh} />
+                }
+              >
+                <RefreshIcon />
+              </TooltipTrigger>
+              <TooltipContent>Refresh</TooltipContent>
+            </Tooltip>
             {tab === "skills" && workspace ? (
               <Button onClick={() => onTryCommand(NEW_SKILL_PROMPT)}>New skill</Button>
             ) : null}

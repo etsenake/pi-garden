@@ -571,12 +571,11 @@ export function DiffPanel({
           ) : (
             <>
               <div className="review-panel__file-header">
-                <span
-                  className="review-panel__file-path"
-                  title={formatPathForDisplay(selectedFile.path)}
-                >
-                  <PathLabel path={selectedFile.path} />
-                </span>
+                <WithTooltip label={formatPathForDisplay(selectedFile.path)}>
+                  <span className="review-panel__file-path">
+                    <PathLabel path={selectedFile.path} />
+                  </span>
+                </WithTooltip>
                 {selectedFile.lines ? <LineTotals {...selectedFile.lines} /> : null}
                 <span className="review-panel__toolbar-spacer" />
                 {selectedFile.status !== "deleted" ? (

@@ -529,7 +529,6 @@ function TreeRowItem({
     <CommandItem
       className="items-start py-0.5 pl-0.5"
       data-testid={`tree-row-${row.node.id}`}
-      title={line}
       value={row.node.id}
       onDoubleClick={onDoubleClick}
       onSelect={onSelect}

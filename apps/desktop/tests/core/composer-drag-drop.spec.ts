@@ -41,8 +41,8 @@ test("existing thread highlights and accepts dropped images and files", async ()
     await expect(window.locator(".composer-attachment--image")).toHaveCount(1);
     await expect(window.locator(".composer-attachment--file")).toHaveCount(1);
     await expect(window.locator(".composer-attachment__preview")).toHaveAttribute(
-      "title",
-      "drop-image.png",
+      "aria-label",
+      "View drop-image.png",
     );
     await expect(window.locator(".composer-attachment__name")).toHaveText("notes.txt");
   } finally {

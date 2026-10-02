@@ -11,7 +11,13 @@ import {
   SidebarMenuSub,
 } from "@/ui/shadcn/sidebar";
 import { PanelEmpty } from "./panel-empty";
-import { WithTooltip } from "./workbench-tooltip";
+import { TooltipTrigger } from "@/ui/shadcn/tooltip";
+import {
+  SharedTooltip,
+  WithTooltip,
+  createSharedTooltip,
+  type SharedTooltipHandle,
+} from "./workbench-tooltip";
 import { ancestorDirectoryPaths } from "./file-workbench-state";
 import { buildFileTree, filterWorkspaceFiles, type FileTreeNode } from "./file-tree";
 
@@ -34,6 +40,7 @@ export function FileExplorer({
 }: FileExplorerProps) {
   const [filter, setFilter] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const [rowTooltip] = useState(createSharedTooltip);
   const filterActive = filter.trim().length > 0;
   const visibleFiles = useMemo(
     () => (files ? filterWorkspaceFiles(files, filter) : []),
@@ -100,9 +107,11 @@ export function FileExplorer({
         <PanelEmpty loading={files === null && !error} title={emptyCopy} />
       ) : (
         <SidebarMenu className="file-workbench__tree" data-testid="file-workbench-tree">
+          <SharedTooltip handle={rowTooltip} />
           {tree.map((node) => (
             <FileTreeRow
               key={node.path || node.name}
+              tooltip={rowTooltip}
               expandAll={filterActive}
               expanded={expanded}
               node={node}
@@ -129,6 +138,7 @@ export function FileExplorer({
 
 function FileTreeRow({
   node,
+  tooltip,
   expandAll,
   expanded,
   selectedPath,
@@ -136,6 +146,7 @@ function FileTreeRow({
   onToggleDirectory,
 }: {
   readonly node: FileTreeNode;
+  readonly tooltip: SharedTooltipHandle;
   readonly expandAll: boolean;
   readonly expanded: ReadonlySet<string>;
   readonly selectedPath: string | null;
@@ -153,8 +164,13 @@ function FileTreeRow({
         >
           <SidebarMenuButton
             className="file-workbench__tree-row file-workbench__tree-row--dir"
-            render={<CollapsibleTrigger />}
-            title={node.path}
+            render={
+              <TooltipTrigger
+                handle={tooltip}
+                payload={node.path}
+                render={<CollapsibleTrigger />}
+              />
+            }
           >
             <ChevronRightIcon className="transition-transform" />
             <FolderIcon />
@@ -165,6 +181,7 @@ function FileTreeRow({
               {node.children.map((child) => (
                 <FileTreeRow
                   key={child.path || child.name}
+                  tooltip={tooltip}
                   expandAll={expandAll}
                   expanded={expanded}
                   node={child}
@@ -182,6 +199,7 @@ function FileTreeRow({
 
   return (
     <FileTreeFileRow
+      tooltip={tooltip}
       name={node.name}
       path={node.path}
       selected={selectedPath === node.path}
@@ -191,11 +209,13 @@ function FileTreeRow({
 }
 
 function FileTreeFileRow({
+  tooltip,
   name,
   path,
   selected,
   onSelect,
 }: {
+  readonly tooltip: SharedTooltipHandle;
   readonly name: string;
   readonly path: string;
   readonly selected: boolean;
@@ -215,7 +235,7 @@ function FileTreeFileRow({
         isActive={selected}
         onClick={() => onSelect(path)}
         ref={rowRef}
-        title={path}
+        render={<TooltipTrigger handle={tooltip} payload={path} />}
       >
         <FileIcon />
         <span>{name}</span>

@@ -14,7 +14,8 @@ import {
   SidebarMenuSub,
 } from "@/ui/shadcn/sidebar";
 import { PanelEmpty } from "./panel-empty";
-import { WithTooltip } from "./workbench-tooltip";
+import { TooltipTrigger } from "@/ui/shadcn/tooltip";
+import { SharedTooltip, WithTooltip, createSharedTooltip } from "./workbench-tooltip";
 
 interface ReviewFileTreeProps {
   readonly checkoutId: string;
@@ -43,6 +44,7 @@ export function ReviewFileTree({
 }: ReviewFileTreeProps) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [rowTooltip] = useState(createSharedTooltip);
   const listRef = useRef<HTMLDivElement | null>(null);
   const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
   const tree = useMemo(
@@ -85,7 +87,16 @@ export function ReviewFileTree({
             open={open}
             role="group"
           >
-            <SidebarMenuButton render={<CollapsibleTrigger />} size="sm" title={node.path}>
+            <SidebarMenuButton
+              render={
+                <TooltipTrigger
+                  handle={rowTooltip}
+                  payload={node.path}
+                  render={<CollapsibleTrigger />}
+                />
+              }
+              size="sm"
+            >
               <ChevronRightIcon className="transition-transform" />
               <span>{node.name}</span>
             </SidebarMenuButton>
@@ -114,8 +125,8 @@ export function ReviewFileTree({
           className="diff-panel__file-name min-w-0 flex-1"
           isActive={selected}
           onClick={() => onSelect(file.path)}
+          render={<TooltipTrigger handle={rowTooltip} payload={formatPathForDisplay(file.path)} />}
           size="sm"
-          title={formatPathForDisplay(file.path)}
         >
           <span className="diff-panel__file-path">{formatPathForDisplay(node.name)}</span>
         </SidebarMenuButton>
@@ -157,12 +168,17 @@ export function ReviewFileTree({
           disabled={busy || stale}
           onCheckedChange={() => onToggleReviewed(file)}
         />
-        <span
-          className={`review-tree__status review-tree__status--${file.conflicted ? "conflicted" : file.status}`}
-          title={file.conflicted ? "Conflicted" : file.status}
+        <TooltipTrigger
+          handle={rowTooltip}
+          payload={file.conflicted ? "Conflicted" : file.status}
+          render={
+            <span
+              className={`review-tree__status review-tree__status--${file.conflicted ? "conflicted" : file.status}`}
+            />
+          }
         >
           {statusLetter(file.conflicted ? "conflicted" : file.status)}
-        </span>
+        </TooltipTrigger>
       </SidebarMenuItem>
     );
   };
@@ -187,7 +203,10 @@ export function ReviewFileTree({
       </div>
       <div className="review-tree__list diff-panel__file-list" ref={listRef}>
         {tree.length ? (
-          <SidebarMenu>{tree.map((node) => renderNode(node))}</SidebarMenu>
+          <SidebarMenu>
+            <SharedTooltip handle={rowTooltip} />
+            {tree.map((node) => renderNode(node))}
+          </SidebarMenu>
         ) : (
           <PanelEmpty title="No files match." />
         )}

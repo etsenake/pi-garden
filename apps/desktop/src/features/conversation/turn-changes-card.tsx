@@ -5,6 +5,7 @@ import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/ui/shadcn/card";
 import { Item, ItemContent, ItemGroup, ItemMedia } from "@/ui/shadcn/item";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 const COLLAPSED_FILE_COUNT = 5;
 
@@ -62,17 +63,25 @@ export function TurnChangesCard({
         <ItemGroup className="gap-0" ref={listRef}>
           {shown.map((file) => (
             <div key={file.path} role="listitem">
-              <Button
-                className="turn-changes__file w-full justify-between gap-4"
-                data-file-path={file.path}
-                disabled={!onOpen}
-                title={file.previousPath ? `${file.previousPath} → ${file.path}` : file.path}
-                variant="ghost"
-                onClick={() => onOpen?.(turn, file.path)}
-              >
-                <FilePath path={file.path} />
-                <FileStats file={file} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      className="turn-changes__file w-full justify-between gap-4"
+                      data-file-path={file.path}
+                      disabled={!onOpen}
+                      variant="ghost"
+                      onClick={() => onOpen?.(turn, file.path)}
+                    />
+                  }
+                >
+                  <FilePath path={file.path} />
+                  <FileStats file={file} />
+                </TooltipTrigger>
+                <TooltipContent>
+                  {file.previousPath ? `${file.previousPath} → ${file.path}` : file.path}
+                </TooltipContent>
+              </Tooltip>
             </div>
           ))}
         </ItemGroup>

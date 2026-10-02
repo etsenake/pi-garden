@@ -62,8 +62,8 @@ test("new thread reuses composer behaviors for slash commands, image previews, a
     const chip = window.locator(".composer-attachment");
     await expect(chip).toBeVisible();
     await expect(chip.locator(".composer-attachment__preview")).toHaveAttribute(
-      "title",
-      "new-thread-image.png",
+      "aria-label",
+      "View new-thread-image.png",
     );
     await expect(chip.locator(".composer-attachment__name")).toHaveCount(0);
 

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 import {
   Item,
   ItemContent,
@@ -194,15 +195,20 @@ export function ExtensionCompatibilitySectionView({
               Re-inspect
             </Button>
             {adaptation ? (
-              <Button
-                data-testid="adapt-for-desktop"
-                disabled={!adaptation.available || loading || !onAdapt}
-                size="sm"
-                title={adaptation.message}
-                onClick={onAdapt}
-              >
-                Adapt for Desktop
-              </Button>
+              <Tooltip disabled={!adaptation.message}>
+                {/* A span trigger, so the reason still shows while the button is disabled. */}
+                <TooltipTrigger render={<span />}>
+                  <Button
+                    data-testid="adapt-for-desktop"
+                    disabled={!adaptation.available || loading || !onAdapt}
+                    size="sm"
+                    onClick={onAdapt}
+                  >
+                    Adapt for Desktop
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{adaptation.message}</TooltipContent>
+              </Tooltip>
             ) : null}
           </div>
         </div>
@@ -361,31 +367,37 @@ function FindingRow({
       {sourceEvidence.length + runtimeEvidence.length > 0 ? (
         <ItemFooter className="flex-wrap justify-start">
           {sourceEvidence.map((item) => (
-            <Badge
-              className="max-w-full"
-              data-evidence="source"
-              key={`${item.file}:${item.line}:${item.column}`}
-              title={item.snippet}
-              variant="secondary"
-            >
-              <span className="truncate">
-                source · {displayPath(item.file, workspacePath)}:{item.line}
-                {item.partial ? " (uncertain)" : ""}
-              </span>
-            </Badge>
+            <Tooltip key={`${item.file}:${item.line}:${item.column}`}>
+              <TooltipTrigger
+                render={<Badge className="max-w-full" data-evidence="source" variant="secondary" />}
+              >
+                <span className="truncate">
+                  source · {displayPath(item.file, workspacePath)}:{item.line}
+                  {item.partial ? " (uncertain)" : ""}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{item.snippet}</TooltipContent>
+            </Tooltip>
           ))}
           {runtimeEvidence.map((item, index) => (
-            <Badge
-              {...RUNTIME_BADGE}
-              className={cn("max-w-full", RUNTIME_BADGE.className)}
-              data-evidence="runtime"
-              key={`${item.generation}:${item.attribution}:${index}`}
-              title={`generation ${item.generation} · ${item.observedAt}`}
-            >
-              <span className="truncate">
-                runtime · {item.detail ?? item.attribution} · {item.attribution}
-              </span>
-            </Badge>
+            <Tooltip key={`${item.generation}:${item.attribution}:${index}`}>
+              <TooltipTrigger
+                render={
+                  <Badge
+                    {...RUNTIME_BADGE}
+                    className={cn("max-w-full", RUNTIME_BADGE.className)}
+                    data-evidence="runtime"
+                  />
+                }
+              >
+                <span className="truncate">
+                  runtime · {item.detail ?? item.attribution} · {item.attribution}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                generation {item.generation} · {item.observedAt}
+              </TooltipContent>
+            </Tooltip>
           ))}
         </ItemFooter>
       ) : null}

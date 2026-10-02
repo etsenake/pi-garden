@@ -123,15 +123,12 @@ export function FileEditorPane({
     <section className="file-editor" data-testid="file-editor" aria-label="Open file">
       <div className="file-editor__tab-strip">
         {worktreeLabel ? (
-          <Badge
-            className="max-w-35"
-            data-testid="file-editor-worktree-chip"
-            title={worktreeLabel}
-            variant="outline"
-          >
-            <WorktreeIcon />
-            <span className="truncate">{worktreeLabel}</span>
-          </Badge>
+          <WithTooltip label={worktreeLabel}>
+            <Badge className="max-w-35" data-testid="file-editor-worktree-chip" variant="outline">
+              <WorktreeIcon />
+              <span className="truncate">{worktreeLabel}</span>
+            </Badge>
+          </WithTooltip>
         ) : null}
         <Tabs
           className="min-w-0 flex-1"
@@ -151,9 +148,11 @@ export function FileEditorPane({
                 data-testid="file-workbench-tab"
                 key={path}
               >
-                <TabsTrigger className="min-w-0" title={path} value={path}>
-                  <span className="truncate">{fileNameFromPath(path)}</span>
-                </TabsTrigger>
+                <WithTooltip label={path}>
+                  <TabsTrigger className="min-w-0" value={path}>
+                    <span className="truncate">{fileNameFromPath(path)}</span>
+                  </TabsTrigger>
+                </WithTooltip>
                 <Button
                   aria-label={`Close ${fileNameFromPath(path)}`}
                   onClick={() => onClose(path)}

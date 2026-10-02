@@ -1,6 +1,7 @@
 import { XIcon } from "lucide-react";
 import { Button } from "@/ui/shadcn/button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/ui/shadcn/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 interface ImageAttachmentThumbProps {
   readonly src: string;
@@ -12,13 +13,19 @@ interface ImageAttachmentThumbProps {
 export function ImageAttachmentThumb({ src, name, className }: ImageAttachmentThumbProps) {
   return (
     <Dialog>
-      <DialogTrigger
-        aria-label={`View ${name}`}
-        className={`image-attachment-thumb ${className}`}
-        title={name}
-      >
-        <img alt={name} src={src} />
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <DialogTrigger
+              aria-label={`View ${name}`}
+              className={`image-attachment-thumb ${className}`}
+            />
+          }
+        >
+          <img alt={name} src={src} />
+        </TooltipTrigger>
+        <TooltipContent>{name}</TooltipContent>
+      </Tooltip>
       <DialogContent
         aria-label={name}
         className="w-auto max-w-[calc(100vw-6rem)] sm:max-w-[calc(100vw-6rem)]"

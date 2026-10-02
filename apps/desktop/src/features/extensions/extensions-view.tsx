@@ -9,6 +9,7 @@ import type {
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/shadcn/item";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 import { ExtensionIcon } from "../../ui/icons";
 import { SettingsGroup, SettingsRow } from "../settings/settings-utils";
 import {
@@ -151,9 +152,12 @@ function ExtensionDetail({
         </SettingsRow>
         {isPiGardenBuiltinExtension(selected) ? null : (
           <SettingsRow title="Location">
-            <code className="resource-detail__code" title={selected.path}>
-              {displayPath(selected.path, workspace.path)}
-            </code>
+            <Tooltip>
+              <TooltipTrigger render={<code className="resource-detail__code" />}>
+                {displayPath(selected.path, workspace.path)}
+              </TooltipTrigger>
+              <TooltipContent>{selected.path}</TooltipContent>
+            </Tooltip>
           </SettingsRow>
         )}
       </SettingsGroup>

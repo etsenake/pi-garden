@@ -1,6 +1,7 @@
 import type { RuntimeSkillRecord } from "@pi-garden/session-driver/runtime-types";
 import type { WorkspaceRecord } from "../../../contracts/desktop-state";
 import { Button } from "@/ui/shadcn/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 import { titleCase } from "../../lib/string-utils";
 import { SkillIcon } from "../../ui/icons";
 import { SettingsGroup, SettingsRow } from "../settings/settings-utils";
@@ -94,9 +95,12 @@ export function SkillsTab({
               </span>
             </SettingsRow>
             <SettingsRow title="Location" description={sourceScopeGroupLabel(selected.scope)}>
-              <code className="resource-detail__code" title={selected.filePath}>
-                {displayPath(selected.filePath, workspace.path)}
-              </code>
+              <Tooltip>
+                <TooltipTrigger render={<code className="resource-detail__code" />}>
+                  {displayPath(selected.filePath, workspace.path)}
+                </TooltipTrigger>
+                <TooltipContent>{selected.filePath}</TooltipContent>
+              </Tooltip>
             </SettingsRow>
           </SettingsGroup>
         </ResourceDetail>
