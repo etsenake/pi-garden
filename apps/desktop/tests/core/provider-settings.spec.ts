@@ -44,6 +44,8 @@ test("settings lets the user save an API key for a built-in provider", async () 
       has: window.locator(".settings-row__title", { hasText: OPENAI_CATALOG_TITLE }),
     });
     await expect(openAiRow).toContainText("API key");
+    // pi's OpenAI provider also offers ChatGPT OAuth; both setups stay available.
+    await expect(openAiRow.getByRole("button", { name: "Sign in with ChatGPT" })).toBeVisible();
     await openAiRow.getByRole("button", { name: "Set API key" }).click();
 
     const dialog = window.getByTestId("provider-api-key-dialog");
@@ -60,9 +62,7 @@ test("settings lets the user save an API key for a built-in provider", async () 
     await expect(connectedProviders.getByRole("button", { name: "Manage" })).toBeVisible();
 
     await window.getByRole("button", { name: "Models", exact: true }).click();
-    const enabledModels = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Enabled models" }),
-    });
+    const enabledModels = window.getByTestId("settings-model-list-chat");
     await expect(
       enabledModels.getByRole("switch", { name: "Enable openai/gpt-5", exact: true }),
     ).toBeChecked();
@@ -225,9 +225,7 @@ test("opening the first workspace from the empty state hydrates provider and mod
     await window.getByRole("button", { name: "Models", exact: true }).click();
     await expect(window.locator(".view-header__title")).toHaveText("Models");
 
-    const enabledModels = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Enabled models" }),
-    });
+    const enabledModels = window.getByTestId("settings-model-list-chat");
     await expect(
       enabledModels.getByRole("switch", { name: "Enable openai/gpt-5", exact: true }),
     ).toBeChecked();
