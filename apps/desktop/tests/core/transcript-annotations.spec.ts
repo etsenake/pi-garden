@@ -12,6 +12,7 @@ import {
 } from "../helpers/electron-app";
 import { appendMessagesToSessionFile, sessionFilePathFromCatalog } from "../helpers/session-file";
 import { formatAnnotatedPrompt } from "../../src/features/conversation/annotations/annotation-prompt";
+import { addToChatShortcutKeys } from "../../src/features/conversation/annotations/annotation-selection";
 
 const REPLY =
   "I wouldn't hold up the reply for TN stamps. Your I-94 is the official admission record.";
@@ -19,6 +20,12 @@ const SENT_EARLIER = formatAnnotatedPrompt(
   [{ quote: "An earlier quoted line from a reply", note: "Earlier note" }],
   "Earlier follow-up",
 );
+
+/** The Add to Chat shortcut the app shows and handles here: ⌘L on macOS, Ctrl+L elsewhere. */
+const PLAYWRIGHT_KEY: Readonly<Record<string, string>> = { "⌘": "Meta", Ctrl: "Control" };
+const ADD_TO_CHAT_SHORTCUT = addToChatShortcutKeys(process.platform)
+  .map((key) => PLAYWRIGHT_KEY[key] ?? key)
+  .join("+");
 
 /** Drags the real mouse across `phrase` inside the assistant reply. */
 async function dragSelect(page: Page, phrase: string): Promise<void> {
@@ -113,7 +120,7 @@ test("adds transcript selections to chat with comments and sends them before the
     // Select, then add with the shortcut; the comment box opens on a numbered marker.
     await dragSelect(page, "hold up the reply");
     await expect(page.getByTestId("add-to-chat")).toContainText("Add to Chat");
-    await page.keyboard.press("Control+L");
+    await page.keyboard.press(ADD_TO_CHAT_SHORTCUT);
     const editor = page.getByTestId("annotation-editor");
     await expect(editor.getByRole("textbox")).toBeFocused();
     await editor.getByRole("textbox").fill("Why not?");
