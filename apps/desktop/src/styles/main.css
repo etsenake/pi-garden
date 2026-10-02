@@ -155,27 +155,6 @@
   flex: 0 0 auto;
 }
 
-.file-editor__breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border);
-  color: var(--muted-soft);
-  font-size: 12px;
-}
-
-.file-editor__breadcrumb-sep {
-  margin: 0 2px;
-  color: var(--muted-subtle);
-}
-
-.file-editor__breadcrumb-file {
-  color: var(--ink);
-  font-weight: 650;
-}
-
 .file-editor__body {
   min-height: 0;
   flex: 1 1 auto;
@@ -236,7 +215,6 @@
 
 .diff-panel__file-path {
   min-width: 0;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
