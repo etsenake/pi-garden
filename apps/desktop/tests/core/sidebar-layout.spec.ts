@@ -33,7 +33,9 @@ test("folder rows start a new thread in that folder", async () => {
       );
       await window.getByRole("button", { name: `New thread in ${basename(path)}` }).click();
       await expect(window.getByTestId("new-thread-composer")).toBeVisible();
-      await expect(workspacePicker.locator("option:checked")).toHaveText(basename(path));
+      await expect(workspacePicker.locator('[data-slot="select-value"]')).toHaveText(
+        basename(path),
+      );
       await expect(window.getByTestId("topbar").locator(".topbar__workspace")).toHaveText(
         basename(path),
       );

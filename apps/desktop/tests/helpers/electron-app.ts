@@ -17,6 +17,7 @@ import type {
 } from "../../contracts/desktop-state";
 import { resolvePackagedAppExecutable } from "./packaged-app";
 import { TINY_PNG_BASE64 } from "./native-input";
+import { chooseSettingsOption, expectSettingsValue } from "./settings-select";
 
 export {
   copyAppBundle,
@@ -1798,7 +1799,7 @@ export async function openNewThread(window: Page): Promise<void> {
 export async function expectNewThreadWorkspace(window: Page, workspacePath: string): Promise<void> {
   const workspace = await waitForWorkspaceByPath(window, workspacePath);
   await expect(window.getByTestId("new-thread-composer")).toBeVisible({ timeout: 15_000 });
-  await expect(window.getByRole("combobox", { name: "Workspace" })).toHaveValue(workspace.id);
+  await expectSettingsValue(window.getByRole("combobox", { name: "Workspace" }), workspace.id);
 }
 
 export async function startThreadFromSurface(
@@ -1813,9 +1814,9 @@ export async function startThreadFromSurface(
 
   await openNewThread(window);
   if (workspaceName) {
-    await window
-      .getByRole("combobox", { name: "Workspace" })
-      .selectOption({ label: workspaceName });
+    await chooseSettingsOption(window.getByRole("combobox", { name: "Workspace" }), {
+      label: workspaceName,
+    });
   }
   if (environment === "worktree") {
     await window.getByRole("button", { name: "Worktree", exact: true }).click();

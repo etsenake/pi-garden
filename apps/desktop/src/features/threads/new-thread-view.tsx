@@ -31,7 +31,7 @@ import type {
 } from "../settings/model-onboarding";
 import { ModelSelector } from "../conversation/model-selector";
 import { Button } from "@/ui/shadcn/button";
-import { NativeSelect, NativeSelectOption } from "@/ui/shadcn/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/shadcn/select";
 import { ToggleGroup, ToggleGroupItem } from "@/ui/shadcn/toggle-group";
 
 interface NewThreadViewProps {
@@ -164,19 +164,26 @@ export function NewThreadView({
           </div>
           <div className="new-thread__eyebrow">New thread</div>
           <h1 className="new-thread__title">Let&apos;s build</h1>
-          <label className="new-thread__workspace-picker">
-            <span className="sr-only">Workspace</span>
-            <NativeSelect
+          <div className="new-thread__workspace-picker">
+            <Select
+              items={workspaces.map((entry) => ({ value: entry.id, label: entry.name }))}
               value={workspace.id}
-              onChange={(event) => onSelectWorkspace(event.target.value)}
+              onValueChange={(value) => {
+                if (value) onSelectWorkspace(value);
+              }}
             >
-              {workspaces.map((entry) => (
-                <NativeSelectOption key={entry.id} value={entry.id}>
-                  {entry.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
+              <SelectTrigger aria-label="Workspace" data-value={workspace.id}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((entry) => (
+                  <SelectItem key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="new-thread__composer composer">

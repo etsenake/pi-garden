@@ -110,7 +110,8 @@ test("switches between app-global and per-repo model scope while worktrees inher
     });
 
     await openNewThread(window);
-    await expect(window.getByRole("combobox", { name: "Workspace" })).toHaveValue(
+    await expectSettingsValue(
+      window.getByRole("combobox", { name: "Workspace" }),
       rootWorkspaceA.id,
     );
     await expectNewThreadModelState(window, {
