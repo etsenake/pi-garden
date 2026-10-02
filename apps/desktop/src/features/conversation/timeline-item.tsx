@@ -337,13 +337,9 @@ function TimelineActivityItem({ item }: { readonly item: TimelineActivity }) {
           <span className="timeline-activity__level">Warning: </span>
         ) : null}
         {item.label}
-        {item.detail ? (
-          <span className="timeline-activity__detail ml-1.5">{item.detail}</span>
-        ) : null}
-        {item.metadata ? (
-          <span className="timeline-activity__meta ml-1.5">{item.metadata}</span>
-        ) : null}
       </MarkerContent>
+      {item.detail ? <span className="timeline-activity__detail">{item.detail}</span> : null}
+      {item.metadata ? <span className="timeline-activity__meta">{item.metadata}</span> : null}
     </Marker>
   );
 }
@@ -752,16 +748,21 @@ function TimelineSummaryItem({ item }: { readonly item: TimelineSummary }) {
       className={divider ? "timeline-summary" : "timeline-activity timeline-activity--summary"}
       variant={divider ? "separator" : "default"}
     >
-      <MarkerContent className={divider ? undefined : "timeline-activity__label"}>
-        {item.label}
-        {item.metadata ? (
-          <span
-            className={`${divider ? "timeline-summary__meta" : "timeline-activity__meta"} ml-2`}
-          >
-            {item.metadata}
-          </span>
-        ) : null}
-      </MarkerContent>
+      {divider ? (
+        // The separator centres one content run between its rules, so the
+        // divider keeps its metadata inside MarkerContent.
+        <MarkerContent>
+          {item.label}
+          {item.metadata ? (
+            <span className="timeline-summary__meta ml-2">{item.metadata}</span>
+          ) : null}
+        </MarkerContent>
+      ) : (
+        <>
+          <MarkerContent className="timeline-activity__label">{item.label}</MarkerContent>
+          {item.metadata ? <span className="timeline-activity__meta">{item.metadata}</span> : null}
+        </>
+      )}
     </Marker>
   );
 }
