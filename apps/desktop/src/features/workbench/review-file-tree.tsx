@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReviewFileEntry, ReviewFileStatus } from "../../../contracts/review";
-import { ChevronDownIcon, ChevronRightIcon, MinusIcon, PlusIcon, SearchIcon } from "../../ui/icons";
+import { ChevronRightIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, SearchIcon } from "../../ui/icons";
 import { buildFileTree, filterWorkspaceFiles, type FileTreeNode } from "./file-tree";
 import { Button } from "@/ui/shadcn/button";
 import { Checkbox } from "@/ui/shadcn/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+} from "@/ui/shadcn/sidebar";
 import { PanelEmpty } from "./panel-empty";
 import { WithTooltip } from "./workbench-tooltip";
 
@@ -66,35 +73,29 @@ export function ReviewFileTree({
       return next;
     });
 
-  const renderNode = (node: FileTreeNode, depth: number) => {
-    const indent = 8 + depth * 14;
+  const renderNode = (node: FileTreeNode) => {
     if (node.kind === "directory") {
       const open = filtering || !collapsed.has(node.path);
       return (
-        <Collapsible
-          aria-label={node.name}
-          key={`dir:${node.path}`}
-          onOpenChange={() => toggleFolder(node.path)}
-          open={open}
-          role="group"
-        >
-          <CollapsibleTrigger
-            render={
-              <Button
-                className="w-full justify-start"
-                size="sm"
-                style={{ paddingInlineStart: indent }}
-                variant="ghost"
-              />
-            }
+        <SidebarMenuItem key={`dir:${node.path}`}>
+          <Collapsible
+            aria-label={node.name}
+            className="[&[data-open]>button>svg:first-child]:rotate-90"
+            onOpenChange={() => toggleFolder(node.path)}
+            open={open}
+            role="group"
           >
-            {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
-            <span className="truncate">{node.name}</span>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            {node.children.map((child) => renderNode(child, depth + 1))}
-          </CollapsibleContent>
-        </Collapsible>
+            <SidebarMenuButton render={<CollapsibleTrigger />} size="sm" title={node.path}>
+              <ChevronRightIcon className="transition-transform" />
+              <span>{node.name}</span>
+            </SidebarMenuButton>
+            <CollapsibleContent>
+              <SidebarMenuSub className="me-0 translate-x-0 ps-1 pe-0">
+                {node.children.map((child) => renderNode(child))}
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarMenuItem>
       );
     }
     const file = byPath.get(node.path);
@@ -102,23 +103,22 @@ export function ReviewFileTree({
     const selected = file.path === selectedPath;
     const busy = busyFiles.has(file.id);
     return (
-      <div
+      <SidebarMenuItem
         className={`diff-panel__file review-tree__file${selected ? " diff-panel__file--selected" : ""}${file.reviewed ? " diff-panel__file--reviewed" : ""}`}
         key={file.id}
         data-workspace-id={checkoutId}
         data-file-path={file.path}
-        style={{ paddingInlineStart: indent }}
       >
-        <Button
+        <SidebarMenuButton
           aria-current={selected ? "true" : undefined}
-          className="diff-panel__file-name min-w-0 flex-1 justify-start font-sans"
+          className="diff-panel__file-name min-w-0 flex-1"
+          isActive={selected}
           onClick={() => onSelect(file.path)}
           size="sm"
           title={formatPathForDisplay(file.path)}
-          variant={selected ? "secondary" : "ghost"}
         >
-          <span className="diff-panel__file-path truncate">{formatPathForDisplay(node.name)}</span>
-        </Button>
+          <span className="diff-panel__file-path">{formatPathForDisplay(node.name)}</span>
+        </SidebarMenuButton>
         {stageActions.length ? (
           <span className="review-panel__stage-actions">
             {file.hasStagedChanges && stageActions.includes("unstage") ? (
@@ -163,7 +163,7 @@ export function ReviewFileTree({
         >
           {statusLetter(file.conflicted ? "conflicted" : file.status)}
         </span>
-      </div>
+      </SidebarMenuItem>
     );
   };
 
@@ -187,7 +187,7 @@ export function ReviewFileTree({
       </div>
       <div className="review-tree__list diff-panel__file-list" ref={listRef}>
         {tree.length ? (
-          tree.map((node) => renderNode(node, 0))
+          <SidebarMenu>{tree.map((node) => renderNode(node))}</SidebarMenu>
         ) : (
           <PanelEmpty title="No files match." />
         )}

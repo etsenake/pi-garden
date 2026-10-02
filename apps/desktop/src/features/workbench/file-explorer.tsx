@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  FileIcon,
-  FolderIcon,
-  RefreshIcon,
-  SearchIcon,
-} from "../../ui/icons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRightIcon } from "lucide-react";
+import { FileIcon, FolderIcon, RefreshIcon, SearchIcon } from "../../ui/icons";
 import { Button } from "@/ui/shadcn/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+} from "@/ui/shadcn/sidebar";
 import { PanelEmpty } from "./panel-empty";
 import { WithTooltip } from "./workbench-tooltip";
 import { ancestorDirectoryPaths } from "./file-workbench-state";
@@ -99,7 +99,7 @@ export function FileExplorer({
       {emptyCopy ? (
         <PanelEmpty loading={files === null && !error} title={emptyCopy} />
       ) : (
-        <div className="file-workbench__tree" data-testid="file-workbench-tree">
+        <SidebarMenu className="file-workbench__tree" data-testid="file-workbench-tree">
           {tree.map((node) => (
             <FileTreeRow
               key={node.path || node.name}
@@ -121,7 +121,7 @@ export function FileExplorer({
               }}
             />
           ))}
-        </div>
+        </SidebarMenu>
       )}
     </section>
   );
@@ -145,35 +145,38 @@ function FileTreeRow({
   if (node.kind === "directory") {
     const isExpanded = expandAll || expanded.has(node.path);
     return (
-      <Collapsible onOpenChange={() => onToggleDirectory(node.path)} open={isExpanded}>
-        <CollapsibleTrigger
-          render={
-            <Button
-              className="file-workbench__tree-row file-workbench__tree-row--dir w-full justify-start ps-[calc(10px+var(--depth)*14px)]"
-              size="sm"
-              style={depthStyle(node.path)}
-              variant="ghost"
-            />
-          }
+      <SidebarMenuItem>
+        <Collapsible
+          className="[&[data-open]>button>svg:first-child]:rotate-90"
+          onOpenChange={() => onToggleDirectory(node.path)}
+          open={isExpanded}
         >
-          {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-          <FolderIcon />
-          <span className="truncate">{node.name}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          {node.children.map((child) => (
-            <FileTreeRow
-              key={child.path || child.name}
-              expandAll={expandAll}
-              expanded={expanded}
-              node={child}
-              selectedPath={selectedPath}
-              onSelect={onSelect}
-              onToggleDirectory={onToggleDirectory}
-            />
-          ))}
-        </CollapsibleContent>
-      </Collapsible>
+          <SidebarMenuButton
+            className="file-workbench__tree-row file-workbench__tree-row--dir"
+            render={<CollapsibleTrigger />}
+            title={node.path}
+          >
+            <ChevronRightIcon className="transition-transform" />
+            <FolderIcon />
+            <span>{node.name}</span>
+          </SidebarMenuButton>
+          <CollapsibleContent>
+            <SidebarMenuSub className="me-0 translate-x-0 ps-1 pe-0">
+              {node.children.map((child) => (
+                <FileTreeRow
+                  key={child.path || child.name}
+                  expandAll={expandAll}
+                  expanded={expanded}
+                  node={child}
+                  selectedPath={selectedPath}
+                  onSelect={onSelect}
+                  onToggleDirectory={onToggleDirectory}
+                />
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </Collapsible>
+      </SidebarMenuItem>
     );
   }
 
@@ -205,28 +208,20 @@ function FileTreeFileRow({
     }
   }, [selected]);
   return (
-    <Button
-      className={`file-workbench__tree-row file-workbench__tree-row--file w-full justify-start ps-[calc(10px+var(--depth)*14px)]${selected ? " file-workbench__tree-row--selected" : ""}`}
-      data-file-path={path}
-      onClick={() => onSelect(path)}
-      ref={rowRef}
-      size="sm"
-      style={depthStyle(path)}
-      variant={selected ? "secondary" : "ghost"}
-    >
-      <FileIcon />
-      <span className="truncate">{name}</span>
-    </Button>
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        className={`file-workbench__tree-row file-workbench__tree-row--file${selected ? " file-workbench__tree-row--selected" : ""}`}
+        data-file-path={path}
+        isActive={selected}
+        onClick={() => onSelect(path)}
+        ref={rowRef}
+        title={path}
+      >
+        <FileIcon />
+        <span>{name}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
-}
-
-/** Rows step in by their depth in the tree. */
-function depthStyle(path: string): CSSProperties {
-  return { "--depth": depthFromPath(path) } as CSSProperties;
-}
-
-function depthFromPath(path: string): number {
-  return path.split("/").filter(Boolean).length - 1;
 }
 
 function scrollIntoContainer(element: HTMLElement, containerSelector: string): void {
