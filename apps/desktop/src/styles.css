@@ -13,7 +13,6 @@
 @import "./styles/base.css" layer(legacy);
 @import "./styles/sidebar.css" layer(legacy);
 @import "./styles/topbar.css" layer(legacy);
-@import "./styles/model-selector-panel.css" layer(legacy);
 @import "./styles/context-meter.css" layer(legacy);
 @import "./styles/new-thread.css" layer(legacy);
 @import "./styles/main.css" layer(legacy);
