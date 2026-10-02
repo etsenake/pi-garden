@@ -370,17 +370,12 @@
   box-shadow: var(--focus-ring), var(--shadow-md);
 }
 
+/* Floats over the composer text; the Badge supplies an opaque look. */
 .composer__drop-indicator {
   position: absolute;
   top: 12px;
   right: 14px;
   z-index: 2;
-  padding: 6px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--accent-tint-bg);
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
   pointer-events: none;
 }
 

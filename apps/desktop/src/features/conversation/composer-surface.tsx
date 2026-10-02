@@ -210,9 +210,9 @@ export function ComposerSurface({
       onDragOver={handleDragOver}
     >
       {isDragActive ? (
-        <div className="composer__drop-indicator" data-testid="composer-drop-indicator">
+        <Badge className="composer__drop-indicator" data-testid="composer-drop-indicator">
           Drop images or files to attach
-        </div>
+        </Badge>
       ) : null}
       {activeSlashCommand ? (
         <div className="composer__slash-intent">
@@ -264,7 +264,8 @@ export function ComposerSurface({
                 <AttachmentActions>
                   <AttachmentAction
                     aria-label={`Remove ${attachment.name}`}
-                    variant="outline"
+                    // It floats over the image, so it needs an opaque fill.
+                    variant="default"
                     onClick={() => onRemoveAttachment(attachment.id)}
                   >
                     <XIcon />

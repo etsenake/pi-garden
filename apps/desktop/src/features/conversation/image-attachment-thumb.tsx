@@ -39,7 +39,7 @@ export function ImageAttachmentThumb({ src, name, className }: ImageAttachmentTh
               aria-label="Close image"
               className="absolute top-2 right-2"
               size="icon-sm"
-              variant="secondary"
+              variant="default"
             />
           }
         >
