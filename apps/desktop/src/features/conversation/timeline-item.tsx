@@ -34,9 +34,12 @@ import {
   TerminalIcon,
 } from "../../ui/icons";
 import { extensionToLanguage } from "../../ui/syntax-highlight";
-import { Bubble, BubbleContent, BubbleGroup } from "@/ui/shadcn/bubble";
+import { Bubble, BubbleContent } from "@/ui/shadcn/bubble";
+import { cn } from "cn";
 import { Button } from "@/ui/shadcn/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
+import { Marker, MarkerContent, MarkerIcon } from "@/ui/shadcn/marker";
+import { Message, MessageContent, MessageFooter, MessageHeader } from "@/ui/shadcn/message";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/shadcn/tooltip";
 
 /**
@@ -186,45 +189,50 @@ function TimelineMessage({
     const body = annotated ? annotated.body : item.text;
     return (
       <article className="timeline-item timeline-item--user" ref={articleRef}>
-        <BubbleGroup className="w-full items-end gap-1">
-          {scheduledOrigin ? (
-            <div className="timeline-item__scheduled-origin" data-testid="sent-by-scheduled-task">
-              Sent by scheduled task
-            </div>
-          ) : null}
-          <Bubble align="end" variant="secondary">
-            <BubbleContent className="timeline-item__bubble">
-              {item.attachments?.length ? (
-                <div className="timeline-item__attachments">
-                  {item.attachments.map((attachment, index) =>
-                    attachment.kind === "image" ? (
-                      <ImageAttachmentThumb
-                        className="timeline-item__attachment timeline-item__attachment--image"
-                        key={`${item.id}:${index}`}
-                        name={attachment.name ?? `Attachment ${index + 1}`}
-                        src={`data:${attachment.mimeType};base64,${attachment.data}`}
-                      />
-                    ) : (
-                      <div
-                        className="timeline-item__attachment timeline-item__attachment--file"
-                        key={`${item.id}:${index}`}
-                        title={attachment.fsPath}
-                      >
-                        <span className="timeline-item__attachment-icon" aria-hidden="true">
-                          <FileIcon />
-                        </span>
-                        <span className="timeline-item__attachment-name">{attachment.name}</span>
-                      </div>
-                    ),
-                  )}
-                </div>
-              ) : null}
-              {annotated ? <SentAnnotations annotations={annotated.annotations} /> : null}
-              {annotated && !body.trim() ? null : <MessageMarkdown annotationRoot text={body} />}
-            </BubbleContent>
-          </Bubble>
-        </BubbleGroup>
-        {markers}
+        <Message align="end">
+          <MessageContent className="gap-1">
+            {scheduledOrigin ? (
+              <MessageHeader
+                className="timeline-item__scheduled-origin"
+                data-testid="sent-by-scheduled-task"
+              >
+                Sent by scheduled task
+              </MessageHeader>
+            ) : null}
+            <Bubble align="end" variant="secondary">
+              <BubbleContent className="timeline-item__bubble">
+                {item.attachments?.length ? (
+                  <div className="timeline-item__attachments">
+                    {item.attachments.map((attachment, index) =>
+                      attachment.kind === "image" ? (
+                        <ImageAttachmentThumb
+                          className="timeline-item__attachment timeline-item__attachment--image"
+                          key={`${item.id}:${index}`}
+                          name={attachment.name ?? `Attachment ${index + 1}`}
+                          src={`data:${attachment.mimeType};base64,${attachment.data}`}
+                        />
+                      ) : (
+                        <div
+                          className="timeline-item__attachment timeline-item__attachment--file"
+                          key={`${item.id}:${index}`}
+                          title={attachment.fsPath}
+                        >
+                          <span className="timeline-item__attachment-icon" aria-hidden="true">
+                            <FileIcon />
+                          </span>
+                          <span className="timeline-item__attachment-name">{attachment.name}</span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : null}
+                {annotated ? <SentAnnotations annotations={annotated.annotations} /> : null}
+                {annotated && !body.trim() ? null : <MessageMarkdown annotationRoot text={body} />}
+              </BubbleContent>
+            </Bubble>
+            {markers ? <MessageFooter>{markers}</MessageFooter> : null}
+          </MessageContent>
+        </Message>
       </article>
     );
   }
@@ -245,49 +253,64 @@ function TimelineMessage({
   const forkable = sourceMessageIndex !== undefined;
   return (
     <article className="timeline-item timeline-item--assistant" ref={articleRef}>
-      {item.hasThinking ? (
-        // Pi shows this label in place of a thinking block the user has hidden.
-        // The desktop transcript never renders thinking text, so the label is
-        // the whole marker; `setHiddenThinkingLabel` changes only its wording.
-        <p className="timeline-message__hidden-thinking" data-testid="hidden-thinking">
-          {hiddenThinkingLabel}
-        </p>
-      ) : null}
-      <MessageMarkdown
-        annotationRoot
-        onOpenWorkspaceFileLine={onOpenWorkspaceFileLine}
-        text={item.text}
-        workspacePath={workspacePath}
-      />
-      {forkable ? (
-        <div className="timeline-item__actions">
-          <Tooltip>
-            {/* A disabled button takes no pointer events; the wrapper keeps the hint. */}
-            <TooltipTrigger render={<span className="inline-flex" />}>
-              <Button
-                aria-label="Fork conversation from this point"
-                data-testid="fork-from-message"
-                disabled={!onForkFromMessage}
-                size="xs"
-                variant="ghost"
-                onClick={() => onForkFromMessage?.(sourceMessageIndex, item.text)}
-              >
-                <ForkIcon />
-                Fork
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {onForkFromMessage
-                ? "Fork conversation from this point"
-                : "Fork is available when the run finishes"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      ) : null}
-      {markers}
+      <Message align="start">
+        <MessageContent className="gap-0">
+          {item.hasThinking ? (
+            // Pi shows this label in place of a thinking block the user has hidden.
+            // The desktop transcript never renders thinking text, so the label is
+            // the whole marker; `setHiddenThinkingLabel` changes only its wording.
+            <p className="timeline-message__hidden-thinking" data-testid="hidden-thinking">
+              {hiddenThinkingLabel}
+            </p>
+          ) : null}
+          <MessageMarkdown
+            annotationRoot
+            onOpenWorkspaceFileLine={onOpenWorkspaceFileLine}
+            text={item.text}
+            workspacePath={workspacePath}
+          />
+          {forkable || markers ? (
+            <MessageFooter className="px-0">
+              {forkable ? (
+                <div className="timeline-item__actions">
+                  <Tooltip>
+                    {/* A disabled button takes no pointer events; the wrapper keeps the hint. */}
+                    <TooltipTrigger render={<span className="inline-flex" />}>
+                      <Button
+                        aria-label="Fork conversation from this point"
+                        data-testid="fork-from-message"
+                        disabled={!onForkFromMessage}
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => onForkFromMessage?.(sourceMessageIndex, item.text)}
+                      >
+                        <ForkIcon />
+                        Fork
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {onForkFromMessage
+                        ? "Fork conversation from this point"
+                        : "Fork is available when the run finishes"}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              ) : null}
+              {markers}
+            </MessageFooter>
+          ) : null}
+        </MessageContent>
+      </Message>
     </article>
   );
 }
+
+/** Pi's tone inks; shadcn ships only the destructive one. */
+const ACTIVITY_TONE_TEXT: Partial<Record<NonNullable<TimelineActivity["tone"]>, string>> = {
+  error: "text-destructive",
+  warning: "text-(--warning-ink)",
+  success: "text-(--success-ink)",
+};
 
 function TimelineActivityItem({ item }: { readonly item: TimelineActivity }) {
   const notifyLevel =
@@ -299,22 +322,29 @@ function TimelineActivityItem({ item }: { readonly item: TimelineActivity }) {
           : "info"
       : undefined;
   return (
-    <div
-      className={`timeline-activity timeline-activity--${item.tone ?? "neutral"}`}
+    <Marker
+      className={cn(
+        `timeline-activity timeline-activity--${item.tone ?? "neutral"}`,
+        item.tone ? ACTIVITY_TONE_TEXT[item.tone] : undefined,
+      )}
       data-notify-level={notifyLevel}
       role={notifyLevel === "error" ? "alert" : notifyLevel ? "status" : undefined}
     >
-      <span className="timeline-activity__label">
+      <MarkerContent className="timeline-activity__label">
         {notifyLevel === "error" ? (
           <span className="timeline-activity__level">Error: </span>
         ) : notifyLevel === "warning" ? (
           <span className="timeline-activity__level">Warning: </span>
         ) : null}
         {item.label}
-      </span>
-      {item.detail ? <span className="timeline-activity__detail">{item.detail}</span> : null}
-      {item.metadata ? <span className="timeline-activity__meta">{item.metadata}</span> : null}
-    </div>
+        {item.detail ? (
+          <span className="timeline-activity__detail ml-1.5">{item.detail}</span>
+        ) : null}
+        {item.metadata ? (
+          <span className="timeline-activity__meta ml-1.5">{item.metadata}</span>
+        ) : null}
+      </MarkerContent>
+    </Marker>
   );
 }
 
@@ -338,19 +368,20 @@ function TimelineWorkingItem({
   const frame = useWorkingIndicatorFrame(frames, intervalMs);
   const indicatorKind = frames.length === 0 ? "hidden" : working.indicator ? "custom" : "default";
   return (
-    <div
+    <Marker
       className="timeline-activity timeline-activity--neutral timeline-activity--working"
       data-testid="working-row"
       data-working-indicator={indicatorKind}
       data-working-message={working.message === undefined ? "default" : "custom"}
     >
       {frame !== undefined ? (
-        <span aria-hidden="true" className="timeline-activity__indicator">
-          {frame}
-        </span>
+        // Custom frames can be wider than one glyph, so the icon box sizes to its frame.
+        <MarkerIcon className="timeline-activity__indicator size-auto">{frame}</MarkerIcon>
       ) : null}
-      <span className="timeline-activity__label">{working.message ?? item.label}</span>
-    </div>
+      <MarkerContent className="timeline-activity__label">
+        {working.message ?? item.label}
+      </MarkerContent>
+    </Marker>
   );
 }
 
@@ -691,9 +722,11 @@ function statusLabel(status: "running" | "success" | "error") {
 
 function TimelineTurnMarkerItem({ item }: { readonly item: TimelineTurnMarker }) {
   return (
-    <div className="timeline-turn-marker" data-testid="timeline-turn-marker">
-      <span className="timeline-turn-marker__label">{`Worked for ${formatWorkedDuration(item.durationMs)}`}</span>
-    </div>
+    <Marker className="timeline-turn-marker" data-testid="timeline-turn-marker" variant="separator">
+      <MarkerContent className="timeline-turn-marker__label">
+        {`Worked for ${formatWorkedDuration(item.durationMs)}`}
+      </MarkerContent>
+    </Marker>
   );
 }
 
@@ -713,19 +746,22 @@ function formatWorkedDuration(durationMs: number): string {
 }
 
 function TimelineSummaryItem({ item }: { readonly item: TimelineSummary }) {
-  if (item.presentation === "divider") {
-    return (
-      <div className="timeline-summary">
-        <span>{item.label}</span>
-        {item.metadata ? <span className="timeline-summary__meta">{item.metadata}</span> : null}
-      </div>
-    );
-  }
-
+  const divider = item.presentation === "divider";
   return (
-    <div className="timeline-activity timeline-activity--summary">
-      <span className="timeline-activity__label">{item.label}</span>
-      {item.metadata ? <span className="timeline-activity__meta">{item.metadata}</span> : null}
-    </div>
+    <Marker
+      className={divider ? "timeline-summary" : "timeline-activity timeline-activity--summary"}
+      variant={divider ? "separator" : "default"}
+    >
+      <MarkerContent className={divider ? undefined : "timeline-activity__label"}>
+        {item.label}
+        {item.metadata ? (
+          <span
+            className={`${divider ? "timeline-summary__meta" : "timeline-activity__meta"} ml-2`}
+          >
+            {item.metadata}
+          </span>
+        ) : null}
+      </MarkerContent>
+    </Marker>
   );
 }

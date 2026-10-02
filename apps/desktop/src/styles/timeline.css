@@ -203,27 +203,6 @@
 
 /* ---- Activity ----------------------------------------------------------- */
 
-.timeline-activity {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  color: var(--muted-soft);
-  font-size: 14px;
-}
-
-.timeline-activity--error {
-  color: var(--error-ink);
-}
-
-.timeline-activity--warning {
-  color: var(--warning-ink);
-}
-
-.timeline-activity--success {
-  color: var(--success-ink);
-}
-
 .timeline-activity--summary {
   margin-top: 2px;
 }
@@ -248,10 +227,6 @@
   color: var(--muted-soft);
   font-size: 13px;
   font-style: italic;
-}
-
-.timeline-activity__label {
-  color: inherit;
 }
 
 .timeline-activity__detail,
@@ -469,22 +444,6 @@
 
 /* ---- Summary divider ---------------------------------------------------- */
 
-.timeline-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted-soft);
-  font-size: 13px;
-}
-
-.timeline-summary::before,
-.timeline-summary::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
 .timeline-summary__meta {
   color: var(--muted-soft);
 }
@@ -492,26 +451,7 @@
 /* ---- Turn timing marker ------------------------------------------------- */
 
 .timeline-turn-marker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   padding: 2px 0;
-}
-
-.timeline-turn-marker::before,
-.timeline-turn-marker::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-.timeline-turn-marker__label {
-  flex-shrink: 0;
-  color: var(--muted-soft);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
 }
 
 /* ---- Loading skeleton --------------------------------------------------- */
@@ -627,6 +567,40 @@
 
 .message__content > :last-child {
   margin-bottom: 0;
+}
+
+/* Markdown renders inside the shadcn Message and Bubble ([data-slot]), where
+   preflight-compat.css leaves Tailwind's preflight in place; restore the browser
+   defaults the markdown rules below are written against. */
+.message__content :where(h1, h2, h3, h4, h5, h6) {
+  font-size: revert;
+  font-weight: revert;
+}
+
+.message__content :where(h1, h2, h3, h4, h5, h6, figure, dl, dd, hr) {
+  margin: revert;
+}
+
+.message__content :where(ul, ol, menu) {
+  list-style: revert;
+}
+
+.message__content :where(hr) {
+  height: revert;
+  color: revert;
+  border: revert;
+}
+
+.message__content :where(table) {
+  border-color: revert;
+  text-indent: revert;
+}
+
+.message__content :where(img, video) {
+  display: revert;
+  vertical-align: revert;
+  max-width: revert;
+  height: revert;
 }
 
 .message__content p,

@@ -4,13 +4,6 @@
   margin: 0 auto;
 }
 
-.timeline-item__scheduled-origin {
-  color: var(--muted-subtle);
-  font-size: 12px;
-  font-weight: 560;
-  letter-spacing: 0.04em;
-}
-
 .chat-header__menu-wrap {
   position: relative;
   flex: 0 0 auto;
