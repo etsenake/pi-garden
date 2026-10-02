@@ -160,6 +160,9 @@ const packagedRuntimeImportChecks = [
   ["@earendil-works", "pi-ai", "dist", "api", "openai-responses.js"],
   ["@earendil-works", "pi-ai", "dist", "bedrock-provider.js"],
   ["proxy-agent", "dist", "index.js"],
+  // Require the spawn chain: directory presence is not enough when nested
+  // isexe@2 is dropped while root isexe stays on incompatible 3.x.
+  ["cross-spawn", "index.js"],
 ];
 
 if (!existsSync(asarPath)) {

@@ -18,6 +18,12 @@ files:
     to: node_modules/proper-lockfile/node_modules/retry
     filter:
       - "**/*"
+  # which@2 needs isexe@2; root isexe is 3.x from which@4/@5 tooling, so the
+  # collector keeps which/cross-spawn but drops the nested isexe@2.
+  - from: ../../node_modules/which/node_modules/isexe
+    to: node_modules/which/node_modules/isexe
+    filter:
+      - "**/*"
   # The collector nests the newer SSO under Bedrock. Its token provider must
   # stay below SSO: Bedrock itself pins a different token-provider version.
   - from: ../../node_modules/@aws-sdk/credential-provider-sso/node_modules/@aws-sdk/token-providers

@@ -122,6 +122,15 @@ function validateCiWorkflow(workflow) {
 }
 
 function validateBuilderConfig(config, desktopPackage, afterRemoveSource) {
+  const fileCopies = (config.files ?? []).filter((entry) => entry && typeof entry === "object");
+  assert(
+    fileCopies.some(
+      (entry) =>
+        entry.from === "../../node_modules/which/node_modules/isexe" &&
+        entry.to === "node_modules/which/node_modules/isexe",
+    ),
+    "electron-builder must ship nested isexe@2 under which (pnpm collector drops it)",
+  );
   assert(config.mac?.notarize === true, "electron-builder must notarize the macOS app");
   assert(
     config.dmg?.sign === true,
