@@ -23,6 +23,7 @@ import { formatPathForDisplay, ReviewFileTree, reviewTreeOrder } from "./review-
 import { ReviewMenu } from "./review-menu";
 import { Badge } from "@/ui/shadcn/badge";
 import { Button } from "@/ui/shadcn/button";
+import { ButtonGroup } from "@/ui/shadcn/button-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/shadcn/collapsible";
 import { Input } from "@/ui/shadcn/input";
 import { Label } from "@/ui/shadcn/label";
@@ -522,20 +523,22 @@ export function DiffPanel({
           }}
         >
           <Label htmlFor="review-base-ref">Base</Label>
-          <Input
-            id="review-base-ref"
-            aria-label="Base branch"
-            value={baseDraft}
-            onChange={(event) => setBaseDraft(event.target.value)}
-            placeholder={
-              review?.scope.kind === "branch"
-                ? (review.scope.baseRef ?? "Repository default")
-                : "Repository default"
-            }
-          />
-          <Button type="submit" disabled={loading} variant="outline">
-            Compare
-          </Button>
+          <ButtonGroup className="w-full">
+            <Input
+              id="review-base-ref"
+              aria-label="Base branch"
+              value={baseDraft}
+              onChange={(event) => setBaseDraft(event.target.value)}
+              placeholder={
+                review?.scope.kind === "branch"
+                  ? (review.scope.baseRef ?? "Repository default")
+                  : "Repository default"
+              }
+            />
+            <Button type="submit" disabled={loading} variant="outline">
+              Compare
+            </Button>
+          </ButtonGroup>
         </form>
       ) : null}
       {actionIssue ? <ReviewIssueBanner issue={actionIssue} onRefresh={refresh} /> : null}
