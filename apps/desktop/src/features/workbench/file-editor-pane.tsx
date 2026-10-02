@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { WorkspaceRecord, WorktreeRecord } from "../../../contracts/desktop-state";
 import type { PiDesktopApi, WorkspaceFilePreview } from "../../../contracts/ipc";
 import ReactMarkdown from "react-markdown";
@@ -7,6 +7,13 @@ import { CloseIcon, CopyIcon, WorktreeIcon } from "../../ui/icons";
 import { HighlightedLine } from "../../ui/highlighted-line";
 import { MAX_HIGHLIGHTED_LINES, extensionToLanguage } from "../../ui/syntax-highlight";
 import { Badge } from "@/ui/shadcn/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/ui/shadcn/breadcrumb";
 import { Button } from "@/ui/shadcn/button";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 import { Toggle } from "@/ui/shadcn/toggle";
@@ -203,20 +210,26 @@ export function FileEditorPane({
         ) : null}
       </div>
       {activePath ? (
-        <nav
+        <Breadcrumb
           aria-label="File path"
-          className="file-editor__breadcrumb"
+          className="border-b px-3 py-1.5"
           data-testid="file-editor-breadcrumb"
         >
-          {breadcrumbSegments(activePath).map((segment, index, segments) => (
-            <span key={`${segment}-${index}`}>
-              {index > 0 ? <span className="file-editor__breadcrumb-sep">›</span> : null}
-              <span className={index === segments.length - 1 ? "file-editor__breadcrumb-file" : ""}>
-                {segment}
-              </span>
-            </span>
-          ))}
-        </nav>
+          <BreadcrumbList>
+            {breadcrumbSegments(activePath).map((segment, index, segments) => (
+              <Fragment key={`${segment}-${index}`}>
+                {index > 0 ? <BreadcrumbSeparator /> : null}
+                <BreadcrumbItem>
+                  {index === segments.length - 1 ? (
+                    <BreadcrumbPage>{segment}</BreadcrumbPage>
+                  ) : (
+                    segment
+                  )}
+                </BreadcrumbItem>
+              </Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
       ) : null}
       <div className="file-editor__body">
         {renderEditorBody({
