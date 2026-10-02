@@ -318,11 +318,11 @@ test("keeps orphaned worktree workspaces visible after removing the root workspa
     await window
       .getByRole("button", { name: `Workspace actions for ${rootWorkspace.name}` })
       .click();
-    const acceptRemoval = window.waitForEvent("dialog").then((dialog) => dialog.accept());
-    await Promise.all([
-      window.getByRole("menuitem", { name: "Remove", exact: true }).click(),
-      acceptRemoval,
-    ]);
+    await window.getByRole("menuitem", { name: "Remove", exact: true }).click();
+    await window
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
 
     await expect(window.getByTestId("empty-state")).toHaveCount(0);
     await expect

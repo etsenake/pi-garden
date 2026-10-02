@@ -582,14 +582,14 @@ test("preserves durable ui state when one startup workspace is unavailable", asy
     }
 
     // Removing the missing folder from the banner forgets it and clears its diagnostic.
-    const acceptRemoval = window.waitForEvent("dialog").then((dialog) => dialog.accept());
-    await Promise.all([
-      window
-        .getByTestId("startup-diagnostics")
-        .getByRole("button", { name: "Remove folder" })
-        .click(),
-      acceptRemoval,
-    ]);
+    await window
+      .getByTestId("startup-diagnostics")
+      .getByRole("button", { name: "Remove folder" })
+      .click();
+    await window
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
     await expect(window.getByTestId("startup-diagnostics")).toHaveCount(0);
     await expect
       .poll(async () => {

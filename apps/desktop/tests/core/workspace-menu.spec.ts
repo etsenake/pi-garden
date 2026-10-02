@@ -54,12 +54,21 @@ test("supports workspace rename and remove from the sidebar menu", async () => {
       })
       .toBe("Renamed workspace");
 
-    const acceptRemoval = window.waitForEvent("dialog").then((dialog) => dialog.accept());
+    // Cancelling the confirmation keeps the folder.
+    const confirmDialog = window.getByRole("alertdialog");
     await window.getByRole("button", { name: "Workspace actions for Renamed workspace" }).click();
-    await Promise.all([
-      window.getByRole("menuitem", { name: "Remove", exact: true }).click(),
-      acceptRemoval,
-    ]);
+    await window.getByRole("menuitem", { name: "Remove", exact: true }).click();
+    await expect(confirmDialog).toContainText("Remove Renamed workspace from pi-garden?");
+    await confirmDialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(confirmDialog).toHaveCount(0);
+    expect(
+      (await getDesktopState(window)).workspaces.some((entry) => entry.id === workspace.id),
+    ).toBe(true);
+
+    await window.getByRole("button", { name: "Workspace actions for Renamed workspace" }).click();
+    await window.getByRole("menuitem", { name: "Remove", exact: true }).click();
+    await confirmDialog.getByRole("button", { name: "Remove", exact: true }).click();
+    await expect(confirmDialog).toHaveCount(0);
 
     await expect
       .poll(async () => {
@@ -98,8 +107,11 @@ test("removes a folder with threads from Settings while time grouping hides its 
     await expect(removeButton).toBeVisible();
     await expect(window.getByText(workspaceA, { exact: true })).toBeVisible();
 
-    const acceptRemoval = window.waitForEvent("dialog").then((dialog) => dialog.accept());
-    await Promise.all([removeButton.click(), acceptRemoval]);
+    await removeButton.click();
+    await window
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
 
     await expect
       .poll(async () => {

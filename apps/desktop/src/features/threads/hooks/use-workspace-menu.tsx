@@ -12,6 +12,7 @@ import type {
   WorktreeRecord,
 } from "../../../../contracts/desktop-state";
 import type { PiDesktopApi } from "../../../../contracts/ipc";
+import { confirmDestructive } from "../../../ui/confirm-dialog";
 
 interface UseWorkspaceMenuParams {
   readonly api: PiDesktopApi | undefined;
@@ -117,18 +118,21 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
   };
 
   const removeWorkspace = (workspace: WorkspaceRecord) => {
-    const confirmed = window.confirm(
-      `Remove ${workspace.name} from pi-garden? This will not delete any files.`,
-    );
     setWorkspaceRenameId(null);
-    if (!confirmed || !api) {
-      return;
-    }
-    void updateSnapshot(setSnapshot, () => api.removeWorkspace(workspace.id)).catch(
-      (error: unknown) => {
+    void confirmDestructive({
+      title: `Remove ${workspace.name} from pi-garden?`,
+      description: "This will not delete any files.",
+      confirmLabel: "Remove",
+    })
+      .then((confirmed) => {
+        if (!confirmed || !api) {
+          return undefined;
+        }
+        return updateSnapshot(setSnapshot, () => api.removeWorkspace(workspace.id));
+      })
+      .catch((error: unknown) => {
         console.error("[renderer] removeWorkspace failed", error);
-      },
-    );
+      });
   };
 
   const createWorktree = (
@@ -147,17 +151,22 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
   };
 
   const removeWorktree = (workspaceId: string, worktree: WorktreeRecord) => {
-    const confirmed = window.confirm(
-      `Remove worktree ${worktree.name}? This removes the git worktree from disk.`,
-    );
-    if (!confirmed || !api) {
-      return;
-    }
-    void updateSnapshot(setSnapshot, () =>
-      api.removeWorktree({ workspaceId, worktreeId: worktree.id }),
-    ).catch((error: unknown) => {
-      console.error("[renderer] updateSnapshot failed", error);
-    });
+    void confirmDestructive({
+      title: `Remove worktree ${worktree.name}?`,
+      description: "This removes the git worktree from disk.",
+      confirmLabel: "Remove worktree",
+    })
+      .then((confirmed) => {
+        if (!confirmed || !api) {
+          return undefined;
+        }
+        return updateSnapshot(setSnapshot, () =>
+          api.removeWorktree({ workspaceId, worktreeId: worktree.id }),
+        );
+      })
+      .catch((error: unknown) => {
+        console.error("[renderer] updateSnapshot failed", error);
+      });
   };
 
   const selectWorkspace = (workspaceId: string) => {
