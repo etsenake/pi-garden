@@ -766,24 +766,6 @@
   gap: 16px;
 }
 
-.theme-mode-tile {
-  position: relative;
-  display: grid;
-  gap: 8px;
-}
-
-/* The real radio covers the whole tile, so clicks and assistive tech both reach it. */
-.theme-mode-tile input {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
 .theme-mode-tile__preview {
   position: relative;
   display: flex;
@@ -840,26 +822,6 @@
 
 .theme-mode-tile__line--title {
   width: 40%;
-}
-
-.theme-mode-tile input:checked + .theme-mode-tile__preview {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.theme-mode-tile input:focus-visible + .theme-mode-tile__preview {
-  outline: 2px solid var(--focus-ring-color);
-  outline-offset: 2px;
-}
-
-.theme-mode-tile__label {
-  color: var(--muted-soft);
-  font-size: 13.5px;
-  text-align: center;
-}
-
-.theme-mode-tile input:checked ~ .theme-mode-tile__label {
-  color: var(--text-strong);
 }
 
 /* ── Skills and extensions (Codex Plugins page, Cursor grouping) ── */

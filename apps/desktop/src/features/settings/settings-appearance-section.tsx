@@ -1,5 +1,7 @@
 import type { ThemeMode } from "../../../contracts/desktop-state";
 import { Button } from "@/ui/shadcn/button";
+import { Field, FieldLabel, FieldTitle } from "@/ui/shadcn/field";
+import { RadioGroup, RadioGroupItem } from "@/ui/shadcn/radio-group";
 import { SettingsSelect, SettingsSwitch } from "./settings-controls";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 import type { CSSProperties } from "react";
@@ -39,34 +41,37 @@ export function SettingsAppearanceSection({
   return (
     <>
       <SettingsGroup title="Theme" plain>
-        <div
+        <RadioGroup
           aria-label="Theme"
           className="theme-mode-tiles"
-          role="radiogroup"
           style={tilePalette(themeCatalog, themePresetId)}
+          value={themeMode}
+          onValueChange={(value) => onSetThemeMode(value as ThemeMode)}
         >
-          {THEME_MODES.map((option) => (
-            <label className="theme-mode-tile" key={option.mode}>
-              <input
-                checked={themeMode === option.mode}
-                name="theme-mode"
-                type="radio"
-                onChange={() => onSetThemeMode(option.mode)}
-              />
-              <span
-                aria-hidden="true"
-                className={`theme-mode-tile__preview theme-mode-tile__preview--${option.mode}`}
-              >
-                <span className="theme-mode-tile__window">
-                  <span className="theme-mode-tile__line theme-mode-tile__line--title" />
-                  <span className="theme-mode-tile__line" />
-                  <span className="theme-mode-tile__line" />
-                </span>
-              </span>
-              <span className="theme-mode-tile__label">{option.label}</span>
-            </label>
-          ))}
-        </div>
+          {THEME_MODES.map((option) => {
+            const id = `theme-mode-${option.mode}`;
+            return (
+              <FieldLabel className="theme-mode-tile" htmlFor={id} key={option.mode}>
+                <Field>
+                  <span
+                    aria-hidden="true"
+                    className={`theme-mode-tile__preview theme-mode-tile__preview--${option.mode}`}
+                  >
+                    <span className="theme-mode-tile__window">
+                      <span className="theme-mode-tile__line theme-mode-tile__line--title" />
+                      <span className="theme-mode-tile__line" />
+                      <span className="theme-mode-tile__line" />
+                    </span>
+                  </span>
+                  <span className="flex items-center justify-center gap-2">
+                    <RadioGroupItem id={id} value={option.mode} />
+                    <FieldTitle className="theme-mode-tile__label">{option.label}</FieldTitle>
+                  </span>
+                </Field>
+              </FieldLabel>
+            );
+          })}
+        </RadioGroup>
       </SettingsGroup>
 
       <SettingsGroup>
