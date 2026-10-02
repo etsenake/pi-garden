@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-garden/session-driver/runtime-types";
 import {
   buildModelOptions,
@@ -8,13 +8,17 @@ import {
 } from "./composer-commands";
 import { Button } from "@/ui/shadcn/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/ui/shadcn/command";
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/ui/shadcn/combobox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +28,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/ui/shadcn/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/shadcn/popover";
 
 interface ModelSelectorProps {
   readonly runtime: RuntimeSnapshot | undefined;
@@ -60,7 +63,6 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const [modelOpen, setModelOpen] = useState(false);
   const [modelFilter, setModelFilter] = useState("");
-  const filterRef = useRef<HTMLInputElement | null>(null);
   const side = dropdownPlacement === "below" ? "bottom" : "top";
 
   const modelOptions = useMemo(() => {
@@ -74,18 +76,11 @@ export function ModelSelector({
       return kind === "chat" || kind === "virtual";
     });
   }, [runtime]);
-  const filteredModels = useMemo(() => {
-    if (!modelFilter) return modelOptions;
-    const q = modelFilter.toLowerCase();
-    return modelOptions.filter(
-      (opt) =>
-        opt.label.toLowerCase().includes(q) ||
-        opt.description.toLowerCase().includes(q) ||
-        opt.providerId.toLowerCase().includes(q),
-    );
-  }, [modelOptions, modelFilter]);
-
-  const groupedModels = useMemo(() => groupByProvider(filteredModels), [filteredModels]);
+  const groupedModels = useMemo(() => groupByProvider(modelOptions), [modelOptions]);
+  const hasMatchingModels = useMemo(
+    () => modelOptions.some((option) => matchesModelFilter(option, modelFilter)),
+    [modelOptions, modelFilter],
+  );
   const hasAvailableModelOptions = modelOptions.length > 0;
   const hasModelControl = Boolean(provider && modelId) || hasAvailableModelOptions;
   const shouldRenderModelControl = hasModelControl || showEmptyModelControl;
@@ -104,84 +99,82 @@ export function ModelSelector({
       ? unselectedModelLabel
       : emptyModelLabel;
   const noMatchingModels =
-    hasAvailableModelOptions && modelFilter.trim().length > 0 && groupedModels.length === 0;
+    hasAvailableModelOptions && modelFilter.trim().length > 0 && !hasMatchingModels;
 
   if (!shouldRenderModelControl && !thinkingLevel) {
     return null;
   }
 
   const activeKey = provider && modelId ? `${provider}:${modelId}` : undefined;
+  const activeOption = modelOptions.find((option) => modelKey(option) === activeKey) ?? null;
 
   return (
     <span className="flex max-w-full min-w-0 flex-wrap items-center gap-1">
       {shouldRenderModelControl ? (
-        <Popover
+        <Combobox
+          disabled={disabled}
+          filter={matchesModelFilter}
+          isItemEqualToValue={(item: ComposerModelOption, value: ComposerModelOption) =>
+            modelKey(item) === modelKey(value)
+          }
+          itemToStringLabel={(option: ComposerModelOption) => option.label}
+          items={groupedModels}
           open={modelOpen}
+          value={activeOption}
+          onInputValueChange={setModelFilter}
           onOpenChange={(next) => {
             setModelOpen(next);
             if (!next) setModelFilter("");
           }}
+          onValueChange={(option: ComposerModelOption | null) => {
+            if (option && modelKey(option) !== activeKey) {
+              onSetModel(option.providerId, option.modelId);
+            }
+          }}
         >
-          <PopoverTrigger
-            disabled={disabled}
+          <ComboboxTrigger
+            aria-label={modelBadgeLabel}
             render={
               <Button className="model-selector__badge max-w-full" size="sm" variant="secondary" />
             }
           >
             <span className="truncate">{modelBadgeLabel}</span>
-          </PopoverTrigger>
-          <PopoverContent
-            align="start"
-            className="model-selector__dropdown p-0"
-            initialFocus={filterRef}
+          </ComboboxTrigger>
+          <ComboboxContent
+            className="model-selector__dropdown w-72"
             side={side}
             onWheel={(event) => event.stopPropagation()}
           >
-            <Command defaultValue={activeKey} label="Models" shouldFilter={false}>
-              <CommandInput
-                className="model-selector__filter-input"
-                placeholder="Filter models..."
-                ref={filterRef}
-                value={modelFilter}
-                onValueChange={setModelFilter}
-              />
-              <CommandList>
-                <CommandEmpty className="px-2 py-3 text-left">
-                  <div className="font-medium">
-                    {noMatchingModels ? "No matching models" : emptyModelTitle}
-                  </div>
-                  {noMatchingModels ? (
-                    <div className="text-muted-foreground">Try a different filter.</div>
-                  ) : null}
-                </CommandEmpty>
-                {groupedModels.map((group) => (
-                  <CommandGroup heading={group.provider} key={group.provider}>
-                    {group.items.map((option) => {
-                      const key = `${option.providerId}:${option.modelId}`;
-                      const isActive = key === activeKey;
-                      return (
-                        <CommandItem
-                          data-checked={isActive}
-                          key={key}
-                          value={key}
-                          onSelect={() => {
-                            if (!isActive) {
-                              onSetModel(option.providerId, option.modelId);
-                            }
-                            setModelOpen(false);
-                            setModelFilter("");
-                          }}
-                        >
-                          <span className="truncate">{option.label}</span>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+            <ComboboxInput
+              aria-label="Filter models"
+              className="model-selector__filter-input"
+              placeholder="Filter models..."
+              showTrigger={false}
+            />
+            <ComboboxEmpty className="justify-start px-2 py-3 text-left">
+              <div className="flex flex-col">
+                <span className="font-medium">
+                  {noMatchingModels ? "No matching models" : emptyModelTitle}
+                </span>
+                {noMatchingModels ? <span>Try a different filter.</span> : null}
+              </div>
+            </ComboboxEmpty>
+            <ComboboxList>
+              {(group: ModelGroup) => (
+                <ComboboxGroup items={group.items} key={group.value}>
+                  <ComboboxLabel>{group.value}</ComboboxLabel>
+                  <ComboboxCollection>
+                    {(option: ComposerModelOption) => (
+                      <ComboboxItem key={modelKey(option)} value={option}>
+                        <span className="truncate">{option.label}</span>
+                      </ComboboxItem>
+                    )}
+                  </ComboboxCollection>
+                </ComboboxGroup>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       ) : null}
       {thinkingLevel ? (
         <DropdownMenu>
@@ -222,8 +215,23 @@ export function ModelSelector({
 }
 
 interface ModelGroup {
-  readonly provider: string;
+  readonly value: string;
   readonly items: readonly ComposerModelOption[];
+}
+
+function modelKey(option: ComposerModelOption): string {
+  return `${option.providerId}:${option.modelId}`;
+}
+
+/** Matches the typed filter against the model label, description, or provider. */
+function matchesModelFilter(option: ComposerModelOption, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    option.label.toLowerCase().includes(q) ||
+    option.description.toLowerCase().includes(q) ||
+    option.providerId.toLowerCase().includes(q)
+  );
 }
 
 function groupByProvider(options: readonly ComposerModelOption[]): readonly ModelGroup[] {
@@ -236,5 +244,5 @@ function groupByProvider(options: readonly ComposerModelOption[]): readonly Mode
       groups.set(option.providerId, [option]);
     }
   }
-  return Array.from(groups.entries()).map(([provider, items]) => ({ provider, items }));
+  return Array.from(groups.entries()).map(([value, items]) => ({ value, items }));
 }

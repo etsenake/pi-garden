@@ -122,7 +122,9 @@ test("switches between app-global and per-repo model scope while worktrees inher
     await expect(window.getByTestId("new-thread-composer")).toHaveCount(0);
 
     await selectComposerModel(window, "GPT-4 Turbo");
-    await expect(window.getByRole("button", { name: "openai:gpt-4-turbo" }).first()).toBeVisible();
+    await expect(
+      window.getByRole("combobox", { name: "openai:gpt-4-turbo" }).first(),
+    ).toBeVisible();
 
     await openSettings(window);
     await openSettingsSection(window, "Models");
@@ -134,7 +136,9 @@ test("switches between app-global and per-repo model scope while worktrees inher
     await expectSettingsValue(defaultModelPicker(window), "openai:gpt-5");
 
     await window.getByRole("button", { name: "Back to app", exact: true }).click();
-    await expect(window.getByRole("button", { name: "openai:gpt-4-turbo" }).first()).toBeVisible();
+    await expect(
+      window.getByRole("combobox", { name: "openai:gpt-4-turbo" }).first(),
+    ).toBeVisible();
     await expectComposerModelOptions(window, {
       visibleModelLabels: ["GPT-5", "GPT-4 Turbo"],
       hiddenModelLabels: ["GPT-4o"],
@@ -197,7 +201,7 @@ async function expectComposerModelState(
   },
 ): Promise<void> {
   await expect(
-    window.getByRole("button", { name: expectations.activeModel }).first(),
+    window.getByRole("combobox", { name: expectations.activeModel }).first(),
   ).toBeVisible();
   await expectModelOptions(window, ".composer__bar", expectations);
 }
@@ -221,7 +225,7 @@ async function expectNewThreadModelState(
   },
 ): Promise<void> {
   await expect(
-    window.getByRole("button", { name: expectations.activeModel }).first(),
+    window.getByRole("combobox", { name: expectations.activeModel }).first(),
   ).toBeVisible();
   await expectModelOptions(window, ".new-thread__hint", expectations);
 }
