@@ -157,20 +157,22 @@ export function ScheduledTasksView({
               data-testid="scheduled-task-row"
               data-task-id={task.id}
               key={task.id}
+              className="gap-0 p-0"
               render={<article role="listitem" />}
               variant="outline"
             >
-              <ItemContent className="min-w-0">
-                <button
-                  className="flex w-full flex-col gap-1 text-left"
-                  type="button"
-                  onClick={() => onOpenEditor({ mode: "edit", taskId: task.id })}
-                >
+              {/* The row body is its own Item button so the actions menu stays a sibling, not nested. */}
+              <Item
+                className="min-w-0 flex-1"
+                render={<button type="button" />}
+                onClick={() => onOpenEditor({ mode: "edit", taskId: task.id })}
+              >
+                <ItemContent className="min-w-0">
                   <ItemTitle>{task.title}</ItemTitle>
                   <ItemDescription>{formatScheduledTaskRowMeta(task)}</ItemDescription>
-                </button>
-              </ItemContent>
-              <ItemActions>
+                </ItemContent>
+              </Item>
+              <ItemActions className="pr-3">
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
