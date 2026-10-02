@@ -23,7 +23,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/shadcn/tabs";
 import { PanelEmpty } from "./panel-empty";
 import { WithTooltip } from "./workbench-tooltip";
 import { BUILTIN_TOOL_ENTRIES, BUILTIN_TOOLS } from "./builtin-tools";
-import { WorkbenchResizeHandle } from "./workbench-resize-handle";
 import { activeWorkbenchTool } from "./workbench-state";
 
 interface WorkbenchProps {
@@ -31,7 +30,6 @@ interface WorkbenchProps {
   readonly platform: NodeJS.Platform;
   /** Whether the side panel tab modifier is held, so tabs show their numbers. */
   readonly tabHintsVisible: boolean;
-  readonly onResize: (width: number) => void;
   readonly onTogglePanel: () => void;
   readonly onOpenTool: (tool: ToolRef) => void;
   readonly onActivateTool: (toolId: string) => void;
@@ -61,7 +59,6 @@ export function Workbench({
   view,
   platform,
   tabHintsVisible,
-  onResize,
   onTogglePanel,
   onOpenTool,
   onActivateTool,
@@ -127,7 +124,7 @@ export function Workbench({
   return (
     <Tabs
       aria-label="Side workspace"
-      className="workbench side-panel gap-0"
+      className="workbench side-panel h-full gap-0"
       data-testid="workbench"
       id="task-workbench"
       onValueChange={(toolId) => {
@@ -136,7 +133,6 @@ export function Workbench({
       render={<aside />}
       value={view.selection.kind === "tool" ? view.selection.toolId : null}
     >
-      <WorkbenchResizeHandle onResize={onResize} />
       <div className="workbench__tabbar">
         <TabsList
           activateOnFocus

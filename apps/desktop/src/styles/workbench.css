@@ -1,4 +1,4 @@
-/* The tool workspace occupies the existing side-panel grid cell. */
+/* The tool workspace fills the workbench pane of the main split. */
 .workbench {
   position: relative;
   display: flex;
@@ -65,31 +65,4 @@
   color: var(--error-ink);
   font-size: 13px;
   line-height: 1.5;
-}
-
-.workbench__resize-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 6px;
-  z-index: 30;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.workbench__resize-handle:hover,
-.workbench__resize-handle:focus-visible,
-.workbench__resize-handle[data-resizing="true"] {
-  background: var(--surface-muted);
-  box-shadow: inset 2px 0 var(--accent);
-}
-
-.main:has(.workbench__resize-handle[data-resizing="true"]) {
-  cursor: col-resize;
-  user-select: none;
-}
-
-.main:has(.workbench__resize-handle[data-resizing="true"]) iframe {
-  pointer-events: none;
 }

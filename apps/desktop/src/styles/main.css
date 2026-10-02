@@ -1,30 +1,21 @@
 .main {
   background: var(--main);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
   min-width: 0;
   overflow: hidden;
   position: relative;
 }
 
-.main--with-side-panel {
-  grid-template-columns: minmax(0, 1fr) min(var(--workbench-width, 440px), 65%);
+/* The conversation pane of the main/workbench split. */
+.main__pane {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
 }
 
-.main--with-side-panel > .topbar {
-  grid-column: 1;
-}
-
-.main--with-side-panel > .composer {
-  grid-column: 1;
-}
-
-.main--with-startup-diagnostics {
+.main__pane--with-startup-diagnostics {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-}
-
-.main--with-side-panel > .startup-diagnostics {
-  grid-column: 1;
 }
 
 .canvas {
@@ -112,12 +103,6 @@
   min-height: 0;
   overflow: hidden;
   background: var(--surface);
-}
-
-.main--with-side-panel > .side-panel {
-  grid-column: 2;
-  grid-row: 1 / -1;
-  border-left: 1px solid var(--border);
 }
 
 .file-workbench {
@@ -1080,23 +1065,6 @@
 @media (max-width: 980px) {
   .settings-view .view-header {
     align-items: stretch;
-  }
-
-  .main--with-side-panel {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .main--with-side-panel > .side-panel {
-    grid-column: auto;
-    grid-row: auto;
-    position: absolute;
-    top: 48px;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-    width: min(var(--workbench-width, 440px), 100%);
-    border-left: 1px solid var(--border);
-    box-shadow: var(--shadow-lg);
   }
 
   .topbar,

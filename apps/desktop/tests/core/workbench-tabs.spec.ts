@@ -461,17 +461,28 @@ test("keeps one resizable width across tools, chooser, tasks, and restart", asyn
     await selectSession(window, TASK_B);
     await openWorkbench(window);
     await expect.poll(panelWidth).toBe(540);
+    // The stock separator moves 5% of the split per arrow key, and End puts the
+    // workbench at its minimum width (it is the second pane).
+    const splitWidth = async () =>
+      (await window.locator('[data-slot="resizable-panel-group"]').boundingBox())!.width;
+    const expectPanelWidth = (expected: number) =>
+      expect.poll(async () => Math.abs((await panelWidth()) - expected)).toBeLessThanOrEqual(1);
     await handle.focus();
     await handle.press("ArrowRight");
-    await expect.poll(panelWidth).toBe(520);
+    await expectPanelWidth(540 - (await splitWidth()) * 0.05);
+    const compactWidth = await panelWidth();
     await window.screenshot({ path: testInfo.outputPath("compact-resizable-workspace.png") });
     await setWindowWidth(1040);
-    await expect.poll(panelWidth).toBeLessThanOrEqual(520);
+    await expect.poll(panelWidth).toBeLessThanOrEqual(compactWidth);
     await expect(window.getByTestId("composer")).toBeVisible();
     await setWindowWidth(900);
-    await expect.poll(panelWidth).toBe(520);
+    // Narrow windows keep the split; the conversation keeps at least 35% of it.
+    await expect
+      .poll(async () => (await panelWidth()) <= Math.ceil((await splitWidth()) * 0.65))
+      .toBe(true);
+    await expect(window.getByTestId("composer")).toBeVisible();
     await handle.focus();
-    await handle.press("Home");
+    await handle.press("End");
     await expect.poll(panelWidth).toBe(320);
     await selectSession(window, TASK_A);
     await addTool(window, "Terminal");
@@ -483,19 +494,25 @@ test("keeps one resizable width across tools, chooser, tasks, and restart", asyn
     expect(activeTab.x + activeTab.width).toBeLessThanOrEqual(strip.x + strip.width + 1);
     await handle.focus();
     await handle.press("ArrowLeft");
-    await expect.poll(panelWidth).toBe(340);
+    await expectPanelWidth(320 + (await splitWidth()) * 0.05);
+    const narrowWidth = await panelWidth();
     await window.getByTestId("workbench-add-tab").click();
-    await expect.poll(panelWidth).toBe(340);
+    await expect.poll(panelWidth).toBe(narrowWidth);
     await window.screenshot({ path: testInfo.outputPath("narrow-workspace-chooser.png") });
     // Wait for the debounced preference write before exercising a fresh process.
     await expect
-      .poll(() => window.evaluate(() => localStorage.getItem("pi-garden.workbench-width")))
-      .toBe("340");
+      .poll(async () =>
+        Math.abs(
+          Number(await window.evaluate(() => localStorage.getItem("pi-garden.workbench-width"))) -
+            narrowWidth,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
     await harness.close();
     harness = await launchDesktop(fixture.userDataDir, options);
     window = await harness.firstWindow();
     await selectSession(window, TASK_A);
-    await expect.poll(panelWidth).toBe(340);
+    await expectPanelWidth(narrowWidth);
   } finally {
     await harness.close();
   }
