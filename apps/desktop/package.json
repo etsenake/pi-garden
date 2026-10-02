@@ -105,6 +105,7 @@
     "@pi-garden/extension-ui": "workspace:*",
     "@pi-garden/pi-sdk-driver": "workspace:*",
     "@pi-garden/session-driver": "workspace:*",
+    "@shadcn/react": "^0.3.1",
     "@silvia-odwyer/photon-node": "0.3.4",
     "@smithy/core": "^3.29.0",
     "@smithy/credential-provider-imds": "^4.5.2",
