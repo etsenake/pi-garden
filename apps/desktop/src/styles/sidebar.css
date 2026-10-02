@@ -25,11 +25,6 @@
   backdrop-filter: var(--glass-blur) var(--glass-saturation);
 }
 
-/* Transparency mode re-enables the sidebar backdrop blur in dark. */
-.enable-transparency.dark .sidebar {
-  backdrop-filter: var(--glass-blur) var(--glass-saturation);
-}
-
 .session-row__status--failed,
 .session-row__status--unseen {
   width: 8px;
