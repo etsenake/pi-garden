@@ -142,7 +142,7 @@ test("Control or Alt with 1-9 selects side panel tabs while Cmd or Ctrl keeps sw
     await window.keyboard.press(desktopShortcut(","));
     await window.getByRole("button", { name: "Keyboard shortcuts" }).click();
     const row = window.locator(".settings-row", { hasText: "Switch to side panel tab" });
-    await expect(row.locator("kbd")).toHaveText([isMac ? "⌃" : "Alt", "1–9"]);
+    await expect(row.locator('[data-slot="kbd"]')).toHaveText([isMac ? "⌃" : "Alt", "1–9"]);
   } finally {
     await harness.close();
   }
