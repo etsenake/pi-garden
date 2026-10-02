@@ -2280,7 +2280,6 @@ export class DesktopAppStore {
       await this.refreshState({
         selectedWorkspaceId: persisted.selectedWorkspaceId,
         selectedSessionId: persisted.selectedSessionId,
-        composerDraft: persisted.composerDraft,
         clearLastError: true,
         refreshWorktrees: true,
         hydrateSelectedSession: false,
@@ -2381,6 +2380,16 @@ export class DesktopAppStore {
     for (const [key, draft] of Object.entries(persisted.composerDraftsBySession ?? {})) {
       if (draft) {
         this.sessionState.composerDraftsBySession.set(key, draft);
+      }
+    }
+    // The per-session map owns drafts. The top-level field only seeds files that predate it.
+    if (persisted.composerDraft && persisted.selectedWorkspaceId && persisted.selectedSessionId) {
+      const key = sessionKey({
+        workspaceId: persisted.selectedWorkspaceId,
+        sessionId: persisted.selectedSessionId,
+      });
+      if (!this.sessionState.composerDraftsBySession.has(key)) {
+        this.sessionState.composerDraftsBySession.set(key, persisted.composerDraft);
       }
     }
     this.extensionCommandCompatibilityByWorkspace.clear();
@@ -3965,7 +3974,11 @@ export class DesktopAppStore {
       selectedWorkspaceId: this.state.selectedWorkspaceId || undefined,
       selectedSessionId: this.state.selectedSessionId || undefined,
       activeView: this.state.activeView,
-      composerDraft: this.state.composerDraft || undefined,
+      // Derived from the map: the renderer's keystroke mirror updates only the map, so
+      // state.composerDraft can lag it and a quit flush would persist a stale value.
+      composerDraft:
+        this.sessionState.composerDraftsBySession.get(this.currentSelectedSessionKey()) ||
+        undefined,
       composerDraftsBySession: mapToRecord(this.sessionState.composerDraftsBySession),
       extensionCommandCompatibilityByWorkspace: serializeCompatibilityByWorkspace(
         this.extensionCommandCompatibilityByWorkspace,

@@ -98,7 +98,8 @@ export function decodePersistedUiState(parsed: unknown): LegacyPersistedUiState 
     selectedWorkspaceId: stringValue(candidate.selectedWorkspaceId),
     selectedSessionId: stringValue(candidate.selectedSessionId),
     activeView: toAppView(candidate.activeView),
-    composerDraft: stringValue(candidate.composerDraft) ?? "",
+    // Absent means "no legacy draft", not an explicit empty draft that clears the saved one.
+    composerDraft: stringValue(candidate.composerDraft),
     composerDraftsBySession: toStringRecord(candidate.composerDraftsBySession),
     extensionCommandCompatibilityByWorkspace: toPersistedCompatibilityByWorkspace(
       candidate.extensionCommandCompatibilityByWorkspace,

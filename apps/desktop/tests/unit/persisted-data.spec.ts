@@ -3,10 +3,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  decodePersistedUiState,
   readPersistedUiState,
   writePersistedUiState,
 } from "../../electron/persistence/app-store-persistence";
 import { AttachmentStore } from "../../electron/persistence/attachment-store";
+
+test("a missing top-level draft decodes as absent so it cannot clear a saved session draft", () => {
+  const decoded = decodePersistedUiState({
+    version: 17,
+    selectedWorkspaceId: "/repo",
+    selectedSessionId: "s1",
+    composerDraftsBySession: { "/repo:s1": "unsent draft" },
+  });
+  expect(decoded.composerDraft).toBeUndefined();
+  expect(decoded.composerDraftsBySession).toEqual({ "/repo:s1": "unsent draft" });
+});
 
 for (const invalid of [
   { version: 99, composerDraft: "future data" },
