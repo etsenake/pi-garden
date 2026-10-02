@@ -20,9 +20,9 @@ Run `pnpm check` locally and in the existing CI typecheck job. It runs:
    files or ban explicit `any`. Type-aware rules also reject unhandled/misused
    promises and unsafe assignment, argument, call, member access, and return
    operations on `any`. A bare `void` does not silence the promise rule.
-   The typed projects build several TypeScript programs and peak above 2 GB,
-   past the default Node heap on CI runners, so the script runs ESLint with a
-   4 GB `--max-old-space-size`.
+   The typed projects build several TypeScript programs and peak above 4 GB
+   with the shadcn/ui dependency types, past the default Node heap on CI
+   runners, so the script runs ESLint with a 6 GB `--max-old-space-size`.
    Compiler escape comments `@ts-nocheck` and `@ts-ignore` fail lint;
    `@ts-expect-error` requires a description. Guard tests compare pnpm's discovered
    workspaces with the real typed-lint configuration, so adding a workspace
