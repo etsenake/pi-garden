@@ -48,15 +48,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-button,
-textarea {
-  font: inherit;
-}
-
+/* Tailwind preflight already resets button and textarea font, border,
+   background and colour; a legacy reset here also overrode the border style
+   preflight gives shadcn buttons. Only the pointer cursor stays app-wide. */
 button {
-  border: 0;
-  background: none;
-  color: inherit;
   cursor: pointer;
 }
 
