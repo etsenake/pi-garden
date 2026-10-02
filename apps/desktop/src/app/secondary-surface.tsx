@@ -1,8 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { SearchIcon } from "../ui/icons";
-import { Button } from "@/ui/shadcn/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/ui/shadcn/input-group";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from "@/ui/shadcn/sidebar";
+
+const SECONDARY_SIDEBAR_STYLE = { "--sidebar-width": "248px" } as CSSProperties;
 
 export interface SecondarySurfaceNavItem {
   readonly id: string;
@@ -47,6 +60,9 @@ export function SecondarySurface({
     return () => window.removeEventListener("keydown", handleEscape);
   }, []);
 
+  const [query, setQuery] = useState("");
+  const matches = filterNavItems(navItems, query);
+
   // Each nav page starts at its top, as in Codex, instead of inheriting the last page's scroll.
   const contentRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -54,33 +70,94 @@ export function SecondarySurface({
   }, [activeNavId]);
 
   return (
-    <div className="secondary-surface" data-testid={testId}>
-      <aside className="secondary-surface__sidebar">
-        <Button
-          className="w-full justify-start"
-          data-testid="secondary-surface-back"
-          variant="ghost"
-          onClick={onBack}
-        >
-          <ArrowLeftIcon aria-hidden="true" />
-          <span>Back to app</span>
-        </Button>
-        {navItems.length > 0 ? (
-          <SecondarySurfaceNav
-            activeNavId={activeNavId}
-            items={navItems}
-            label={`${title} sections`}
-            searchLabel={`Search ${title.toLowerCase()}`}
-            onSelect={(id) => onSelectNav?.(id)}
-          />
-        ) : (
-          <div className="secondary-surface__title">{title}</div>
-        )}
-      </aside>
-      <main className="secondary-surface__content" ref={contentRef}>
+    // A fixed nav column: the Sidebar never collapses here, so the provider's
+    // open state (and its Cmd/Ctrl+B listener) has nothing to drive.
+    <SidebarProvider
+      className="secondary-surface"
+      data-testid={testId}
+      style={SECONDARY_SIDEBAR_STYLE}
+    >
+      <Sidebar
+        className="secondary-surface__sidebar max-[700px]:w-42"
+        collapsible="none"
+        role="complementary"
+      >
+        <SidebarHeader className="pt-(--titlebar-inset-top)">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton data-testid="secondary-surface-back" onClick={onBack}>
+                <ArrowLeftIcon aria-hidden="true" />
+                <span>Back to app</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          {navItems.length > 0 ? (
+            <SecondarySurfaceSearch
+              label={`Search ${title.toLowerCase()}`}
+              query={query}
+              onQueryChange={setQuery}
+              onSubmit={() => {
+                if (matches[0]) onSelectNav?.(matches[0].id);
+              }}
+            />
+          ) : null}
+        </SidebarHeader>
+        <SidebarContent>
+          {navItems.length > 0 ? (
+            <SecondarySurfaceNav
+              activeNavId={activeNavId}
+              items={matches}
+              label={`${title} sections`}
+              query={query}
+              onSelect={(id) => onSelectNav?.(id)}
+            />
+          ) : (
+            <SidebarGroup>
+              <SidebarGroupLabel className="secondary-surface__title">{title}</SidebarGroupLabel>
+            </SidebarGroup>
+          )}
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset className="secondary-surface__content" ref={contentRef}>
         {children}
-      </main>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+function SecondarySurfaceSearch({
+  label,
+  query,
+  onQueryChange,
+  onSubmit,
+}: {
+  readonly label: string;
+  readonly query: string;
+  readonly onQueryChange: (query: string) => void;
+  readonly onSubmit: () => void;
+}) {
+  return (
+    <InputGroup>
+      <InputGroupAddon>
+        <SearchIcon />
+      </InputGroupAddon>
+      <InputGroupInput
+        aria-label={label}
+        placeholder="Search"
+        spellCheck={false}
+        type="search"
+        value={query}
+        onChange={(event) => onQueryChange(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && query.trim()) onSubmit();
+          // The first Escape clears the search; the next one leaves the surface.
+          if (event.key === "Escape" && query) {
+            event.preventDefault();
+            onQueryChange("");
+          }
+        }}
+      />
+    </InputGroup>
   );
 }
 
@@ -88,69 +165,47 @@ function SecondarySurfaceNav({
   items,
   activeNavId,
   label,
-  searchLabel,
+  query,
   onSelect,
 }: {
   readonly items: readonly SecondarySurfaceNavItem[];
   readonly activeNavId?: string;
   readonly label: string;
-  readonly searchLabel: string;
+  readonly query: string;
   readonly onSelect: (id: string) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const matches = filterNavItems(items, query);
-  const groups = [...new Set(matches.map((item) => item.group))];
-
+  const groups = [...new Set(items.map((item) => item.group))];
   return (
-    <>
-      <InputGroup>
-        <InputGroupAddon>
-          <SearchIcon />
-        </InputGroupAddon>
-        <InputGroupInput
-          aria-label={searchLabel}
-          placeholder="Search"
-          spellCheck={false}
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && query.trim() && matches[0]) {
-              onSelect(matches[0].id);
-            }
-            // The first Escape clears the search; the next one leaves the surface.
-            if (event.key === "Escape" && query) {
-              event.preventDefault();
-              setQuery("");
-            }
-          }}
-        />
-      </InputGroup>
-      <nav aria-label={label} className="secondary-surface__nav">
-        {groups.map((group) => (
-          <div className="secondary-surface__nav-group" key={group}>
-            <div className="secondary-surface__nav-group-label">{group}</div>
-            {matches
+    <nav aria-label={label} className="secondary-surface__nav">
+      {groups.map((group) => (
+        <SidebarGroup className="secondary-surface__nav-group" key={group}>
+          <SidebarGroupLabel>{group}</SidebarGroupLabel>
+          <SidebarMenu>
+            {items
               .filter((item) => item.group === group)
               .map((item) => (
-                <Button
-                  key={item.id}
-                  aria-current={activeNavId === item.id ? "page" : undefined}
-                  className="w-full justify-start"
-                  variant={activeNavId === item.id ? "secondary" : "ghost"}
-                  onClick={() => onSelect(item.id)}
-                >
-                  {item.icon}
-                  <span>{item.title}</span>
-                </Button>
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton
+                    aria-current={activeNavId === item.id ? "page" : undefined}
+                    isActive={activeNavId === item.id}
+                    onClick={() => onSelect(item.id)}
+                  >
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
-          </div>
-        ))}
-        {matches.length === 0 ? (
-          <p className="secondary-surface__nav-empty">No matches for “{query.trim()}”</p>
-        ) : null}
-      </nav>
-    </>
+          </SidebarMenu>
+        </SidebarGroup>
+      ))}
+      {items.length === 0 ? (
+        <SidebarGroup>
+          <p className="secondary-surface__nav-empty px-2 text-sm">
+            No matches for “{query.trim()}”
+          </p>
+        </SidebarGroup>
+      ) : null}
+    </nav>
   );
 }
 
