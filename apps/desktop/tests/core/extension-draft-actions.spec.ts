@@ -62,10 +62,13 @@ export default function extension(pi) {
       frame.getByRole("button", { name: "Prepare task draft", exact: true }),
     ).toBeVisible();
     await expectExtensionViewReady(window);
-    await expect(window.getByRole("tab", { name: "Draft actions", exact: true })).toHaveAttribute(
-      "title",
-      /^Draft actions \(/,
-    );
+    // The tab's tooltip names the view and its side panel shortcut.
+    await window.getByRole("tab", { name: "Draft actions", exact: true }).hover();
+    const tabTooltip = window.locator('[data-slot="tooltip-content"]', {
+      hasText: "Draft actions",
+    });
+    await expect(tabTooltip).toHaveText(/^Draft actions(⌃|Alt\+)\d$/);
+    await window.mouse.move(0, 0);
     const state = await getDesktopState(window);
     const target = { workspaceId: state.selectedWorkspaceId!, sessionId: state.selectedSessionId! };
 
