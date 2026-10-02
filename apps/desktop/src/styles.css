@@ -43,9 +43,12 @@
   --color-popover-foreground: var(--text-strong);
   --color-primary: var(--button-primary-bg);
   --color-primary-foreground: var(--button-primary-ink);
-  --color-secondary: var(--surface-muted);
+  /* Secondary and muted fills are an ink overlay, not --surface-muted: in dark
+     themes --surface-muted sits within a few percent of --surface, so pressed
+     toggles and secondary buttons vanished on cards. */
+  --color-secondary: var(--overlay-active);
   --color-secondary-foreground: var(--text-strong);
-  --color-muted: var(--surface-muted);
+  --color-muted: var(--overlay-active);
   --color-muted-foreground: var(--muted);
   --color-accent: var(--surface-overlay-hover);
   --color-accent-foreground: var(--text-strong);
@@ -87,7 +90,7 @@
   --popover-foreground: var(--text-strong);
   --primary: var(--button-primary-bg);
   --primary-foreground: var(--button-primary-ink);
-  --secondary: var(--surface-muted);
+  --secondary: var(--overlay-active);
   --secondary-foreground: var(--text-strong);
   --muted-foreground: var(--muted);
   --accent-foreground: var(--text-strong);
